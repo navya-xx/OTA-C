@@ -209,8 +209,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     std::this_thread::sleep_for(std::chrono::seconds(1)); // allow for some setup time
 
-    double wave_freq = usrp->get_tx_rate() / 2;
-
     // create a transmit streamer
     // linearly map channels (index0 = channel0, index1 = channel1, ...)
     uhd::stream_args_t stream_args("fc32", otw);
