@@ -92,6 +92,7 @@ private:
     size_t max_sample_size;
     uhd::time_spec_t sample_duration;
     size_t num_samp_consume;
+    std::vector<float> abs_corr;
     size_t capacity;
     size_t front;
     size_t rear;
@@ -102,26 +103,24 @@ private:
     boost::condition_variable cv_consumer;
 
 public:
-    CycleStartDetector(size_t capacity, size_t max_sample_size, uhd::time_spec_t sample_duration, size_t num_samp_consume, size_t N_zfc, size_t m_zfc, size_t R_zfc) : samples_buffer(capacity), timer(capacity), num_samp_consume(num_samp_consume), max_sample_size(max_sample_size), sample_duration(sample_duration), capacity(capacity), front(0), rear(0), num_produced(0), N_zfc(N_zfc), m_zfc(m_zfc), R_zfc(R_zfc) {}
+    CycleStartDetector(size_t capacity, size_t max_sample_size, uhd::time_spec_t sample_duration, size_t num_samp_consume, size_t N_zfc, size_t m_zfc, size_t R_zfc) : samples_buffer(capacity), timer(capacity), num_samp_consume(num_samp_consume), abs_corr(num_samp_consume), max_sample_size(max_sample_size), sample_duration(sample_duration), capacity(capacity), front(0), rear(0), num_produced(0), N_zfc(N_zfc), m_zfc(m_zfc), R_zfc(R_zfc) {}
 
     std::vector<samp_type> zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
     // Function to check if correlation is positive
-    std::pair<int, int> correlation_operation(const std::vector<samp_type> &samples)
+    std::pair<int, int> correlation_operation()
     {
         // std::vector<samp_type> result(samples.size()); // Initialize result vector
-        std::vector<float> abs_corr(samples.size());
         float mean_corr = 0.0;
         float max_corr = 0.0;
-        size_t samp_len = samples.size();
 
         // Perform cross-correlation - "equal" size
-        for (size_t i = 0; i < samp_len; ++i)
+        for (size_t i = 0; i < num_samp_consume; ++i)
         {
             samp_type corr;
             for (size_t j = 0; j < N_zfc; ++j)
             {
-                corr += samples[i] * std::conj(zfc_seq[j]);
+                corr += samples_buffer[(front + i) % capacity] * std::conj(zfc_seq[j]);
             }
             float abs_val = std::abs(corr);
             abs_corr[i] = abs_val;
@@ -132,7 +131,7 @@ public:
             }
         }
 
-        mean_corr = mean_corr / samp_len;
+        mean_corr = mean_corr / num_samp_consume;
 
         // check if max/mean > threshold => existence of ZFC seq
         float max_to_mean_ratio = max_corr / mean_corr;
@@ -144,7 +143,7 @@ public:
             // find peaks with this threshold
             std::cout << "Peak detected in correlated signal!" << std::endl;
             std::cout << "Max to mean ratio : " << max_to_mean_ratio << std::endl;
-            peak_indices = findPeaks(abs_corr, max_corr * 0.7);
+            peak_indices = findPeaks(max_corr * 0.7, 20);
         }
         else
         {
@@ -153,7 +152,12 @@ public:
             return {0, 0};
         }
 
-        if (peak_indices.size() < 2) // we need at least two peaks to make a decision
+        if (peak_indices.size() == 0)
+        {
+            std::cout << "No peak detected!" << std::endl;
+            return {0, 0};
+        }
+        else if (peak_indices.size() < 2) // we need at least two peaks to make a decision
         {
             std::cout << "Only one peak detected! Keep sampling..." << std::endl;
             return {-1, peak_indices.front()};
@@ -168,14 +172,14 @@ public:
             // auto min_it = std::min_element(peak_indices.begin(), peak_indices.end());
             // int peak_diff = (*max_it - *min_it) / (num_peaks - 1);
 
-            std::cout << "Last peak:" << *max_it << ". Last sample :" << samples.size() - 1 << ". ZFC seq len: " << zfc_seq.size() << std::endl;
+            std::cout << "Last peak:" << *max_it << ". Last sample :" << num_samp_consume - 1 << ". ZFC seq len: " << zfc_seq.size() << std::endl;
 
             // check if all peaks are detected
             if (num_peaks < R_zfc)
             {
                 std::cout << "All peaks are not detected! We detected " << num_peaks
                           << " peaks out of a total of " << R_zfc << std::endl;
-                if (samples.size() - *max_it < zfc_seq.size())
+                if (num_samp_consume - *max_it < zfc_seq.size())
                 {
                     std::cout << "More peaks are expected in next batch of samples!" << std::endl;
                     return {-1, peak_indices.front()};
@@ -197,19 +201,19 @@ public:
     }
 
     // Function to find peaks > peak_threshold
-    std::vector<size_t> findPeaks(const std::vector<float> &vec, const float &peak_threshold, const int &min_peak_sep = 100)
+    std::vector<size_t> findPeaks(const float &peak_threshold, const int &min_peak_sep = 100)
     {
         // Check if the vector is empty
-        if (vec.empty())
+        if (abs_corr.empty())
         {
             return {0};
         }
 
         // Calculate the index of the maximum element
         std::vector<size_t> peak_indices;
-        for (int i = 0; i < vec.size(); i++)
+        for (int i = 0; i < num_samp_consume; i++)
         {
-            if (vec[i] > peak_threshold)
+            if (abs_corr[i] > peak_threshold)
             {
                 // check for min_peak_sep between adjacent peaks
                 int last_peak = peak_indices.back();
@@ -297,16 +301,17 @@ public:
         // front = (front + num_samp_consume) % capacity;
         // num_produced -= (num_samp_consume);
 
-        std::vector<samp_type> samples;
-        std::vector<uhd::time_spec_t> sample_times;
         bool successful_detection = false;
-        for (size_t i = 0; i < num_samp_consume; ++i)
-        {
-            samples.push_back(samples_buffer[(front + i) % capacity]);
-            sample_times.push_back(timer[(front + i) % capacity]); // Store the time corresponding to each sample
-        }
 
-        auto result = correlation_operation(samples); // Run the operation function on the samples
+        // std::vector<samp_type> samples;
+        // std::vector<uhd::time_spec_t> sample_times;
+        // for (size_t i = 0; i < num_samp_consume; ++i)
+        // {
+        //     samples.push_back(samples_buffer[(front + i) % capacity]);
+        //     sample_times.push_back(timer[(front + i) % capacity]); // Store the time corresponding to each sample
+        // }
+
+        auto result = correlation_operation(); // Run the operation function on the samples
 
         size_t last_peak_id = 0;
 
@@ -341,7 +346,7 @@ public:
 
         if (successful_detection)
         {
-            return {true, sample_times[last_peak_id]};
+            return {true, timer[(front + last_peak_id) % capacity]};
         }
         else
         {
@@ -440,7 +445,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         // ("int-n", "tune USRP with integer-N tuning")
         // For cycle start detector program
         ("capacity-mul", po::value<size_t>(&capacity_mul)->default_value(10), "Buffer capacity in terms of multiples of maximum number of samples received by USRP in one burst.")
-        ("num-samp-consume", po::value<size_t>(&num_samp_consume), "Number of samples to apply correlation operation at once.")
+        ("num-samp-consume", po::value<size_t>(&num_samp_consume)->default_value(0), "Number of samples to apply correlation operation at once.")
         ("N-zfc", po::value<size_t>(&N_zfc)->default_value(257), "ZFC seq length.")
         ("m-zfc", po::value<size_t>(&m_zfc)->default_value(31), "ZFC seq identifier (prime).")
         ("R-zfc", po::value<size_t>(&R_zfc)->default_value(5), "ZFC seq repetitions.")
@@ -595,7 +600,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (spb == 0)
         spb = max_sample_size;
 
-    if (not vm.count("num_samp_consume"))
+    if (num_samp_consume == 0)
     {
         num_samp_consume = std::max(max_sample_size, N_zfc * R_zfc * 2);
     }
