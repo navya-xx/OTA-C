@@ -21,13 +21,14 @@
 namespace po = boost::program_options;
 using namespace std::chrono_literals;
 
+using start_time_type = std::chrono::time_point<std::chrono::steady_clock>;
+
 static bool stop_signal_called = false;
+static bool DEBUG = false;
 void sig_int_handler(int)
 {
     stop_signal_called = true;
 }
-
-using start_time_type = std::chrono::time_point<std::chrono::steady_clock>;
 
 /***********************************************************************
  * Test result variables
@@ -108,27 +109,22 @@ public:
     // Function to check if correlation is positive
     std::pair<int, int> correlation_operation(const std::vector<samp_type> &samples)
     {
-        std::vector<samp_type> result(samples.size() - 1, 0); // Initialize result vector
-
-        // Perform cross-correlation - "equal" size
-        for (size_t i = 0; i < samples.size(); ++i)
-        {
-            for (size_t j = 0; j < zfc_seq.size(); ++j)
-            {
-                result[i] += samples[i] * std::conj(zfc_seq[j]);
-            }
-        }
-
-        // absolute val, mean and max
-        std::vector<float> abs_corr;
+        // std::vector<samp_type> result(samples.size()); // Initialize result vector
+        std::vector<float> abs_corr(samples.size());
         float mean_corr = 0.0;
         float max_corr = 0.0;
-        for (const auto &samp : result)
+        size_t samp_len = samples.size();
+
+        // Perform cross-correlation - "equal" size
+        for (size_t i = 0; i < samp_len; ++i)
         {
-            float abs_val = std::abs(samp);
-
-            abs_corr.push_back(abs_val);
-
+            samp_type corr;
+            for (size_t j = 0; j < N_zfc; ++j)
+            {
+                corr += samples[i] * std::conj(zfc_seq[j]);
+            }
+            float abs_val = std::abs(corr);
+            abs_corr[i] = abs_val;
             mean_corr += abs_val;
             if (max_corr < abs_val)
             {
@@ -136,22 +132,24 @@ public:
             }
         }
 
-        mean_corr = mean_corr / result.size();
+        mean_corr = mean_corr / samp_len;
 
         // check if max/mean > threshold => existence of ZFC seq
         float max_to_mean_ratio = max_corr / mean_corr;
-        std::cout << "Max to mean ratio : " << max_to_mean_ratio << std::endl;
 
         std::vector<size_t> peak_indices;
 
         if (max_to_mean_ratio > MAX_MEAN_RATIO_THRESHOLD)
         {
             // find peaks with this threshold
-            peak_indices = findPeaks(abs_corr, max_corr * 0.8);
+            std::cout << "Peak detected in correlated signal!" << std::endl;
+            std::cout << "Max to mean ratio : " << max_to_mean_ratio << std::endl;
+            peak_indices = findPeaks(abs_corr, max_corr * 0.7);
         }
         else
         {
-            std::cout << "No peak detected! Discard samples and continue..." << std::endl;
+            if (DEBUG)
+                std::cout << "No peak detected! Discard samples and continue..." << std::endl;
             return {0, 0};
         }
 
@@ -242,14 +240,30 @@ public:
     }
 
     // Insert sample into cyclic buffer - Let it be consumed before capacity is full
-    void produce(const std::vector<samp_type> &samples, const uhd::time_spec_t &time)
+    void produce(const std::vector<samp_type> &samples, const uhd::time_spec_t &time, std::ofstream &outfile)
     {
         boost::unique_lock<boost::mutex> lock(mtx);
+
+        if (DEBUG)
+        {
+            std::string lock_condition = ((rear + max_sample_size) % capacity != front) ? "true" : "false";
+            std::cout << "Produce -- front " << front << ", Rear " << rear << ", num_produced " << num_produced << ", Samples " << samples.size() << ", lock condition " << lock_condition << std::endl;
+        }
+
         cv_producer.wait(lock, [this]
-                         { return front >= (rear + max_sample_size) % capacity; }); // Wait for enough space to produce
+                         { return capacity - num_produced >= max_sample_size; }); // Wait for enough space to produce
+
+        if (DEBUG)
+            std::cout << "Produce -- wait skip" << std::endl;
+
+        // save in file
+        if (outfile.is_open())
+        {
+            outfile.write((const char *)&samples.front(), samples.size() * sizeof(samp_type));
+        }
         // insert first timer
         uhd::time_spec_t next_time = time;
-        for (samp_type sample : samples)
+        for (const auto &sample : samples)
         {
             samples_buffer[rear] = sample;
             timer[rear] = next_time; // store absolute sample times
@@ -258,15 +272,31 @@ public:
             next_time += sample_duration;
         }
 
-        num_produced = num_produced + samples.size();
+        num_produced += samples.size();
+
+        if (DEBUG)
+            std::cout << "Produce -- num_produced " << num_produced << std::endl;
+
         cv_consumer.notify_one(); // Notify consumer that new data is available
     }
 
     std::pair<bool, uhd::time_spec_t> consume()
     {
         boost::unique_lock<boost::mutex> lock(mtx);
+
+        if (DEBUG)
+        {
+            std::string lock_condition = (num_produced >= num_samp_consume) ? "true" : "false";
+            std::cout << "Consume -- front " << front << ", Rear " << rear << ", num_produced " << num_produced << ", lock condition " << lock_condition << std::endl;
+        }
+
         cv_consumer.wait(lock, [this]
                          { return num_produced >= num_samp_consume; }); // Wait until minimum number of samples are produced
+
+        // test -- consume and carry on without processing
+        // front = (front + num_samp_consume) % capacity;
+        // num_produced -= (num_samp_consume);
+
         std::vector<samp_type> samples;
         std::vector<uhd::time_spec_t> sample_times;
         bool successful_detection = false;
@@ -275,9 +305,13 @@ public:
             samples.push_back(samples_buffer[(front + i) % capacity]);
             sample_times.push_back(timer[(front + i) % capacity]); // Store the time corresponding to each sample
         }
+
         auto result = correlation_operation(samples); // Run the operation function on the samples
 
         size_t last_peak_id = 0;
+
+        // front = (front + num_samp_consume - max_sample_size) % capacity;
+        // num_produced -= (num_samp_consume - max_sample_size);
 
         if (result.first == 0)
         { // No peak found -> discard all samples
@@ -287,7 +321,7 @@ public:
         else if (result.first == -1)
         { // some peak found, but more are coming!
             size_t first_peak = result.second;
-            size_t remove_samps = std::max(static_cast<size_t>(0), first_peak - 2 * zfc_seq.size());
+            size_t remove_samps = std::max(static_cast<size_t>(0), first_peak - 2 * N_zfc);
             front = (front + remove_samps);
             num_produced -= remove_samps;
         }
@@ -298,13 +332,19 @@ public:
             successful_detection = true;
         }
 
+        // if (DEBUG)
+        //     std::cout << "Consumed -- front " << front << ", rear " << rear << ", num_produced " << num_produced << std::endl;
+
+        cv_producer.notify_one(); // Notify producer that space is available
+
+        // return {false, uhd::time_spec_t(0.0)};
+
         if (successful_detection)
         {
             return {true, sample_times[last_peak_id]};
         }
         else
         {
-            cv_producer.notify_one(); // Notify producer that space is available
             return {false, uhd::time_spec_t(0.0)};
         }
     }
@@ -364,7 +404,7 @@ bool check_locked_sensor(std::vector<std::string> sensor_names,
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     // variables to be set by po
-    std::string args, type, ant, subdev, ref, wirefmt;
+    std::string args, type, ant, subdev, ref, wirefmt, file;
     size_t channel, spb, capacity_mul, max_sample_size, num_samp_consume, N_zfc, m_zfc, R_zfc;
     double rate, freq, gain, bw, total_time, setup_time, lo_offset;
     uhd::time_spec_t sample_duration;
@@ -375,11 +415,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     desc.add_options()
         ("help", "help message")
         ("args", po::value<std::string>(&args)->default_value("serial=32C79BE"), "multi uhd device address args")
+        ("file", po::value<std::string>(&file)->default_value("usrp_samples.dat"), "name of the file to write binary samples to")
         ("type", po::value<std::string>(&type)->default_value("float"), "sample type: double, float, or short")
-        ("duration", po::value<double>(&total_time)->default_value(600), "total number of seconds to receive")
+        ("duration", po::value<double>(&total_time)->default_value(0), "total number of seconds to receive")
         ("spb", po::value<size_t>(&spb)->default_value(0), "samples per buffer")
         ("rate", po::value<double>(&rate)->default_value(1e6), "rate of incoming samples")
-        ("freq", po::value<double>(&freq)->default_value(5e9), "RF center frequency in Hz")
+        ("freq", po::value<double>(&freq)->default_value(3e9), "RF center frequency in Hz")
         ("lo-offset", po::value<double>(&lo_offset)->default_value(0.0),
             "Offset for frontend LO in Hz (optional)")
         ("gain", po::value<double>(&gain)->default_value(60.0), "gain for the RF chain")
@@ -396,9 +437,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         // ("null", "run without writing to file")
         ("continue", "don't abort on a bad packet")
         ("skip-lo", "skip checking LO lock status")
-        ("int-n", "tune USRP with integer-N tuning")
+        // ("int-n", "tune USRP with integer-N tuning")
         // For cycle start detector program
-        ("capacity-mul", po::value<size_t>(&capacity_mul)->default_value(20), "Buffer capacity in terms of multiples of maximum number of samples received by USRP in one burst.")
+        ("capacity-mul", po::value<size_t>(&capacity_mul)->default_value(10), "Buffer capacity in terms of multiples of maximum number of samples received by USRP in one burst.")
         ("num-samp-consume", po::value<size_t>(&num_samp_consume), "Number of samples to apply correlation operation at once.")
         ("N-zfc", po::value<size_t>(&N_zfc)->default_value(257), "ZFC seq length.")
         ("m-zfc", po::value<size_t>(&m_zfc)->default_value(31), "ZFC seq identifier (prime).")
@@ -412,7 +453,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // print the help message
     if (vm.count("help"))
     {
-        std::cout << boost::format("UHD Rx -- Cycle Start Detector") % desc << std::endl;
+        std::cout << boost::format("UHD Rx -- Cycle Start Detector %s") % desc << std::endl;
         std::cout << std::endl
                   << "This application streams data from a single channel of a USRP "
                      "device, and check the received symbols for existance of ZFC reference signal.\n"
@@ -543,7 +584,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     }
 
     // create a receive streamer
-    uhd::stream_args_t stream_args(wirefmt, "fc32");
+    uhd::stream_args_t stream_args("fc32", wirefmt);
     std::vector<size_t> channel_nums;
     channel_nums.push_back(channel);
     stream_args.channels = channel_nums;
@@ -556,21 +597,22 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     if (not vm.count("num_samp_consume"))
     {
-        num_samp_consume = std::max(max_sample_size, N_zfc * R_zfc * 3);
+        num_samp_consume = std::max(max_sample_size, N_zfc * R_zfc * 2);
     }
 
     // calculate sample duration
     sample_duration = uhd::time_spec_t(static_cast<double>(1 / rate));
 
-    size_t capacity = capacity_mul * max_sample_size;
+    size_t capacity = capacity_mul * spb;
 
     // create class object -> buffer handler
     CycleStartDetector<std::complex<float>> csdbuffer(capacity, max_sample_size, sample_duration, num_samp_consume, N_zfc, m_zfc, R_zfc);
 
+    std::cout << "capacity " << capacity << " max_sample_size " << max_sample_size << " num_samp_consume " << num_samp_consume << std::endl;
+
     // atomic bool to signal thread stop
     std::atomic<bool> stop_thread_signal(false);
 
-    // create buffer to stream data
     typedef std::complex<float> samp_type;
 
     // setup thread_group
@@ -582,6 +624,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         uhd::rx_metadata_t md;
         bool overflow_message = true;
 
+        std::ofstream outfile;
+        outfile.open(file.c_str(), std::ofstream::binary);
+
         // setup streaming
         uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
         stream_cmd.num_samps = size_t(spb);
@@ -592,17 +637,35 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         const auto start_time = std::chrono::steady_clock::now();
         const auto stop_time =
             start_time + std::chrono::milliseconds(int64_t(1000 * total_time));
+
+        std::cout << "Starting rx at " << time_delta_str(start_time_type(std::chrono::milliseconds(int64_t(0)))) << std::endl;
+        
         std::vector<samp_type> buff(spb);
 
+        const float burst_pkt_time = std::max<float>(0.100f, (2 * spb / rate));
+        float recv_timeout         = burst_pkt_time + 0.05;
+        size_t num_rx_samps        = 0;
+        
         // Run this loop until either time expired (if a duration was given), until
         // the requested number of samples were collected (if such a number was
         // given), or until Ctrl-C was pressed.
+        auto last_receive_time = std::chrono::steady_clock::now();
+        
         while (not stop_signal_called and not stop_thread_signal and (total_time == 0.0 or std::chrono::steady_clock::now() <= stop_time))
         {
-            const auto now = std::chrono::steady_clock::now();
 
-            size_t num_rx_samps =
-                rx_stream->recv(&buff.front(), buff.size(), md, 1.0, false);
+            if(DEBUG) 
+                std::cout << "Receiving after " << time_delta_str(last_receive_time) << std::endl;
+            last_receive_time = std::chrono::steady_clock::now();
+
+            try {
+                num_rx_samps = rx_stream->recv(&buff.front(), buff.size(), md, recv_timeout, false);
+                recv_timeout = burst_pkt_time;
+            } catch (uhd::io_error& e) {
+                std::cerr << "[" << NOW() << "] Caught an IO exception. " << std::endl;
+                std::cerr << e.what() << std::endl;
+                return;
+            }
 
             if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
             {
@@ -638,20 +701,33 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             }
 
             // no error
-            std::cout << "Received " << num_rx_samps << std::endl;
+            if(DEBUG) std::cout << "Received " << num_rx_samps << std::endl;
+
+            // // save in file
+            // if (outfile.is_open())
+            // {
+            //     outfile.write((const char *)&buff.front(), num_rx_samps * sizeof(samp_type));
+            // }
 
             // pass on to the cycle start detector
-            csdbuffer.produce(buff, md.time_spec);
+            csdbuffer.produce(buff, md.time_spec, outfile);
         } // while loop end
         const auto actual_stop_time = std::chrono::steady_clock::now();
 
         std::cout << "Rx streaming stopping at " << time_delta_str(actual_stop_time) << std::endl;
+
+        if (outfile.is_open())
+        {
+            outfile.close();
+        }
 
         // issue stop streaming command
         stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
         rx_stream->issue_stream_cmd(stream_cmd); });
 
     uhd::set_thread_name(rx_producer_thread, "csd_rx_producer_thread");
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     // CSD consumer thread
     auto rx_consumer_thread = thread_group.create_thread([=, &csdbuffer, &stop_thread_signal]()
@@ -661,22 +737,28 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_time));
         std::pair<bool, uhd::time_spec_t> result;
 
-        while(not stop_signal_called and (total_time == 0.0 or std::chrono::steady_clock::now() <= stop_time)) {
+        while (not stop_signal_called and not stop_thread_signal and (total_time == 0.0 or std::chrono::steady_clock::now() <= stop_time))
+        {
             result = csdbuffer.consume();
 
             // check result
-            if(result.first)
+            if (result.first == true)
             {
                 std::cout << "Successful detection! Closing thread..." << std::endl;
+                // Display timer captured
+                std::cout << "Synchronized at " << time_delta_str(convert_to_system_clock(result.second)) << std::endl;
                 break;
-            } 
-        } 
-        
-        // Display timer captured
-        std::cout << "Synchronized at " << time_delta_str(convert_to_system_clock(result.second)) << std::endl; });
+            }
+            else
+            {
+                if (DEBUG)
+                    std::cout << "Continue consumer" << std::endl;
+            }
+        } });
 
     uhd::set_thread_name(rx_consumer_thread, "csd_rx_consumer_thread");
 
+    std::this_thread::sleep_for(std::chrono::seconds(10));
     // interrupt and join the threads
     stop_signal_called = true;
     thread_group.join_all();
