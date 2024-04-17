@@ -47,6 +47,40 @@ std::vector<std::complex<float>> generateZadoffChuSequence(size_t N, int m)
     return sequence;
 }
 
+// Define the type for complex numbers
+using Complex = std::complex<float>;
+constexpr float PI = M_PI;
+
+// Function to perform IFFT
+std::vector<Complex> ifft(const std::vector<Complex>& input, size_t& N) {
+    int L = input.size();
+    std::vector<Complex> output(N);
+
+    // Perform IFFT
+    for (int n = 0; n < N; ++n) {
+        for (int k = 0; k < L; ++k) {
+            output[n] += input[k] * std::exp(Complex(0, 2 * PI * n * k / N)) / N;
+        }
+    }
+
+    return output;
+}
+
+// Function to perform FFT
+std::vector<Complex> fft(const std::vector<Complex>& input, size_t& L) {
+    int N = input.size();
+    std::vector<Complex> output(L);
+
+    // Perform FFT
+    for (int k = 0; k < L; ++k) {
+        for (int n = 0; n < N; ++n) {
+            output[k] += input[n] * std::exp(Complex(0, -2 * PI * n * k / N));
+        }
+    }
+
+    return output;
+}
+
 /***********************************************************************
  * Main function
  **********************************************************************/
@@ -55,7 +89,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // variables to be set by po
     std::string args, ant, subdev, ref, pps, otw, channel_list;
     uint64_t total_num_samps;
-    size_t spb, N_zfc, m_zfc, R_zfc;
+    size_t spb, N_zfc, m_zfc, fft_pow, fft_cp;
     double rate, freq, gain, power, bw, lo_offset;
     float ampl;
 
@@ -64,22 +98,23 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // clang-format off
     desc.add_options()
         ("help", "help message")
-        ("args", po::value<std::string>(&args)->default_value("serial=32C79C6"), "single uhd device address args")
+        ("args", po::value<std::string>(&args)->default_value(""), "single uhd device address args")
         ("spb", po::value<size_t>(&spb)->default_value(0), "samples per buffer, 0 for default")
         ("nsamps", po::value<uint64_t>(&total_num_samps)->default_value(0), "total number of samples to transmit")
-        ("N-zfc", po::value<uint64_t>(&N_zfc)->default_value(257), "ZFC sequence length. Prefferably prime.")
-        ("m-zfc", po::value<uint64_t>(&m_zfc)->default_value(31), "Prime number for ZFC seq ID.")
-        ("R-zfc", po::value<uint64_t>(&R_zfc)->default_value(5), "Number of repetitions of ZFC seq.")
-        ("rate", po::value<double>(&rate)->default_value(1e6), "rate of outgoing samples")
-        ("freq", po::value<double>(&freq)->default_value(3e9), "RF center frequency in Hz")
+        ("N_zfc", po::value<uint64_t>(&N_zfc)->default_value(721), "ZFC sequence length. Prefferably prime.")
+        ("m_zfc", po::value<uint64_t>(&m_zfc)->default_value(31), "Prime number for ZFC seq ID.")
+        ("fft_pow", po::value<uint64_t>(&fft_pow)->default_value(10), "FFT length as power of 2.")
+        ("fft_cp", po::value<uint64_t>(&fft_cp)->default_value(15), "FFT length as power of 2.")
+        ("rate", po::value<double>(&rate), "rate of outgoing samples")
+        ("freq", po::value<double>(&freq), "RF center frequency in Hz")
         ("lo-offset", po::value<double>(&lo_offset)->default_value(0.0),
             "Offset for frontend LO in Hz (optional)")
         ("ampl", po::value<float>(&ampl)->default_value(float(0.3)), "amplitude of the waveform [0 to 0.7]")
-        ("gain", po::value<double>(&gain)->default_value(60.0), "gain for the RF chain")
+        ("gain", po::value<double>(&gain), "gain for the RF chain")
         ("power", po::value<double>(&power), "Transmit power (if USRP supports it)")
         ("ant", po::value<std::string>(&ant), "antenna selection")
         ("subdev", po::value<std::string>(&subdev), "subdevice specification")
-        ("bw", po::value<double>(&bw)->default_value(1e6), "analog frontend filter bandwidth in Hz")
+        ("bw", po::value<double>(&bw), "analog frontend filter bandwidth in Hz")
         ("ref", po::value<std::string>(&ref)->default_value("internal"), "clock reference (internal, external, mimo, gpsdo)")
         ("pps", po::value<std::string>(&pps), "PPS source (internal, external, mimo, gpsdo)")
         ("otw", po::value<std::string>(&otw)->default_value("sc16"), "specify the over-the-wire sample mode")
@@ -223,15 +258,26 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (spb == 0)
     {
         // spb = tx_stream->get_max_num_samps() * 10;
-        spb = N_zfc * R_zfc;
+        spb = N_zfc * 10;
     }
     std::vector<std::complex<float>> buff(spb);
-    std::vector<std::complex<float> *> buffs(channel_nums.size(), &buff.front());
+    // std::vector<std::complex<float> *> buffs(channel_nums.size(), &buff.front());
 
     for (size_t n = 0; n < buff.size(); n++)
     {
         buff[n] = zfc_seq[n % N_zfc];
     }
+
+    // FFT setup
+    size_t fft_len = std::pow(2, fft_pow);
+
+    // convert to time domain -- IFFT
+    auto time_domain_buff = ifft(buff, fft_len);
+
+    // add cyclic prefix
+    std::vector<Complex> signal_with_cp(fft_len + fft_cp);
+    std::copy(time_domain_buff.begin(), time_domain_buff.end(), signal_with_cp.begin());
+    std::fill(signal_with_cp.end() - fft_cp, signal_with_cp.end(), Complex(0.0, 0.0));
 
     std::cout << boost::format("Setting device timestamp to 0...") << std::endl;
     if (channel_nums.size() > 1)
@@ -305,10 +351,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     md.has_time_spec = true;
     md.time_spec = usrp->get_time_now() + uhd::time_spec_t(0.1);
 
-    if (total_num_samps == 0) {
-        total_num_samps = buff.size();
-    }
-
     // send data until the signal handler gets called
     // or if we accumulate the number of samples specified (unless it's 0)
     uint64_t num_acc_samps = 0;
@@ -319,8 +361,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         {
             break;
         }
-        // Break when we've transimitted nsamps
-        if (total_num_samps <= num_acc_samps)
+        // Break when we've received nsamps
+        if (num_acc_samps >= buff.size())
         {
             break;
         }
