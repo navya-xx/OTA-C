@@ -51,6 +51,11 @@ void recv_to_file(uhd::usrp::multi_usrp::sptr usrp,
     stream_args.channels = channel_nums;
     uhd::rx_streamer::sptr rx_stream = usrp->get_rx_stream(stream_args);
 
+    if (samps_per_buff == 0)
+    {
+        samps_per_buff = rx_stream->get_max_num_samps();
+    }
+
     uhd::rx_metadata_t md;
     std::vector<samp_type> buff(samps_per_buff);
     std::ofstream outfile;
@@ -245,7 +250,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         ("type", po::value<std::string>(&type)->default_value("short"), "sample type: double, float, or short")
         ("nsamps", po::value<size_t>(&total_num_samps)->default_value(0), "total number of samples to receive")
         ("duration", po::value<double>(&total_time)->default_value(0), "total number of seconds to receive")
-        ("spb", po::value<size_t>(&spb)->default_value(10000), "samples per buffer")
+        ("spb", po::value<size_t>(&spb)->default_value(0), "samples per buffer")
         ("rate", po::value<double>(&rate)->default_value(1e6), "rate of incoming samples")
         ("freq", po::value<double>(&freq)->default_value(0.0), "RF center frequency in Hz")
         ("lo-offset", po::value<double>(&lo_offset)->default_value(0.0),
