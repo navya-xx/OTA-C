@@ -60,10 +60,6 @@ message(STATUS "* linker flags to make sure your specific requirements are inclu
 message(STATUS "******************************************************************************")
 
 
-### Make the executable #######################################################
-# add_executable(rx_to_file rx_to_file.cpp)
-add_executable(CycleStartDetectorTest CycleStartDetectorTest.cpp)
-
 # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
 if(NOT UHD_USE_STATIC_LIBS)
