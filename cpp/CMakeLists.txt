@@ -48,8 +48,8 @@ include_directories(
 link_directories(${Boost_LIBRARY_DIRS})
 
 ### Make the executable #######################################################
-## add_executable(rx_to_file rx_to_file.cpp)
-add_executable(transmit_zfc transmit_zfc.cpp)
+add_executable(CycleStartDetectorTest CycleStartDetectorTest.cpp)
+# add_executable(transmit_zfc transmit_zfc.cpp)
 
 set(CMAKE_BUILD_TYPE "Release")
 message(STATUS "******************************************************************************")
@@ -59,21 +59,16 @@ message(STATUS "* exactly match what you require. Make sure to double-check comp
 message(STATUS "* linker flags to make sure your specific requirements are included.          ")
 message(STATUS "******************************************************************************")
 
-
-### Make the executable #######################################################
-# add_executable(rx_to_file rx_to_file.cpp)
-add_executable(CycleStartDetectorTest CycleStartDetectorTest.cpp)
-
 # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
 if(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against shared UHD library.")
-    target_link_libraries(transmit_zfc ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(CycleStartDetectorTest ${UHD_LIBRARIES} ${Boost_LIBRARIES})
 # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
 else(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against static UHD library.")
-    target_link_libraries(transmit_zfc
+    target_link_libraries(CycleStartDetectorTest
         # We could use ${UHD_LIBRARIES}, but linking requires some extra flags,
         # so we use this convenience variable provided to us
         ${UHD_STATIC_LIB_LINK_FLAG}
