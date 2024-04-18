@@ -17,6 +17,9 @@
 #include <csignal>
 #include <fstream>
 #include <thread>
+#include <boost/date_time.hpp>
+#include <iomanip>
+#include <sstream>
 
 namespace po = boost::program_options;
 using namespace std::chrono_literals;
@@ -56,6 +59,37 @@ inline std::string time_delta_str(const start_time_type &ref_time)
         delta - hours - minutes - seconds);
 
     return str(boost::format("%02d:%02d:%02d.%06d") % hours.count() % minutes.count() % seconds.count() % nanoseconds.count());
+}
+
+std::chrono::steady_clock::duration convert_timestr_to_duration(const std::string &mytime)
+{
+    // setup time struct
+    std::tm desiredTime = {};
+    std::istringstream ss(mytime);
+    ss >> std::get_time(&desiredTime, "%H:%M");
+    if (ss.fail())
+    {
+        throw std::runtime_error("Invalid time format. Use HH:MM format.");
+    }
+
+    // Convert the current time to std::time_t
+    std::time_t currentTime_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    // Convert the desired time tm to std::time_t
+    std::time_t desiredTime_t = std::mktime(&desiredTime);
+
+    // Calculate the duration until the desired time
+    auto duration = std::chrono::steady_clock::duration(desiredTime_t - currentTime_t);
+
+    if (duration.count() <= 0)
+    {
+        std::cerr << "The desired time has already passed." << std::endl;
+        return static_cast<std::chrono::microseconds>(0);
+    }
+    else
+    {
+        return duration;
+    }
 }
 
 #define NOW() (time_delta_str(start_time))
@@ -383,7 +417,7 @@ bool check_locked_sensor(std::vector<std::string> sensor_names,
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     // variables to be set by po
-    std::string args, type, ant, subdev, ref, wirefmt, file;
+    std::string args, type, ant, subdev, ref, wirefmt, file, start_at;
     size_t channel, spb, capacity_mul, max_sample_size, num_samp_corr, N_zfc, m_zfc, R_zfc;
     double rate, freq, gain, bw, total_time, setup_time, lo_offset;
     uhd::time_spec_t sample_duration;
@@ -423,6 +457,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         ("N-zfc", po::value<size_t>(&N_zfc)->default_value(257), "ZFC seq length.")
         ("m-zfc", po::value<size_t>(&m_zfc)->default_value(31), "ZFC seq identifier (prime).")
         ("R-zfc", po::value<size_t>(&R_zfc)->default_value(5), "ZFC seq repetitions.")
+        ("start-at", po::value<std::string>(&start_at), "Set start time from CPU clock in HH:MM format.")
     ;
     // clang-format on
     po::variables_map vm;
@@ -556,6 +591,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
     }
 
+    // make program wait for to match starting time with start_time
+
+    if (vm.count(start_at))
+    {
+        auto wait_duration = convert_timestr_to_duration(start_at);
+
+        std::this_thread::sleep_for(wait_duration);
+    }
+
     if (total_time == 0.0)
     {
         std::signal(SIGINT, &sig_int_handler);
@@ -639,7 +683,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         bool overflow_message = true;
 
         std::ofstream outfile;
-        outfile.open(file.c_str(), std::ofstream::binary);
+        // outfile.open(file.c_str(), std::ofstream::binary);
 
         // setup streaming
         uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);

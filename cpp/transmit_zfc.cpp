@@ -219,6 +219,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // pre-fill the buffer with the waveform
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
+    std::cout << "ZFC seq len " << N_zfc << ", identifier " << m_zfc << std::endl;
+
     // allocate a buffer which we re-use for each channel
     if (spb == 0)
     {
@@ -228,7 +230,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::vector<std::complex<float>> buff(spb);
     std::vector<std::complex<float> *> buffs(channel_nums.size(), &buff.front());
 
-    for (size_t n = 0; n < buff.size(); n++)
+    for (size_t n = 0; n < spb; n++)
     {
         buff[n] = zfc_seq[n % N_zfc];
     }
@@ -305,7 +307,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     md.has_time_spec = true;
     md.time_spec = usrp->get_time_now() + uhd::time_spec_t(0.1);
 
-    if (total_num_samps == 0) {
+    if (total_num_samps == 0)
+    {
         total_num_samps = buff.size();
     }
 
