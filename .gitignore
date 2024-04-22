@@ -1,3 +1,4 @@
 cpp/build
 cpp/storage
+cpp/backup_storage
 cpp/CMakeLists.txt
