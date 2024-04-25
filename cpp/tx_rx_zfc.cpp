@@ -30,7 +30,7 @@ using start_time_type = std::chrono::time_point<std::chrono::steady_clock>;
 static bool DEBUG = false;
 static size_t PEAK_DETECTION_PARAM = 10;
 static double TX_WAIT_TIME_MICROSECS = 1e6;
-static size_t RX_N_ZFC = 721;
+static size_t RX_N_ZFC = 257;
 
 static bool stop_signal_called = false;
 void sig_int_handler(int)
@@ -199,7 +199,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     // variables to be set by po
     std::string args, type, ant, subdev, ref, wirefmt, file, start_at;
-    size_t channel, spb, N_zfc, m_zfc, R_zfc;
+    size_t channel, spb, N_zfc, m_zfc, R_zfc, tx_upfactor;
     double rate, freq, gain, bw, total_time, setup_time, lo_offset, pnr_threshold;
     uhd::time_spec_t sample_duration;
 
@@ -236,6 +236,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         ("N-zfc", po::value<size_t>(&N_zfc)->default_value(257), "TX ZFC seq length.")
         ("m-zfc", po::value<size_t>(&m_zfc)->default_value(31), "TX ZFC seq identifier (prime).")
         ("R-zfc", po::value<size_t>(&R_zfc)->default_value(5), "TX ZFC seq repetitions.")
+        ("Tx-upsampling-factor", po::value<size_t>(&tx_upfactor)->default_value(10), "TX ZFC seq length.")
         ("start-at", po::value<std::string>(&start_at)->default_value(""), "Set start time from CPU clock in HH:MM format.")
     ;
     // clang-format on
@@ -265,7 +266,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         std::cout << "Duration " << wait_duration.count() << " Seconds" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(wait_duration.count()));
 
-        std::cout << "Wait is over! Starting Rx streaming now..." << std::endl;
+        std::cout << "Wait is over! Starting REF signal streaming now..." << std::endl;
     }
     else
     {
@@ -333,6 +334,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             tune_request.args = uhd::device_addr_t("mode_n=integer");
         usrp->set_rx_freq(tune_request, channel);
         std::cout << boost::format("Actual RX Freq: %f MHz...") % (usrp->get_rx_freq(channel) / 1e6)
+                  << std::endl
+                  << std::endl;
+        usrp->set_tx_freq(tune_request, channel);
+        std::cout << boost::format("Actual TX Freq: %f MHz...") % (usrp->get_rx_freq(channel) / 1e6)
                   << std::endl
                   << std::endl;
     }
@@ -447,14 +452,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (spb == 0)
     {
         // spb = tx_stream->get_max_num_samps() * 10;
-        spb = N_zfc * R_zfc;
+        spb = N_zfc * R_zfc * tx_upfactor;
     }
     std::vector<std::complex<float>> buff(spb);
     std::vector<std::complex<float> *> buffs(channel_nums.size(), &buff.front());
 
     for (size_t n = 0; n < spb; n++)
     {
-        buff[n] = zfc_seq[n % N_zfc];
+        if (n % tx_upfactor == 0)
+            buff[n] = zfc_seq[(n / tx_upfactor) % N_zfc];
     }
 
     std::signal(SIGINT, &sig_int_handler);
