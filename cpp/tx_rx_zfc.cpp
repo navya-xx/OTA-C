@@ -28,9 +28,7 @@ using namespace std::chrono_literals;
 using start_time_type = std::chrono::time_point<std::chrono::steady_clock>;
 
 static bool DEBUG = false;
-static size_t PEAK_DETECTION_PARAM = 10;
-static double TX_WAIT_TIME_MICROSECS = 1e6;
-static size_t RX_N_ZFC = 257;
+static double TX_WAIT_TIME_MICROSECS = 50e3;
 
 static bool stop_signal_called = false;
 void sig_int_handler(int)
@@ -199,7 +197,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     // variables to be set by po
     std::string args, type, ant, subdev, ref, wirefmt, file, start_at;
-    size_t channel, spb, N_zfc, m_zfc, R_zfc, tx_upfactor;
+    size_t channel, spb, N_zfc, m_zfc, R_zfc, ref_gap, Rx_N_zfc;
     double rate, freq, gain, bw, total_time, setup_time, lo_offset, pnr_threshold;
     uhd::time_spec_t sample_duration;
 
@@ -233,10 +231,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         ("skip-lo", "skip checking LO lock status")
         // ("int-n", "tune USRP with integer-N tuning")
         // For cycle start detector program
-        ("N-zfc", po::value<size_t>(&N_zfc)->default_value(257), "TX ZFC seq length.")
-        ("m-zfc", po::value<size_t>(&m_zfc)->default_value(31), "TX ZFC seq identifier (prime).")
-        ("R-zfc", po::value<size_t>(&R_zfc)->default_value(5), "TX ZFC seq repetitions.")
-        ("Tx-upsampling-factor", po::value<size_t>(&tx_upfactor)->default_value(10), "TX ZFC seq length.")
+        ("Tx-N-zfc", po::value<size_t>(&N_zfc)->default_value(79), "TX ZFC seq length.")
+        ("Tx-m-zfc", po::value<size_t>(&m_zfc)->default_value(31), "TX ZFC seq identifier (prime).")
+        ("Tx-R-zfc", po::value<size_t>(&R_zfc)->default_value(1), "TX ZFC seq repetitions.")
+        ("Rx-N-zfc", po::value<size_t>(&Rx_N_zfc)->default_value(79), "Length of ZFC sequence to back from synced receivers.")
         ("start-at", po::value<std::string>(&start_at)->default_value(""), "Set start time from CPU clock in HH:MM format.")
     ;
     // clang-format on
@@ -329,6 +327,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                   << std::endl;
         std::cout << boost::format("Setting RX LO Offset: %f MHz...") % (lo_offset / 1e6)
                   << std::endl;
+        std::cout << boost::format("Setting TX LO Offset: %f MHz...") % (lo_offset / 1e6)
+                  << std::endl;
         uhd::tune_request_t tune_request(freq, lo_offset);
         if (vm.count("int-n"))
             tune_request.args = uhd::device_addr_t("mode_n=integer");
@@ -390,9 +390,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // check Ref and LO Lock detect
     if (not vm.count("skip-lo"))
     {
+        std::cout << "Getting here--> for LO lock" << std::endl;
         check_locked_sensor(
             usrp->get_rx_sensor_names(channel),
-            "rx_lo_locked",
+            "lo_locked",
             [usrp, channel](const std::string &sensor_name)
             {
                 return usrp->get_rx_sensor(sensor_name, channel);
@@ -400,7 +401,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             setup_time);
         check_locked_sensor(
             usrp->get_tx_sensor_names(channel),
-            "tx_lo_locked",
+            "lo_locked",
             [usrp, channel](const std::string &sensor_name)
             {
                 return usrp->get_tx_sensor(sensor_name, channel);
@@ -452,15 +453,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (spb == 0)
     {
         // spb = tx_stream->get_max_num_samps() * 10;
-        spb = N_zfc * R_zfc * tx_upfactor;
+        spb = N_zfc * R_zfc;
     }
     std::vector<std::complex<float>> buff(spb);
     std::vector<std::complex<float> *> buffs(channel_nums.size(), &buff.front());
 
     for (size_t n = 0; n < spb; n++)
     {
-        if (n % tx_upfactor == 0)
-            buff[n] = zfc_seq[(n / tx_upfactor) % N_zfc];
+        buff[n] = zfc_seq[n % N_zfc];
     }
 
     std::signal(SIGINT, &sig_int_handler);
@@ -478,7 +478,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // compute time_stamp of beginning of last ref seq
     sample_duration = uhd::time_spec_t(static_cast<double>(1 / rate));
-    double add_duration = sample_duration.get_real_secs() * (total_num_samps - N_zfc);
+    // align to the first sample of the last sequence sent
+    double add_duration = sample_duration.get_real_secs() * (total_num_samps - N_zfc + 1);
     uhd::time_spec_t ref_time = txmd.time_spec + uhd::time_spec_t(add_duration);
 
     // send data until the signal handler gets called
@@ -522,41 +523,94 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // ---------------------------------------------------------------------------------------
     // setup Rx streaming
-    size_t Rx_len = RX_N_ZFC * 5;
+
+    typedef std::complex<float> samp_type;
 
     // create a receive streamer
     uhd::stream_args_t rx_stream_args("fc32", wirefmt);
     rx_stream_args.channels = channel_nums;
     uhd::rx_streamer::sptr rx_stream = usrp->get_rx_stream(rx_stream_args);
 
+    const auto stop_time =
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(int64_t(1000 * total_time));
+
+    // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     uhd::rx_metadata_t rxmd;
-    uhd::stream_cmd_t rx_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
-    rx_stream_cmd.num_samps = size_t(Rx_len);
+    uhd::stream_cmd_t rx_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
     rx_stream_cmd.stream_now = false;
-    double add_rx_duration = TX_WAIT_TIME_MICROSECS / 1e6 - (sample_duration.get_real_secs() * RX_N_ZFC);
+    // start time for Rx -- start a bit early
+    double add_rx_duration = TX_WAIT_TIME_MICROSECS / 1e6 - (sample_duration.get_real_secs() * Rx_N_zfc * 10);
     rx_stream_cmd.time_spec = uhd::time_spec_t(ref_time) + uhd::time_spec_t(add_rx_duration);
+    std::cout << "Current USRP timer : " << size_t(usrp->get_time_now().get_real_secs() * 1e6) << " microsecs";
+    std::cout << " Requested Rx timer : " << size_t(rx_stream_cmd.time_spec.get_real_secs() * 1e6) << " microsecs" << std::endl;
+    size_t num_total_samps = 0;
+    size_t total_samples_capture = Rx_N_zfc * 20;
+    size_t max_rx_samples = std::min(rx_stream->get_max_num_samps(), total_samples_capture);
+    rx_stream_cmd.num_samps = total_samples_capture;
     rx_stream->issue_stream_cmd(rx_stream_cmd);
 
-    std::vector<std::complex<float>> rx_buff(Rx_len);
-
-    try
-    {
-        rx_stream->recv(&rx_buff.front(), Rx_len, rxmd, 1.0, false);
-    }
-    catch (uhd::io_error &e)
-    {
-        std::cerr << "[" << NOW() << "] Caught an IO exception. " << std::endl;
-        std::cerr << e.what() << std::endl;
-    }
-
-    // save Rx data
-    std::cout << "Saving to file '" << file << "'." << std::endl;
     std::ofstream outfile;
     outfile.open(file.c_str(), std::ofstream::binary);
+
+    bool overflow_message = true;
+    bool continue_on_bad_packet = true;
+
+    std::vector<std::complex<float>> rx_buff(max_rx_samples);
+    double timeout = (rx_stream_cmd.time_spec - usrp->get_time_now()).get_real_secs() + rx_buff.size() * sample_duration.get_real_secs() + 0.1;
+
+    while (not stop_signal_called and (num_total_samps <= total_samples_capture) and (total_time == 0.0 or std::chrono::steady_clock::now() <= stop_time))
+    {
+
+        size_t num_rx_samps = rx_stream->recv(&rx_buff.front(), rx_buff.size(), rxmd, timeout, false);
+
+        if (rxmd.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        {
+            std::cout << boost::format("Timeout while streaming") << std::endl;
+            break;
+        }
+        if (rxmd.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        {
+            if (overflow_message)
+            {
+                overflow_message = false;
+                std::cerr
+                    << boost::format(
+                           "Got an overflow indication. Please consider the following:\n"
+                           "  Your write medium must sustain a rate of %fMB/s.\n"
+                           "  Dropped samples will not be written to the file.\n"
+                           "  Please modify this example for your purposes.\n"
+                           "  This message will not appear again.\n") %
+                           (usrp->get_rx_rate(channel) * sizeof(samp_type) / 1e6);
+            }
+            continue;
+        }
+        if (rxmd.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        {
+            std::string error = str(boost::format("Receiver error: %s") % rxmd.strerror());
+            if (continue_on_bad_packet)
+            {
+                std::cerr << error << std::endl;
+                continue;
+            }
+            else
+                throw std::runtime_error(error);
+        }
+
+        num_total_samps += num_rx_samps;
+
+        if (outfile.is_open())
+        {
+            outfile.write((const char *)&rx_buff.front(), num_rx_samps * sizeof(samp_type));
+        }
+    }
+
     if (outfile.is_open())
     {
-        outfile.write((const char *)&rx_buff.front(), Rx_len * sizeof(std::complex<float>));
+        outfile.close();
     }
+
+    std::cout << "Total " << num_total_samps << " samples save in file " << file << std::endl;
 
     std::cout << "[" << NOW() << "] Cycle start detector test complete." << std::endl
               << std::endl;

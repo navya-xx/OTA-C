@@ -1,0 +1,287 @@
+#include "usrp_routines.hpp"
+
+bool check_locked_sensor(std::vector<std::string> sensor_names,
+                         const char *sensor_name,
+                         get_sensor_fn_t get_sensor_fn,
+                         double setup_time)
+{
+    if (std::find(sensor_names.begin(), sensor_names.end(), sensor_name) == sensor_names.end())
+        return false;
+
+    auto setup_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(int64_t(setup_time * 1000));
+    bool lock_detected = false;
+
+    std::cout << boost::format("Waiting for \"%s\": ") % sensor_name;
+    std::cout.flush();
+
+    while (true)
+    {
+        if (lock_detected and (std::chrono::steady_clock::now() > setup_timeout))
+        {
+            std::cout << " locked." << std::endl;
+            break;
+        }
+        if (get_sensor_fn(sensor_name).to_bool())
+        {
+            std::cout << "+";
+            std::cout.flush();
+            lock_detected = true;
+        }
+        else
+        {
+            if (std::chrono::steady_clock::now() > setup_timeout)
+            {
+                std::cout << std::endl;
+                throw std::runtime_error(
+                    str(boost::format(
+                            "timed out waiting for consecutive locks on sensor \"%s\"") %
+                        sensor_name));
+            }
+            std::cout << "_";
+            std::cout.flush();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    std::cout << std::endl;
+    return true;
+}
+
+// routines to setup USRP
+// create a usrp device
+std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(uhd::usrp::multi_usrp::sptr &usrp, ConfigParser &config_parser)
+{
+    // Lock mboard clocks
+    std::string ref = config_parser.getValue_str("ref");
+    if (ref != "")
+    {
+        std::cout << "Setting clock source as '" << ref << "'." << std::endl;
+        usrp->set_clock_source(ref);
+    }
+
+    std::cout << boost::format("Using Device: %s") % usrp->get_pp_string() << std::endl;
+
+    // set the sample rate
+    float rate = config_parser.getValue_float("rate");
+    int channel = config_parser.getValue_int("channel");
+    if (rate <= 0.0)
+    {
+        throw std::runtime_error("Please specify a valid sample rate");
+    }
+
+    std::cout << boost::format("Setting Rate: %f Msps...") % (rate / 1e6) << std::endl;
+    usrp->set_rx_rate(rate, channel);
+    usrp->set_tx_rate(rate);
+
+    std::cout << boost::format("Actual Rx Rate: %f Msps...") % (usrp->get_rx_rate(channel) / 1e6) << std::endl;
+    std::cout << boost::format("Actual Tx Rate: %f Msps...") % (usrp->get_tx_rate(channel) / 1e6) << std::endl;
+
+    // set the center frequency
+    float freq = config_parser.getValue_float("freq");
+    float lo_offset = config_parser.getValue_float("lo_offset");
+
+    std::cout << boost::format("Setting Freq: %f MHz...") % (freq / 1e6) << std::endl;
+    std::cout << boost::format("Setting LO Offset: %f MHz...") % (lo_offset / 1e6) << std::endl;
+    uhd::tune_request_t tune_request(freq, lo_offset);
+    usrp->set_rx_freq(tune_request, channel);
+    usrp->set_tx_freq(tune_request, channel);
+    std::cout << boost::format("Actual Rx Freq: %f MHz...") % (usrp->get_rx_freq(channel) / 1e6) << std::endl;
+    std::cout << boost::format("Actual Tx Freq: %f MHz...") % (usrp->get_tx_freq(channel) / 1e6) << std::endl;
+
+    // set the rf gain
+    float gain = config_parser.getValue_float("gain");
+    if (gain >= 0.0)
+    {
+        std::cout << boost::format("Setting Gain: %f dB...") % gain << std::endl;
+        usrp->set_rx_gain(gain, channel);
+        usrp->set_tx_gain(gain, channel);
+
+        std::cout << boost::format("Actual Rx Gain: %f dB...") % usrp->get_rx_gain(channel) << std::endl;
+        std::cout << boost::format("Actual Tx Gain: %f dB...") % usrp->get_tx_gain(channel) << std::endl;
+    }
+
+    // set the IF filter bandwidth
+    float bw = config_parser.getValue_float("bw");
+    if (bw >= 0.0)
+    {
+        std::cout << boost::format("Setting Bandwidth: %f MHz...") % (bw / 1e6) << std::endl;
+        usrp->set_rx_bandwidth(bw, channel);
+        usrp->set_tx_bandwidth(bw, channel);
+
+        std::cout << boost::format("Actual Rx Bandwidth: %f MHz...") % (usrp->get_rx_bandwidth(channel) / 1e6) << std::endl;
+        std::cout << boost::format("Actual Tx Bandwidth: %f MHz...") % (usrp->get_tx_bandwidth(channel) / 1e6) << std::endl;
+    }
+
+    // sleep a bit to allow setup
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    // check Ref and LO Lock detect
+    check_locked_sensor(
+        usrp->get_rx_sensor_names(channel),
+        "lo_locked",
+        [usrp, channel](const std::string &sensor_name)
+        {
+            return usrp->get_rx_sensor(sensor_name, channel);
+        },
+        1.0);
+
+    check_locked_sensor(
+        usrp->get_tx_sensor_names(channel),
+        "lo_locked",
+        [usrp, channel](const std::string &sensor_name)
+        {
+            return usrp->get_tx_sensor(sensor_name, channel);
+        },
+        1.0);
+
+    // create streamers
+
+    uhd::stream_args_t stream_args("fc32", "sc16");
+    std::vector<size_t> channel_nums;
+    channel_nums.push_back(channel);
+    stream_args.channels = channel_nums;
+    uhd::rx_streamer::sptr rx_streamer = usrp->get_rx_stream(stream_args);
+    uhd::tx_streamer::sptr tx_streamer = usrp->get_tx_stream(stream_args);
+
+    return {rx_streamer, tx_streamer};
+}
+
+float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_streamer)
+{
+    uhd::rx_metadata_t noise_md;
+    uhd::stream_cmd_t noise_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
+    size_t spb = rx_streamer->get_max_num_samps();
+    noise_stream_cmd.num_samps = size_t(spb);
+    noise_stream_cmd.stream_now = true;
+    noise_stream_cmd.time_spec = uhd::time_spec_t();
+    rx_streamer->issue_stream_cmd(noise_stream_cmd);
+
+    size_t noise_seq_len = spb * 5;
+
+    std::vector<std::complex<float>> noise_buff(noise_seq_len);
+
+    try
+    {
+        rx_streamer->recv(&noise_buff.front(), noise_seq_len, noise_md, 1.0, false);
+    }
+    catch (uhd::io_error &e)
+    {
+        std::cerr << "Caught an IO exception. " << std::endl;
+        std::cerr << e.what() << std::endl;
+    }
+
+    float noise_power = 0.0;
+    for (int i = 0; i < noise_buff.size(); i++)
+    {
+        noise_power += std::pow(std::abs(noise_buff[i]), 2);
+    }
+    noise_power /= noise_buff.size();
+
+    // std::cout << "Noise power " << noise_power << std::endl;
+    return std::sqrt(noise_power);
+}
+
+void cyclestartdetector_receiver_thread(CycleStartDetector<std::complex<float>> &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> stop_time, const float rate)
+{
+    uhd::rx_metadata_t md;
+    bool overflow_message = true;
+    size_t spb = rx_stream->get_max_num_samps();
+
+    // setup streaming
+    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+    stream_cmd.num_samps = size_t(spb);
+    stream_cmd.stream_now = true;
+    stream_cmd.time_spec = uhd::time_spec_t();
+    rx_stream->issue_stream_cmd(stream_cmd);
+
+    std::vector<std::complex<float>> buff(spb);
+
+    const float burst_pkt_time = std::max<float>(0.100f, (2 * spb / rate));
+    float recv_timeout = burst_pkt_time + 0.05;
+    size_t num_rx_samps = 0;
+
+    // Run this loop until either time expired (if a duration was given), until
+    // the requested number of samples were collected (if such a number was
+    // given), or until Ctrl-C was pressed.
+
+    // if (DEBUG)
+    //     std::cout << "Starting receiver thread..." << std::endl;
+
+    while (not stop_signal_called and not stop_thread_signal and not(std::chrono::steady_clock::now() > stop_time))
+    {
+        try
+        {
+            num_rx_samps = rx_stream->recv(&buff.front(), buff.size(), md, recv_timeout, false);
+            recv_timeout = burst_pkt_time;
+        }
+        catch (uhd::io_error &e)
+        {
+            std::cerr << "Caught an IO exception in CSD Receiver Thread. " << std::endl;
+            std::cerr << e.what() << std::endl;
+            return;
+        }
+
+        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        {
+            std::cout << boost::format("Timeout while streaming") << std::endl;
+            break;
+        }
+        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        {
+            if (overflow_message)
+            {
+                overflow_message = false;
+                std::cerr << "Got an overflow indication." << std::endl
+                          << std::endl;
+                ;
+            }
+            continue;
+        }
+        if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        {
+            std::string error = str(boost::format("Receiver error: %s") % md.strerror());
+            std::cerr << error << std::endl;
+        }
+
+        // if (DEBUG)
+        //     std::cout << "Received " << num_rx_samps << " samples. Passing to producer..." << std::endl;
+
+        // pass on to the cycle start detector
+        csdbuffer.produce(buff, num_rx_samps, md.time_spec);
+
+    } // while loop end
+    const auto actual_stop_time = std::chrono::steady_clock::now();
+
+    // issue stop streaming command
+    stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+    rx_stream->issue_stream_cmd(stream_cmd);
+
+    // if (DEBUG)
+    //     std::cout << "Ending receiver thread..." << std::endl;
+}
+
+void cyclestartdetector_transmitter_thread(CycleStartDetector<std::complex<float>> &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate, uhd::time_spec_t &csd_detect_time, float &csd_ch_pow)
+{
+
+    bool result;
+
+    // if (DEBUG)
+    //     std::cout << "Starting consumer thread..." << std::endl;
+
+    while (not stop_signal_called and not stop_thread_signal and not(std::chrono::steady_clock::now() > stop_time))
+    {
+        result = csdbuffer.consume();
+
+        // check result
+        if (result)
+        {
+            if (DEBUG)
+                std::cout << "Successful detection! Closing thread..." << std::endl;
+
+            stop_thread_signal = true;
+            break;
+        }
+    }
+
+    // if (DEBUG)
+    //     std::cout << "Ending receiver thread..." << std::endl;
+}
