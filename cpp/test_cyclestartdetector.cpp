@@ -159,22 +159,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return EXIT_FAILURE;
 
         // Extract peak data
-        auto peak_vals = peak_det_obj.get_peak_vals();
-        auto peak_times = peak_det_obj.get_peak_times();
-        peak_det_obj.print_peaks_data();
-
-        // free memory
-
-        for (int i = 0; i < num_peaks_detected; ++i)
-        {
-            ch_pow += peak_vals[i];
-            if (DEBUG)
-                std::cout << "Peak " << i + 1 << " channel power = " << peak_vals[i] << std::endl;
-        }
-
-        ch_pow = ch_pow / num_peaks_detected;
-
-        detect_time = peak_times[num_peaks_detected - 1];
+        ch_pow = peak_det_obj.get_avg_ch_pow();
+        detect_time = peak_det_obj.get_sync_time();
     }
 
     // ------------------------------------------------------------------------------------------------------

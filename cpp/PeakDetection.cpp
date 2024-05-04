@@ -338,6 +338,11 @@ float PeakDetectionClass::get_avg_ch_pow()
     return ch_pow;
 }
 
+uhd::time_spec_t PeakDetectionClass::get_sync_time()
+{
+    return peak_times[peaks_count - 1];
+}
+
 // PeakDetectionClass::~PeakDetectionClass()
 // {
 //     delete[] peak_indices;

@@ -73,6 +73,7 @@ public:
     void updateNoiseLevel(const float &corr_val);
 
     float get_avg_ch_pow();
+    uhd::time_spec_t get_sync_time();
 
     // ~PeakDetectionClass();
 };
