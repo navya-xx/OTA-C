@@ -70,7 +70,7 @@ do
 
     echo -e "\n DEVICE CENT (NUC01)\n"
     cmd_quit="screen -S cent_nuc01_${CENT_DEVICE_NUC01}_run_${i} -X quit"
-    cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${CENT_DEVICE_NUC01}_${i}.log -S cent_nuc01_${CENT_DEVICE_NUC01}_run_${i} -d -m ${LEAF_SSH_PREFIX_NUC01} ${LEAF_HOME_NUC01}/OTA-C/cpp/build/tx_rx_zfc --args serial=${CENT_DEVICE_NUC01} --file ../storage/mc_run_data.dat --rate 1e6 --bw 2e6 --Tx-N-zfc 79 --Tx-R-zfc 10 --gain 60 --Rx-N-zfc 257"
+    cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${CENT_DEVICE_NUC01}_${i}.log -S cent_nuc01_${CENT_DEVICE_NUC01}_run_${i} -d -m ${LEAF_SSH_PREFIX_NUC01} ${LEAF_HOME_NUC01}/OTA-C/cpp/build/tx_rx_zfc --args serial=${CENT_DEVICE_NUC01} --file /home/nuc01/OTA-C/cpp/storage/mc_run_data.dat --rate 1e6 --bw 2e6 --Tx-N-zfc 79 --Tx-R-zfc 10 --gain 60 --Rx-N-zfc 257"
     echo -e "\t Central Device ${LEAF_DEVICES_RPI4COMPUTE_ID[$dev_counter]}"
     eval "${cmd_quit}"
     eval "${cmd_main}"

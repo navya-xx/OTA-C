@@ -165,28 +165,31 @@ void PeakDetectionClass::save_into_buffer(const std::complex<float> &sample)
 
 void PeakDetectionClass::save_complex_data_to_file(const std::string &file)
 {
-    if (DEBUG)
-        std::cout << "Saving data to file " << file << std::endl;
-
-    std::ofstream outfile;
-    outfile.open(file);
-
-    if (outfile.is_open()) // we save as csv for analysis in python
+    if (save_buffer_flag)
     {
-        for (auto it = save_buffer.begin(); it != save_buffer.end(); ++it)
+        if (DEBUG)
+            std::cout << "Saving data to file " << file << std::endl;
+
+        std::ofstream outfile;
+        outfile.open(file);
+
+        if (outfile.is_open()) // we save as csv for analysis in python
         {
-            outfile << it->real() << "|" << it->imag();
-            if (std::next(it) != save_buffer.end())
+            for (auto it = save_buffer.begin(); it != save_buffer.end(); ++it)
             {
-                outfile << ",";
+                outfile << it->real() << "|" << it->imag();
+                if (std::next(it) != save_buffer.end())
+                {
+                    outfile << ",";
+                }
             }
+            outfile << std::endl;
+            outfile.close();
         }
-        outfile << std::endl;
-        outfile.close();
-    }
-    else
-    {
-        std::cerr << "ERROR: File not open!" << std::endl;
+        else
+        {
+            std::cerr << "ERROR: File not open!" << std::endl;
+        }
     }
 }
 
