@@ -187,7 +187,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     size_t Tx_N_zfc = parser.getValue_int("Tx-len");
     float min_ch_pow = parser.getValue_float("min-ch-pow");
-    size_t tx_wait_microsec = parser.getValue_int("tx-wait-microsec");
+    float tx_wait_microsec = parser.getValue_float("tx-wait-microsec");
     size_t Tx_m_zfc;
     if (argc > 1)
         Tx_m_zfc = static_cast<size_t>(std::stoi(argv[2]));
