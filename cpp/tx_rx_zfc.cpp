@@ -28,7 +28,7 @@ using namespace std::chrono_literals;
 using start_time_type = std::chrono::time_point<std::chrono::steady_clock>;
 
 static bool DEBUG = false;
-static double TX_WAIT_TIME_MICROSECS = 200e3;
+static double TX_WAIT_TIME_MICROSECS = 100e3;
 
 static bool stop_signal_called = false;
 void sig_int_handler(int)
