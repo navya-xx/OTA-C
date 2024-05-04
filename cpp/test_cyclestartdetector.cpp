@@ -3,6 +3,7 @@
 #include "usrp_routines.hpp"
 #include "PeakDetection.hpp"
 #include <stdexcept>
+#include <unistd.h>
 
 /***************************************************************
  * Copyright (c) 2023 Navneet Agrawal
@@ -31,9 +32,21 @@ extern const float MAX_PEAK_MULT_FACTOR = 0.6;
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
 
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+        std::cout << "Current working directory: " << cwd << std::endl;
+    }
+    else
+    {
+        perror("getcwd() error");
+        return 1;
+    }
+    std::string currentDir(cwd);
+
     // rx and tx streamers -- initilize
     ConfigParser parser;
-    parser.parse("../leaf_config.conf");
+    parser.parse(currentDir + "/../leaf_config.conf");
 
     parser.print_values();
 
