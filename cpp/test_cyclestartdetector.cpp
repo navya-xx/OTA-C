@@ -3,7 +3,6 @@
 #include "usrp_routines.hpp"
 #include "PeakDetection.hpp"
 #include <stdexcept>
-#include <unistd.h>
 
 /***************************************************************
  * Copyright (c) 2023 Navneet Agrawal
@@ -32,32 +31,23 @@ extern const float MAX_PEAK_MULT_FACTOR = 0.6;
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
 
-    char cwd[1024];
-    if (getcwd(cwd, sizeof(cwd)) != NULL)
-    {
-        std::cout << "Current working directory: " << cwd << std::endl;
-    }
-    else
-    {
-        perror("getcwd() error");
-        return 1;
-    }
-    std::string currentDir(cwd);
+    const char *homeDir = std::getenv("HOME");
+    std::string currentDir(homeDir);
 
     // rx and tx streamers -- initilize
     ConfigParser parser;
-    parser.parse(currentDir + "/../cpp/leaf_config.conf");
+    parser.parse(currentDir + "/OTA-C/cpp/leaf_config.conf");
 
     parser.print_values();
 
     const std::string file = parser.getValue_str("file");
     bool save_buffer_flag = false;
-    if (file != "")
+    if (file != "NULL")
         save_buffer_flag = true;
 
     // USRP init
     std::string args = parser.getValue_str("args");
-    if (args == "")
+    if (args == "NULL")
     {
         if (argc < 3)
             throw std::invalid_argument("ERROR : device address missing!");

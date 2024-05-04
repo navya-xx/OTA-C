@@ -77,7 +77,7 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
 
     // set the center frequency
     float freq = config_parser.getValue_float("freq");
-    float lo_offset = config_parser.getValue_float("lo_offset");
+    float lo_offset = config_parser.getValue_float("lo-offset");
 
     std::cout << boost::format("Setting Freq: %f MHz...") % (freq / 1e6) << std::endl;
     std::cout << boost::format("Setting LO Offset: %f MHz...") % (lo_offset / 1e6) << std::endl;
