@@ -49,7 +49,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         if (argc < 3)
             throw std::invalid_argument("ERROR : device address missing!");
 
-        args = argv[2];
+        args = argv[1];
     }
 
     if (DEBUG)
@@ -163,7 +163,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t Tx_N_zfc = parser.getValue_int("Tx-len");
     size_t Tx_m_zfc;
     if (argc > 1)
-        Tx_m_zfc = static_cast<size_t>(std::stoi(argv[1]));
+        Tx_m_zfc = static_cast<size_t>(std::stoi(argv[2]));
     else
         Tx_m_zfc = parser.getValue_int("Tx-id");
     csdtest_tx_leaf_node(usrp, tx_streamer, Tx_N_zfc, Tx_m_zfc, ch_pow, detect_time, 0.004, 1e6);
