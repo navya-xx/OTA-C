@@ -46,7 +46,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // rx and tx streamers -- initilize
     ConfigParser parser;
-    parser.parse(currentDir + "/../leaf_config.conf");
+    parser.parse(currentDir + "/../cpp/leaf_config.conf");
 
     parser.print_values();
 
