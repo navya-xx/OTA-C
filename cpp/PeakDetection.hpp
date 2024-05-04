@@ -72,5 +72,7 @@ public:
 
     void updateNoiseLevel(const float &corr_val);
 
+    float get_avg_ch_pow();
+
     // ~PeakDetectionClass();
 };

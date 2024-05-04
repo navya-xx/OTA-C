@@ -42,25 +42,19 @@ uhd::time_spec_t *PeakDetectionClass::get_peak_times()
 void PeakDetectionClass::print_peaks_data()
 {
     // Timer analysis
-    float ch_pow = 0.0;
     int num_peaks_detected = peaks_count;
     for (int i = 0; i < num_peaks_detected; ++i)
     {
+        std::cout << "Peak " << i + 1 << " channel power = " << peak_vals[i] << std::endl;
         if (i == num_peaks_detected - 1)
             continue;
         else
         {
             std::cout << "Peak " << i + 2 << " and " << i + 1;
             std::cout << " : Index diff = " << peak_indices[i + 1] - peak_indices[i];
-            std::cout << ", Time diff = " << (peak_times[i + 1] - peak_times[i]).get_real_secs() << std::endl;
+            std::cout << ", Time diff = " << (peak_times[i + 1] - peak_times[i]).get_real_secs() * 1e6 << " microsecs" << std::endl;
         }
-        ch_pow += peak_vals[i];
-        std::cout << "Peak " << i + 1 << " channel power = " << peak_vals[i] << std::endl;
     }
-
-    ch_pow = ch_pow / num_peaks_detected;
-
-    std::cout << "Avg channel power " << ch_pow << std::endl;
 }
 
 void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time)
@@ -313,6 +307,35 @@ bool PeakDetectionClass::process_corr(const float &abs_val, const uhd::time_spec
         // updateNoiseLevel(abs_val);
         return false;
     }
+}
+
+float PeakDetectionClass::get_avg_ch_pow()
+{
+    float ch_pow = 0.0;
+    if (peaks_count > 2)
+    {
+        int num_peaks_detected = peaks_count - 2;
+
+        for (int i = 1; i < peaks_count - 1; ++i)
+        {
+            ch_pow += peak_vals[i];
+        }
+
+        ch_pow = ch_pow / num_peaks_detected;
+    }
+    else
+    {
+        int num_peaks_detected = peaks_count;
+
+        for (int i = 0; i < peaks_count; ++i)
+        {
+            ch_pow += peak_vals[i];
+        }
+
+        ch_pow = ch_pow / num_peaks_detected;
+    }
+
+    return ch_pow;
 }
 
 // PeakDetectionClass::~PeakDetectionClass()
