@@ -301,7 +301,7 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
     const uhd::time_spec_t tx_timer = csd_detect_time + uhd::time_spec_t(tx_wait / 1e6);
     uhd::tx_metadata_t txmd;
     txmd.has_time_spec = true;
-    txmd.start_of_burst = false;
+    txmd.start_of_burst = true;
     txmd.end_of_burst = false;
 
     const double timeout = (tx_timer - usrp->get_time_now()).get_real_secs() + 0.1;
@@ -314,6 +314,7 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
 
     // send a mini EOB packet
     txmd.has_time_spec = false;
+    txmd.start_of_burst = false;
     txmd.end_of_burst = true;
     tx_stream->send("", 0, txmd);
 
