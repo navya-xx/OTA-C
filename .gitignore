@@ -3,3 +3,4 @@ cpp/storage
 cpp/backup_storage
 cpp/CMakeLists.txt
 cpp/eigen-3.4.0
+.vscode
