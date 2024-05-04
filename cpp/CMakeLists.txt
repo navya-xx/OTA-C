@@ -48,7 +48,7 @@ include_directories(
 link_directories(${Boost_LIBRARY_DIRS})
 
 ### Make the executable #######################################################
-add_executable(test_cyclestartdetector test_cyclestartdetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp)
+add_executable(test_cyclestartdetector test_cyclestartdetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
 
 set(CMAKE_BUILD_TYPE "Release")
 message(STATUS "******************************************************************************")

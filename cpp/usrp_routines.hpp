@@ -40,6 +40,8 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
 
 float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_streamer);
 
-void cyclestartdetector_receiver_thread(CycleStartDetector<std::complex<float>> &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> stop_time, const float rate);
+void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate);
 
-void cyclestartdetector_transmitter_thread(CycleStartDetector<std::complex<float>> &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate, uhd::time_spec_t &csd_detect_time, float &csd_ch_pow);
+void cyclestartdetector_transmitter_thread(CycleStartDetector &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate);
+
+void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr &tx_stream, const size_t &N_zfc, const size_t &m_zfc, const float &csd_ch_pow, const uhd::time_spec_t &csd_detect_time, const float &min_ch_pow, const float &tx_wait);

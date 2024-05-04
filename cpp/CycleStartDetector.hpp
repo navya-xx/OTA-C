@@ -23,28 +23,21 @@
 #include <sstream>
 #include <deque>
 #include <vector>
+#include "PeakDetection.hpp"
 
-template <typename samp_type>
 class CycleStartDetector
 {
 public:
-    CycleStartDetector(size_t capacity, uhd::time_spec_t sample_duration, size_t num_samp_corr, size_t N_zfc, size_t m_zfc, size_t R_zfc, float init_noise_level, float pnr_threshold);
+    CycleStartDetector(size_t capacity, uhd::time_spec_t sample_duration, size_t num_samp_corr, size_t N_zfc, size_t m_zfc, size_t R_zfc, PeakDetectionClass &peak_det_obj);
 
-    void produce(const std::vector<samp_type> &samples, const size_t &samples_size, const uhd::time_spec_t &time);
+    void produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time);
+
     bool consume();
 
-    void save_complex_data_to_file(std::ofstream &outfile);
-    int correlation_operation();
-
-    std::vector<size_t> get_peakindices();
-    std::vector<uhd::time_spec_t> get_timestamps();
-    std::vector<float> get_peakvals();
-    size_t get_peakscount();
-
-    bool save_buffer_flag = true;
+    void correlation_operation();
 
 private:
-    std::vector<samp_type> samples_buffer;
+    std::vector<std::complex<float>> samples_buffer;
     std::vector<uhd::time_spec_t> timer;
     size_t N_zfc, m_zfc, R_zfc;
     uhd::time_spec_t sample_duration;
@@ -53,21 +46,10 @@ private:
     size_t front;
     size_t rear;
     size_t num_produced;
-    std::vector<size_t> peak_indices;
-    std::vector<float> peak_vals;
-    size_t peaks_count;
-    float pnr_threshold, curr_pnr_threshold;
-    std::vector<uhd::time_spec_t> peak_times;
-    float init_noise_level;
-    size_t noise_counter;
-    std::deque<samp_type> save_buffer;
-    bool successful_detection;
+    std::vector<std::complex<float>> zfc_seq;
+    PeakDetectionClass &peak_det_obj_ref;
 
     boost::mutex mtx;
     boost::condition_variable cv_producer;
     boost::condition_variable cv_consumer;
-
-    std::vector<samp_type> zfc_seq;
-    size_t save_counter;
-    size_t samples_from_first_peak;
 };

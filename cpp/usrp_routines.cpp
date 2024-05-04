@@ -170,17 +170,15 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
     }
 
     float noise_power = 0.0;
-    for (int i = 0; i < noise_buff.size(); i++)
+    for (int i = 0; i < noise_seq_len; i++)
     {
         noise_power += std::pow(std::abs(noise_buff[i]), 2);
     }
-    noise_power /= noise_buff.size();
 
-    // std::cout << "Noise power " << noise_power << std::endl;
-    return std::sqrt(noise_power);
+    return std::sqrt(noise_power / noise_seq_len);
 }
 
-void cyclestartdetector_receiver_thread(CycleStartDetector<std::complex<float>> &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> stop_time, const float rate)
+void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate)
 {
     uhd::rx_metadata_t md;
     bool overflow_message = true;
@@ -259,13 +257,10 @@ void cyclestartdetector_receiver_thread(CycleStartDetector<std::complex<float>> 
     //     std::cout << "Ending receiver thread..." << std::endl;
 }
 
-void cyclestartdetector_transmitter_thread(CycleStartDetector<std::complex<float>> &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate, uhd::time_spec_t &csd_detect_time, float &csd_ch_pow)
+void cyclestartdetector_transmitter_thread(CycleStartDetector &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate)
 {
 
     bool result;
-
-    // if (DEBUG)
-    //     std::cout << "Starting consumer thread..." << std::endl;
 
     while (not stop_signal_called and not stop_thread_signal and not(std::chrono::steady_clock::now() > stop_time))
     {
@@ -275,13 +270,65 @@ void cyclestartdetector_transmitter_thread(CycleStartDetector<std::complex<float
         if (result)
         {
             if (DEBUG)
-                std::cout << "Successful detection! Closing thread..." << std::endl;
+                std::cout << "Finished detection process! Closing thread..." << std::endl;
 
             stop_thread_signal = true;
             break;
         }
     }
+}
 
-    // if (DEBUG)
-    //     std::cout << "Ending receiver thread..." << std::endl;
+void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr &tx_stream, const size_t &N_zfc, const size_t &m_zfc, const float &csd_ch_pow, const uhd::time_spec_t &csd_detect_time, const float &min_ch_pow, const float &tx_wait)
+{
+
+    auto tx_zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
+
+    if (DEBUG)
+    {
+        std::cout << "TX ZFC seq len " << N_zfc << ", identifier " << m_zfc << std::endl;
+        std::cout << "Channel power estimated : " << csd_ch_pow << ", min ch pow " << min_ch_pow << std::endl;
+    }
+
+    // size_t num_max_tx_samps = tx_stream->get_max_num_samps();
+    std::vector<std::complex<float>> tx_buff(N_zfc);
+
+    for (size_t n = 0; n < N_zfc; n++)
+    {
+        tx_buff[n] = tx_zfc_seq[n % N_zfc] / csd_ch_pow * min_ch_pow;
+        // tx_buff[n] = tx_zfc_seq[n % N_zfc];
+    }
+
+    const uhd::time_spec_t tx_timer = csd_detect_time + uhd::time_spec_t(tx_wait / 1e6);
+    uhd::tx_metadata_t txmd;
+    txmd.has_time_spec = true;
+    txmd.start_of_burst = false;
+    txmd.end_of_burst = false;
+
+    const double timeout = (tx_timer - usrp->get_time_now()).get_real_secs() + 0.1;
+
+    txmd.time_spec = tx_timer;
+
+    std::cout << "Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
+
+    size_t num_tx_samps = tx_stream->send(&tx_buff.front(), N_zfc, txmd, timeout);
+
+    // send a mini EOB packet
+    txmd.has_time_spec = false;
+    txmd.end_of_burst = true;
+    tx_stream->send("", 0, txmd);
+
+    std::cout << std::endl
+              << "Waiting for async burst ACK... " << std::flush;
+    uhd::async_metadata_t async_md;
+    bool got_async_burst_ack = false;
+    // loop through all messages for the ACK packet (may have underflow messages in queue)
+    while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, timeout))
+    {
+        got_async_burst_ack =
+            (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
+    }
+    std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
+
+    // std::cout << "Transmitted " << num_samp_tx << " samples." << std::endl;
+    std::cout << "Transmitted " << num_tx_samps << " samples. Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
 }

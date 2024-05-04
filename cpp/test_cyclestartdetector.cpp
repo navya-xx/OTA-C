@@ -1,6 +1,7 @@
 #include "CycleStartDetector.hpp"
 #include "utility_funcs.hpp"
 #include "usrp_routines.hpp"
+#include "PeakDetection.hpp"
 
 /***************************************************************
  * Copyright (c) 2023 Navneet Agrawal
@@ -23,6 +24,9 @@ void sig_int_handler(int)
 
 extern const bool DEBUG = true;
 
+extern const size_t PEAK_DETECTION_TOLERANCE = 2;
+extern const float MAX_PEAK_MULT_FACTOR = 0.6;
+
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
 
@@ -31,6 +35,26 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     parser.parse("../leaf_config.conf");
 
     parser.print_values();
+
+    const std::string file = parser.getValue_str("file");
+    bool save_buffer_flag = false;
+    if (file != "")
+        save_buffer_flag = true;
+
+    if (DEBUG)
+    {
+        std::string for_print = save_buffer_flag ? "True" : "False";
+        std::cout << "File : " << file << ", save_buffer_flag : " << for_print << std::endl;
+    }
+
+    std::ofstream outfile;
+    outfile.open(file);
+
+    if (!outfile.is_open())
+    {
+        std::cerr << "Failed to open file for writing: " << file << std::endl;
+        return 1; // Return with an error status
+    }
 
     // USRP init
     std::string args = parser.getValue_str("args");
@@ -49,114 +73,120 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     rx_streamer = streamers.first;
     tx_streamer = streamers.second;
 
-    // create data stream type based on config
-    // -- we skip this for now
-
-    // get initial noise level
-    float init_noise_level = get_background_noise_level(usrp, rx_streamer);
-    if (DEBUG)
-        std::cout << "Noise level = " << init_noise_level << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // protocol config
-    bool keep_running = true;
-    float total_time = parser.getValue_float("duration");
-    if (total_time == 0.0)
-    {
-        std::signal(SIGINT, &sig_int_handler);
-        std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
-        total_time = 24 * 3600; // run for one day at most
-    }
-
-    // Cycle Start Detector config
-    float rate = parser.getValue_float("rate");
-    size_t capacity_mul = parser.getValue_int("capacity-mul") < 1 ? 1 : parser.getValue_int("capacity-mul");
-    size_t num_samp_corr = parser.getValue_int("num-samp-corr");
-    size_t max_sample_size = rx_streamer->get_max_num_samps();
-    size_t capacity = capacity_mul * std::max(num_samp_corr, max_sample_size);
-    float sample_duration = usrp->get_rx_rate(parser.getValue_int("channel")) / 1e6;
-    size_t Ref_N_zfc = parser.getValue_int("Ref-N-zfc");
-    size_t Ref_m_zfc = parser.getValue_int("Ref-m-zfc");
-    size_t Ref_R_zfc = parser.getValue_int("Ref-R-zfc");
-    float pnr_threshold = parser.getValue_float("pnr-threshold");
-
-    if (num_samp_corr == 0)
-        num_samp_corr = Ref_N_zfc * Ref_R_zfc;
-
-    CycleStartDetector<std::complex<float>> csdbuffer(capacity, sample_duration, num_samp_corr, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, init_noise_level, pnr_threshold);
-
-    std::string file = parser.getValue_str("file");
-    if (file != "")
-        csdbuffer.save_buffer_flag = true;
-
-    // Threading -- consumer-producer routine
-    // atomic bool to signal thread stop
-    std::atomic<bool> stop_thread_signal(false);
-    const auto start_time = std::chrono::steady_clock::now();
-    const auto stop_time =
-        start_time + std::chrono::milliseconds(int64_t(1000 * total_time));
-
-    if (DEBUG)
-    {
-        auto stop_duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(int64_t(total_time)));
-        print_duration(stop_duration);
-    }
-
-    // setup thread_group
-    boost::thread_group thread_group;
-
-    // Rx producer thread
-    auto rx_producer_thread = thread_group.create_thread([=, &csdbuffer, &stop_thread_signal]()
-                                                         { cyclestartdetector_receiver_thread(csdbuffer, rx_streamer, stop_thread_signal, stop_signal_called, stop_time, rate); });
-
-    uhd::set_thread_name(rx_producer_thread, "csd_rx_producer_thread");
-
-    uhd::time_spec_t csd_detect_time;
-    float csd_ch_pow;
-
-    // CSD consumer thread
-    auto rx_consumer_thread = thread_group.create_thread([=, &csdbuffer, &csd_detect_time, &csd_ch_pow, &stop_thread_signal]()
-                                                         { cyclestartdetector_transmitter_thread(csdbuffer, rx_streamer, stop_thread_signal, stop_signal_called, stop_time, rate, csd_detect_time, csd_ch_pow); });
-
-    uhd::set_thread_name(rx_consumer_thread, "csd_rx_consumer_thread");
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    thread_group.join_all();
-
-    size_t num_peaks_detected = csdbuffer.get_peakscount();
-    if (num_peaks_detected < Ref_R_zfc)
-    {
-        std::cout << "CSD failed! Only detected " << num_peaks_detected << " peaks." << std::endl;
-        stop_signal_called = true;
-    }
-    else
-        std::cout << "CSD Successful! All  " << num_peaks_detected << " peaks detected." << std::endl;
-
-    if (stop_signal_called)
-        return EXIT_FAILURE;
-
-    // Timer analysis
-    auto peak_indices = csdbuffer.get_peakindices();
-    auto peak_times = csdbuffer.get_timestamps();
-    auto peak_vals = csdbuffer.get_peakvals();
+    // create scope for time sync process
+    uhd::time_spec_t detect_time;
     float ch_pow = 0.0;
-    for (int i = 0; i < num_peaks_detected; ++i)
     {
-        if (i == num_peaks_detected - 1)
-            continue;
-        else
+
+        // get initial noise level
+        float init_noise_level = get_background_noise_level(usrp, rx_streamer);
+        if (DEBUG)
+            std::cout << "Noise level = " << init_noise_level << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // protocol config
+        bool keep_running = true;
+        float total_time = parser.getValue_float("duration");
+        if (total_time == 0.0)
         {
-            std::cout << "Peak " << i + 2 << " and " << i + 1;
-            std::cout << "Index diff = " << peak_indices[i + 1];
-            std::cout << ", Time diff = " << (peak_times[i + 1] - peak_times[i]).get_real_secs() * 1e6 << std::endl;
+            std::signal(SIGINT, &sig_int_handler);
+            std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
+            total_time = 24 * 3600; // run for one day at most
         }
-        ch_pow += peak_vals[i];
-        std::cout << "Peak " << i + 1 << " channel power = " << peak_vals[i] << std::endl;
+
+        // Cycle Start Detector config
+        float rate = parser.getValue_float("rate");
+        size_t capacity_mul = parser.getValue_int("capacity-mul") < 1 ? 1 : parser.getValue_int("capacity-mul");
+        size_t num_samp_corr = parser.getValue_int("num-samp-corr");
+        size_t max_sample_size = rx_streamer->get_max_num_samps();
+        size_t capacity = capacity_mul * std::max(num_samp_corr, max_sample_size);
+        float sample_duration = 1 / usrp->get_rx_rate(parser.getValue_int("channel"));
+        size_t Ref_N_zfc = parser.getValue_int("Ref-N-zfc");
+        size_t Ref_m_zfc = parser.getValue_int("Ref-m-zfc");
+        size_t Ref_R_zfc = parser.getValue_int("Ref-R-zfc");
+        float pnr_threshold = parser.getValue_float("pnr-threshold");
+
+        if (num_samp_corr == 0)
+            num_samp_corr = Ref_N_zfc * Ref_R_zfc * 2;
+
+        // peak detection class obj init
+        PeakDetectionClass peak_det_obj(Ref_N_zfc, Ref_R_zfc, pnr_threshold, init_noise_level, save_buffer_flag);
+        CycleStartDetector csdbuffer(capacity, sample_duration, num_samp_corr, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, peak_det_obj);
+
+        // Threading -- consumer-producer routine
+        // atomic bool to signal thread stop
+        std::atomic<bool> stop_thread_signal(false);
+        const auto start_time = std::chrono::steady_clock::now();
+        const auto stop_time =
+            start_time + std::chrono::milliseconds(int64_t(1000 * total_time));
+
+        if (DEBUG)
+        {
+            auto stop_duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(int64_t(total_time)));
+            print_duration(stop_duration);
+        }
+
+        // setup thread_group
+        boost::thread_group thread_group;
+
+        // Rx producer thread
+        auto rx_producer_thread = thread_group.create_thread([=, &csdbuffer, &peak_det_obj, &stop_thread_signal]()
+                                                             { cyclestartdetector_receiver_thread(csdbuffer, rx_streamer, stop_thread_signal, stop_signal_called, stop_time, rate); });
+
+        uhd::set_thread_name(rx_producer_thread, "csd_rx_producer_thread");
+
+        // CSD consumer thread
+        auto rx_consumer_thread = thread_group.create_thread([=, &csdbuffer, &peak_det_obj, &stop_thread_signal]()
+                                                             { cyclestartdetector_transmitter_thread(csdbuffer, rx_streamer, stop_thread_signal, stop_signal_called, stop_time, rate); });
+
+        uhd::set_thread_name(rx_consumer_thread, "csd_rx_consumer_thread");
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        thread_group.join_all();
+
+        size_t num_peaks_detected = peak_det_obj.peaks_count;
+        if (num_peaks_detected < Ref_R_zfc)
+        {
+            std::cout << "CSD failed! Only detected " << num_peaks_detected << " peaks." << std::endl;
+            stop_signal_called = true;
+        }
+        else
+            std::cout << "CSD Successful! All  " << num_peaks_detected << " peaks detected." << std::endl;
+
+        peak_det_obj.save_complex_data_to_file(outfile);
+
+        if (stop_signal_called)
+            return EXIT_FAILURE;
+
+        // Extract peak data
+        auto peak_vals = peak_det_obj.get_peak_vals();
+        auto peak_times = peak_det_obj.get_peak_times();
+        peak_det_obj.print_peaks_data();
+
+        // free memory
+
+        for (int i = 0; i < num_peaks_detected; ++i)
+        {
+            ch_pow += peak_vals[i];
+            if (DEBUG)
+                std::cout << "Peak " << i + 1 << " channel power = " << peak_vals[i] << std::endl;
+        }
+
+        ch_pow = ch_pow / num_peaks_detected;
+
+        detect_time = peak_times[num_peaks_detected - 1];
     }
 
-    ch_pow = ch_pow / num_peaks_detected;
+    // ------------------------------------------------------------------------------------------------------
+    // ----- Transmit another sequence for csd testing --------------
 
-    std::cout << "Avg channel power " << ch_pow << std::endl;
+    size_t Tx_N_zfc = parser.getValue_int("Tx-len");
+    size_t Tx_m_zfc;
+    if (argc > 1)
+        Tx_m_zfc = static_cast<size_t>(std::stoi(argv[1]));
+    else
+        Tx_m_zfc = parser.getValue_int("Tx-id");
+    csdtest_tx_leaf_node(usrp, tx_streamer, Tx_N_zfc, Tx_m_zfc, ch_pow, detect_time, 0.004, 1e6);
 
     return 0;
 }
