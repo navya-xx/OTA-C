@@ -163,10 +163,13 @@ void PeakDetectionClass::save_into_buffer(const std::complex<float> &sample)
     }
 }
 
-void PeakDetectionClass::save_complex_data_to_file(std::ofstream &outfile)
+void PeakDetectionClass::save_complex_data_to_file(const std::string &file)
 {
     if (DEBUG)
-        std::cout << "Saving data to file." << std::endl;
+        std::cout << "Saving data to file " << file << std::endl;
+
+    std::ofstream outfile;
+    outfile.open(file);
 
     if (outfile.is_open()) // we save as csv for analysis in python
     {

@@ -68,7 +68,7 @@ public:
     bool next();
 
     void save_into_buffer(const std::complex<float> &sample);
-    void save_complex_data_to_file(std::ofstream &outfile);
+    void save_complex_data_to_file(const std::string &file);
 
     void updateNoiseLevel(const float &corr_val);
 

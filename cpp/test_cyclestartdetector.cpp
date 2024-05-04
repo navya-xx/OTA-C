@@ -2,6 +2,7 @@
 #include "utility_funcs.hpp"
 #include "usrp_routines.hpp"
 #include "PeakDetection.hpp"
+#include <stdexcept>
 
 /***************************************************************
  * Copyright (c) 2023 Navneet Agrawal
@@ -41,23 +42,16 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (file != "")
         save_buffer_flag = true;
 
-    if (DEBUG)
-    {
-        std::string for_print = save_buffer_flag ? "True" : "False";
-        std::cout << "File : " << file << ", save_buffer_flag : " << for_print << std::endl;
-    }
-
-    std::ofstream outfile;
-    outfile.open(file);
-
-    if (!outfile.is_open())
-    {
-        std::cerr << "Failed to open file for writing: " << file << std::endl;
-        return 1; // Return with an error status
-    }
-
     // USRP init
     std::string args = parser.getValue_str("args");
+    if (args == "")
+    {
+        if (argc < 3)
+            throw std::invalid_argument("ERROR : device address missing!");
+
+        args = argv[2];
+    }
+
     if (DEBUG)
         std::cout << "USRP = " << args << std::endl;
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(args);
@@ -153,7 +147,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         else
             std::cout << "CSD Successful! All  " << num_peaks_detected << " peaks detected." << std::endl;
 
-        peak_det_obj.save_complex_data_to_file(outfile);
+        peak_det_obj.save_complex_data_to_file(file);
 
         if (stop_signal_called)
             return EXIT_FAILURE;
