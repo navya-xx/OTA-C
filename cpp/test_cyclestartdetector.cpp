@@ -186,12 +186,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // ----- Transmit another sequence for csd testing --------------
 
     size_t Tx_N_zfc = parser.getValue_int("Tx-len");
+    float min_ch_pow = parser.getValue_float("min-ch-pow");
+    size_t tx_wait_microsec = parser.getValue_int("tx-wait-microsec");
     size_t Tx_m_zfc;
     if (argc > 1)
         Tx_m_zfc = static_cast<size_t>(std::stoi(argv[2]));
     else
         Tx_m_zfc = parser.getValue_int("Tx-id");
-    csdtest_tx_leaf_node(usrp, tx_streamer, Tx_N_zfc, Tx_m_zfc, ch_pow, detect_time, 0.001, 1e6);
+    csdtest_tx_leaf_node(usrp, tx_streamer, Tx_N_zfc, Tx_m_zfc, ch_pow, detect_time, min_ch_pow, tx_wait_microsec);
 
     return 0;
 }
