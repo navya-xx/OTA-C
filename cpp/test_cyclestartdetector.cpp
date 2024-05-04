@@ -57,7 +57,29 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     if (DEBUG)
         std::cout << "USRP = " << args << std::endl;
-    uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(args);
+
+    uhd::usrp::multi_usrp::sptr usrp;
+    bool device_create = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        try
+        {
+            usrp = uhd::usrp::multi_usrp::make(args);
+            device_create = true;
+            break;
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << '\n';
+        }
+    }
+
+    if (not device_create)
+    {
+        std::cerr << "ERROR: Failed to create device.. Exiting!" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     if (DEBUG)
         std::cout << "USRP device setup -> Done!" << std::endl;
