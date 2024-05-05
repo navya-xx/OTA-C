@@ -27,6 +27,7 @@ extern const bool DEBUG = true;
 
 extern const size_t PEAK_DETECTION_TOLERANCE = 2;
 extern const float MAX_PEAK_MULT_FACTOR = 0.6;
+extern const size_t TIME_PEAK_FROM_LAST_INDEX = 2;
 
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
@@ -173,6 +174,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             std::cout << "CSD Successful! All  " << num_peaks_detected << " peaks detected." << std::endl;
 
         peak_det_obj.save_complex_data_to_file(file);
+
+        peak_det_obj.print_peaks_data();
 
         if (stop_signal_called)
             return EXIT_FAILURE;
