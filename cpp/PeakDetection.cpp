@@ -3,6 +3,7 @@
 extern const size_t PEAK_DETECTION_TOLERANCE;
 extern const float MAX_PEAK_MULT_FACTOR;
 extern const bool DEBUG;
+extern const int TIME_PEAK_FROM_LAST_INDEX;
 
 PeakDetectionClass::PeakDetectionClass(
     size_t ref_seq_len,
@@ -346,7 +347,7 @@ float PeakDetectionClass::get_avg_ch_pow()
 
 uhd::time_spec_t PeakDetectionClass::get_sync_time()
 {
-    return peak_times[peaks_count - 1];
+    return peak_times[peaks_count - TIME_PEAK_FROM_LAST_INDEX];
 }
 
 // PeakDetectionClass::~PeakDetectionClass()
