@@ -150,6 +150,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         // setup thread_group
         boost::thread_group thread_group;
 
+        // set usrp timer to zero
+        usrp->set_time_now(uhd::time_spec_t(0.0));
+
         // Rx producer thread
         auto rx_producer_thread = thread_group.create_thread([=, &csdbuffer, &peak_det_obj, &stop_thread_signal]()
                                                              { cyclestartdetector_receiver_thread(csdbuffer, rx_streamer, stop_thread_signal, stop_signal_called, stop_time, rate); });

@@ -28,7 +28,7 @@ using namespace std::chrono_literals;
 using start_time_type = std::chrono::time_point<std::chrono::steady_clock>;
 
 static bool DEBUG = false;
-static double TX_WAIT_TIME_MICROSECS = 100e3;
+static double TX_WAIT_TIME_MICROSECS = 300e3;
 
 static bool stop_signal_called = false;
 void sig_int_handler(int)
@@ -122,22 +122,22 @@ std::chrono::steady_clock::duration convert_timestr_to_duration(const std::strin
 void print_duration(std::chrono::steady_clock::duration &time_duration)
 {
 
-    std::cout << "Duration " << time_duration.count() << " Seconds" << std::endl;
-    // Extract hours, minutes, seconds, and milliseconds from the duration
-    auto hours = std::chrono::duration_cast<std::chrono::hours>(time_duration);
-    time_duration -= hours;
-    auto minutes = std::chrono::duration_cast<std::chrono::minutes>(time_duration);
-    time_duration -= minutes;
-    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(time_duration);
-    time_duration -= seconds;
-    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time_duration);
+    std::cout << "Program runs for a duration of " << time_duration.count() << " secs" << std::endl;
+    // // Extract hours, minutes, seconds, and milliseconds from the duration
+    // auto hours = std::chrono::duration_cast<std::chrono::hours>(time_duration);
+    // time_duration -= hours;
+    // auto minutes = std::chrono::duration_cast<std::chrono::minutes>(time_duration);
+    // time_duration -= minutes;
+    // auto seconds = std::chrono::duration_cast<std::chrono::seconds>(time_duration);
+    // time_duration -= seconds;
+    // auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(time_duration);
 
-    // Print the duration in the desired format
-    std::cout << "Wait duration is :" << std::endl;
-    std::cout << std::setfill('0') << std::setw(2) << hours.count() << ":"
-              << std::setw(2) << minutes.count() << ":"
-              << std::setw(2) << seconds.count() << "."
-              << std::setw(3) << milliseconds.count() << std::endl;
+    // // Print the duration in the desired format
+    // std::cout << "Wait duration is :" << std::endl;
+    // std::cout << std::setfill('0') << std::setw(2) << hours.count() << ":"
+    //           << std::setw(2) << minutes.count() << ":"
+    //           << std::setw(2) << seconds.count() << "."
+    //           << std::setw(3) << milliseconds.count() << std::endl;
 }
 
 #define NOW() (time_delta_str(start_time))
