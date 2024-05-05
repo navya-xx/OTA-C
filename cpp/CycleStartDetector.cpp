@@ -13,6 +13,7 @@ CycleStartDetector::CycleStartDetector(
     size_t R_zfc,
     PeakDetectionClass &peak_det_obj) : samples_buffer(capacity),
                                         timer(capacity),
+                                        prev_timer(uhd::time_spec_t(0.0)),
                                         num_samp_corr(num_samp_corr),
                                         sample_duration(sample_duration),
                                         capacity(capacity),
@@ -34,6 +35,21 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
 
     // insert first timer
     uhd::time_spec_t next_time = time;
+
+    if (DEBUG)
+    {
+        if (prev_timer.get_real_secs() == 0.0)
+        {
+            prev_timer = time;
+        }
+        else
+        {
+            std::cout << "Current : " << time.get_real_secs() * 1e6 << ", Prev : " << prev_timer.get_real_secs() * 1e6 << ", sample_size : " << samples_size << std::endl;
+            std::cout << "T-> " << (time - prev_timer).get_real_secs() * 1e6 << " microsecs" << std::endl;
+            std::cout << "S-> " << (prev_timer.get_real_secs() + (sample_duration.get_real_secs() * samples_size)) * 1e6 << " || " << time.get_real_secs() * 1e6 << std::endl;
+            prev_timer = time;
+        }
+    }
 
     // insert samples into the buffer
     for (const auto &sample : samples)

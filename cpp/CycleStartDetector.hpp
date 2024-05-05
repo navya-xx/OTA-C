@@ -39,6 +39,7 @@ public:
 private:
     std::vector<std::complex<float>> samples_buffer;
     std::vector<uhd::time_spec_t> timer;
+    uhd::time_spec_t prev_timer;
     size_t N_zfc, m_zfc, R_zfc;
     uhd::time_spec_t sample_duration;
     size_t num_samp_corr;

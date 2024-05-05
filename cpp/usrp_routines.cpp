@@ -188,7 +188,7 @@ void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_s
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
     stream_cmd.num_samps = size_t(spb);
     stream_cmd.stream_now = true;
-    stream_cmd.time_spec = uhd::time_spec_t();
+    // stream_cmd.time_spec = uhd::time_spec_t();
     rx_stream->issue_stream_cmd(stream_cmd);
 
     std::vector<std::complex<float>> buff(spb);
@@ -201,15 +201,12 @@ void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_s
     // the requested number of samples were collected (if such a number was
     // given), or until Ctrl-C was pressed.
 
-    // if (DEBUG)
-    //     std::cout << "Starting receiver thread..." << std::endl;
-
     while (not stop_signal_called and not stop_thread_signal and not(std::chrono::steady_clock::now() > stop_time))
     {
         try
         {
             num_rx_samps = rx_stream->recv(&buff.front(), buff.size(), md, recv_timeout, false);
-            recv_timeout = burst_pkt_time;
+            // recv_timeout = burst_pkt_time;
         }
         catch (uhd::io_error &e)
         {
@@ -228,7 +225,7 @@ void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_s
             if (overflow_message)
             {
                 overflow_message = false;
-                std::cerr << "Got an overflow indication." << std::endl
+                std::cerr << "*** Got an overflow indication." << std::endl
                           << std::endl;
                 ;
             }
@@ -239,9 +236,6 @@ void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_s
             std::string error = str(boost::format("Receiver error: %s") % md.strerror());
             std::cerr << error << std::endl;
         }
-
-        // if (DEBUG)
-        //     std::cout << "Received " << num_rx_samps << " samples. Passing to producer..." << std::endl;
 
         // pass on to the cycle start detector
         csdbuffer.produce(buff, num_rx_samps, md.time_spec);
