@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# LEAF_DEVICES_NUC=( "32C793E" "32C79BE" "32C7981" )
+LEAF_DEVICES_NUC=( "32C793E" "32C79BE" "32C7981" )
 # LEAF_DEVICES_NUC01=( "32B1708" "32B1728" "32B172B" )
 LEAF_DEVICES_RPI4COMPUTE=( "32C79F7" )
 
@@ -58,8 +58,8 @@ do
             eval "${cmd_main}"
             # echo -e "\t${cmd_quit}"
             echo -e "\t${cmd_main}\n"
-            screen_name_list+=("csdtest_nuc01_${nuc01_dev}")
-            program_list+=("test_cyclestartdetector")
+            screen_name_list+=( "csdtest_nuc01_${nuc01_dev}" )
+            program_list+=( "test_cyclestartdetector" )
             (( dev_counter++ ))
         done
     fi
@@ -77,8 +77,8 @@ do
             eval "${cmd_main}"
             # echo -e "\t${cmd_quit}"
             echo -e "\t${cmd_main}\n"
-            screen_name_list+=("csdtest_rpi4compute_${rpi4compute_dev}")
-            program_list+=("test_cyclestartdetector")
+            screen_name_list+=( "csdtest_rpi4compute_${rpi4compute_dev}" )
+            program_list+=( "test_cyclestartdetector" )
             (( dev_counter++ ))
         done
     fi
@@ -93,10 +93,10 @@ do
     eval "${cmd_main}"
     # echo -e $cmd_quit
     echo -e $cmd_main
-    screen_name_list+=("cent_nuc01_${CENT_DEVICE_NUC01}")
-    program_list+=("tx_rx_zfc")
+    screen_name_list+=( "cent_nuc01_${CENT_DEVICE_NUC01}" )
+    program_list+=( "tx_rx_zfc" )
 
-    sleep 10
+    sleep 12
 
     # gracefully quit screens
     k=0
@@ -104,8 +104,8 @@ do
     do
         if screen -list | grep -q "$screen_name"
         then
-            echo "Screen session '$session_name' is ACTIVE."
-            session_id=$(screen -list | grep "$session_name" | awk '{print $1}')
+            session_id=$(screen -list | grep "$screen_name" | awk '{print $1}')
+            echo "Screen '$screen_name' session id '$session_id' is ACTIVE."
             if screen -S "$session_id" -X stuff "pgrep ${program_list[k]}$(printf '\r')" > /dev/null 2>&1;
             then
                 screen -X -S "$session_id" stuff "^C"
@@ -126,7 +126,7 @@ do
                 echo "Closing program gracefully -> Success!"
             fi
         else
-            echo "Screen session '$session_name' is INACTIVE."
+            echo "Screen '$screen_name' session id '$session_id' is INACTIVE."
         fi
 
         (( ++k ))

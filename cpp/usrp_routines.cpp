@@ -112,7 +112,7 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
     }
 
     // sleep a bit to allow setup
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // check Ref and LO Lock detect
     check_locked_sensor(

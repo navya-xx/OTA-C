@@ -67,6 +67,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         try
         {
             usrp = uhd::usrp::multi_usrp::make(args);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
             device_create = true;
             break;
         }
