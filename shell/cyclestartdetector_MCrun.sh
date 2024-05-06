@@ -1,14 +1,14 @@
 #!/bin/bash
 
-LEAF_DEVICES_NUC=( "32C793E" ) # "32C79BE" "32C7981" "32B172B" )
-LEAF_DEVICES_NUC01=( "32B1708" ) # "32B1728" "32C7920" )
+LEAF_DEVICES_NUC=( "32C793E" "32C79BE" "32C7981" "32B172B" )
+LEAF_DEVICES_NUC01=( "32B1708" "32B1728" "32C7920" )
 # LEAF_DEVICES_RPI4COMPUTE=( "32C79F7" )
 CENT_DEVICE="32C79F7"
 LEAF_DEVICES_RPI4MODULE=( "32C79C6" )
 
-LEAF_DEVICES_NUC_ID=( 31 73 109 )
+LEAF_DEVICES_NUC_ID=( 31 73 109 139 )
 LEAF_DEVICES_NUC01_ID=( 97 173 211 )
-LEAF_DEVICES_RPI4COMPUTE_ID=( 139 )
+# LEAF_DEVICES_RPI4COMPUTE_ID=( 139 )
 LEAF_DEVICES_RPI4MODULE_ID=( 229 )
 
 LEAF_SSH_PREFIX_NUC01="ssh nuc01@192.168.5.68"
@@ -116,7 +116,7 @@ do
     then
         sleep 2
         echo -e "\n DEVICE CENT\n"
-        cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${CENT_DEVICE}_${i}.log -S cent_${CENT_DEVICE} -d -m ${LEAF_SSH_PREFIX_CENT} ${LEAF_HOME_CENT}/OTA-C/cpp/build/tx_rx_zfc --args serial=${CENT_DEVICE} --file ${LEAF_HOME_CENT}/OTA-C/cpp/storage/new_mc_run_${i}_data.dat --rate 1e6 --bw 2e6 --Tx-N-zfc 79 --Tx-R-zfc 10 --gain 70 --Rx-N-zfc 257"
+        cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${CENT_DEVICE}_${i}.log -S cent_${CENT_DEVICE} -d -m ${LEAF_SSH_PREFIX_CENT} ${LEAF_HOME_CENT}/OTA-C/cpp/build/tx_rx_zfc serial=${CENT_DEVICE} ${LEAF_HOME_CENT}/OTA-C/cpp/storage/new_mc_run_${i}_data.dat"
         echo -e "\t Central Device ${CENT_DEVICE}"
         echo -e "RUN -> \t${cmd_main}\n"
         eval "${cmd_main}"

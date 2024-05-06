@@ -296,8 +296,8 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
 
     for (size_t n = 0; n < N_zfc; n++)
     {
-        tx_buff[n] = tx_zfc_seq[n % N_zfc] / csd_ch_pow * min_ch_pow;
-        // tx_buff[n] = tx_zfc_seq[n % N_zfc];
+        // tx_buff[n] = tx_zfc_seq[n % N_zfc] / csd_ch_pow * min_ch_pow;
+        tx_buff[n] = tx_zfc_seq[n % N_zfc];
     }
 
     const uhd::time_spec_t tx_timer = csd_detect_time + uhd::time_spec_t(tx_wait / 1e6);
