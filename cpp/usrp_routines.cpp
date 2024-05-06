@@ -403,7 +403,7 @@ void csd_rx_test_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::spt
     bool overflow_message = true;
     bool continue_on_bad_packet = true;
 
-    while (not stop_signal_called and (num_total_samps <= total_rx_samples))
+    while (not stop_signal_called and (num_total_samps < total_rx_samples))
     {
 
         size_t num_rx_samps = rx_stream->recv(&rx_buff.front(), rx_buff.size(), rxmd, timeout, false);
