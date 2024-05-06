@@ -327,3 +327,130 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
     // std::cout << "Transmitted " << num_samp_tx << " samples." << std::endl;
     std::cout << "Transmitted " << num_tx_samps << " samples. Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
 }
+
+void csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr &tx_stream, const size_t &Ref_N_zfc, const size_t &Ref_m_zfc, const size_t &Ref_R_zfc, uhd::time_spec_t tx_time, bool &stop_signal_called)
+{
+    // pre-fill the buffer with the waveform
+    auto zfc_seq = generateZadoffChuSequence(Ref_N_zfc, Ref_m_zfc);
+
+    std::cout << "ZFC seq len " << Ref_N_zfc << ", identifier " << Ref_m_zfc << std::endl;
+
+    // allocate a buffer which we re-use for each channel
+    size_t spb = Ref_N_zfc * Ref_R_zfc;
+    std::vector<std::complex<float>> buff(spb);
+
+    for (size_t n = 0; n < spb; n++)
+    {
+        buff[n] = zfc_seq[n % Ref_N_zfc];
+    }
+
+    // Set up metadata. We start streaming a bit in the future
+    // to allow MIMO operation:
+    uhd::tx_metadata_t txmd;
+    txmd.start_of_burst = true;
+    txmd.end_of_burst = false;
+    txmd.has_time_spec = true;
+    txmd.time_spec = tx_time;
+
+    size_t total_num_samps = buff.size();
+
+    // send data until the signal handler gets called
+    // or if we accumulate the number of samples specified (unless it's 0)
+    uint64_t num_acc_samps = 0;
+    while (not stop_signal_called and (total_num_samps <= num_acc_samps))
+    {
+
+        // send the entire contents of the buffer
+        num_acc_samps += tx_stream->send(&buff.front(), buff.size(), txmd);
+
+        txmd.start_of_burst = false;
+        txmd.has_time_spec = false;
+    }
+
+    // send a mini EOB packet
+    txmd.end_of_burst = true;
+    tx_stream->send("", 0, txmd);
+
+    // finished
+    if (DEBUG)
+        std::cout << "Total number of samples transmitted: " << num_acc_samps << std::endl;
+}
+
+void csd_rx_test_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_stream, const size_t &test_signal_len, const uhd::time_spec_t &rx_time, const size_t &total_rx_samples, const std::string &file, bool &stop_signal_called)
+{
+    uhd::rx_metadata_t rxmd;
+    uhd::stream_cmd_t rx_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+    rx_stream_cmd.stream_now = false;
+    rx_stream_cmd.time_spec = rx_time;
+    size_t num_total_samps = 0;
+    rx_stream_cmd.num_samps = total_rx_samples;
+    rx_stream->issue_stream_cmd(rx_stream_cmd);
+
+    float sample_duration = 1 / usrp->get_rx_rate();
+
+    if (DEBUG)
+        std::cout << "Time diff : " << (usrp->get_time_now() - rx_time).get_real_secs() * 1e6 << " = " << rx_time.get_frac_secs() * 1e6 << " - " << usrp->get_time_now().get_real_secs() * 1e6 << std::endl;
+
+    std::ofstream outfile;
+    outfile.open(file.c_str(), std::ofstream::binary);
+
+    bool overflow_message = true;
+    bool continue_on_bad_packet = true;
+
+    std::vector<std::complex<float>> rx_buff(total_rx_samples);
+    double timeout = (rx_time - usrp->get_time_now()).get_real_secs() + rx_buff.size() * sample_duration + 0.1;
+
+    while (not stop_signal_called and (num_total_samps <= total_rx_samples))
+    {
+
+        size_t num_rx_samps = rx_stream->recv(&rx_buff.front(), rx_buff.size(), rxmd, timeout, false);
+
+        if (rxmd.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        {
+            std::cout << boost::format("Timeout while streaming") << std::endl;
+            break;
+        }
+        if (rxmd.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        {
+            if (overflow_message)
+            {
+                overflow_message = false;
+                std::cerr
+                    << boost::format(
+                           "Got an overflow indication. Please consider the following:\n"
+                           "  Your write medium must sustain a rate of %fMB/s.\n"
+                           "  Dropped samples will not be written to the file.\n"
+                           "  Please modify this example for your purposes.\n"
+                           "  This message will not appear again.\n") %
+                           (usrp->get_rx_rate() * sizeof(std::complex<float>) / 1e6);
+            }
+            continue;
+        }
+        if (rxmd.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        {
+            std::string error = str(boost::format("Receiver error: %s") % rxmd.strerror());
+            if (continue_on_bad_packet)
+            {
+                std::cerr << error << std::endl;
+                continue;
+            }
+            else
+                throw std::runtime_error(error);
+        }
+
+        num_total_samps += num_rx_samps;
+
+        if (outfile.is_open())
+        {
+            outfile.write((const char *)&rx_buff.front(), num_rx_samps * sizeof(std::complex<float>));
+        }
+    }
+
+    if (outfile.is_open())
+    {
+        outfile.close();
+    }
+
+    if (DEBUG)
+        std::cout << "Total " << num_total_samps << " samples saved in file " << file << std::endl;
+}
