@@ -98,7 +98,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     float tx_wait_time = parser.getValue_float("tx-wait-microsec");
     size_t test_signal_len = parser.getValue_int("test-signal-len");
-    double add_rx_duration = tx_wait_time / 1e6 - (sample_duration * 5 * test_signal_len);
+    double add_rx_duration = tx_wait_time / 1e6 - (sample_duration * 2 * test_signal_len);
     uhd::time_spec_t rx_time = ref_time + uhd::time_spec_t(add_rx_duration);
 
     if (DEBUG)
@@ -112,7 +112,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         else
             std::cerr << "ERROR : Test output filename cannot be determined." << std::endl;
     }
-    csd_rx_test_signal(usrp, rx_streamer, test_signal_len, rx_time, test_signal_len * 10, test_outfile, stop_signal_called);
+    csd_rx_test_signal(usrp, rx_streamer, test_signal_len, rx_time, test_signal_len * 4, test_outfile, stop_signal_called);
 
     return EXIT_SUCCESS;
 }
