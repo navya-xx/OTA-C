@@ -85,8 +85,8 @@ std::chrono::steady_clock::duration convert_timestr_to_duration(const std::strin
 
 void print_duration(std::chrono::steady_clock::duration &time_duration)
 {
-
-    std::cout << "Program runs for a duration of " << time_duration.count() << " secs" << std::endl;
+    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(time_duration);
+    std::cout << "Program runs for a duration of " << seconds.count() << " secs" << std::endl;
     // // Extract hours, minutes, seconds, and milliseconds from the duration
     // auto hours = std::chrono::duration_cast<std::chrono::hours>(time_duration);
     // time_duration -= hours;

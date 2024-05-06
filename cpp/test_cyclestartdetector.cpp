@@ -116,7 +116,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         float rate = parser.getValue_float("rate");
         size_t capacity_mul = parser.getValue_int("capacity-mul") < 1 ? 1 : parser.getValue_int("capacity-mul");
         size_t max_sample_size = rx_streamer->get_max_num_samps();
-        float sample_duration = 1 / usrp->get_rx_rate(parser.getValue_int("channel"));
+        float sample_duration = 1 / usrp->get_rx_rate();
         size_t Ref_N_zfc = parser.getValue_int("Ref-N-zfc");
         size_t Ref_m_zfc = parser.getValue_int("Ref-m-zfc");
         size_t Ref_R_zfc = parser.getValue_int("Ref-R-zfc");

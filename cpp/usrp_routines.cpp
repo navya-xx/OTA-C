@@ -339,12 +339,12 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
         std::cout << "Transmitted " << num_tx_samps << " samples. Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
 }
 
-void csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr &tx_stream, const size_t &Ref_N_zfc, const size_t &Ref_m_zfc, const size_t &Ref_R_zfc, uhd::time_spec_t tx_time, bool &stop_signal_called)
+uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr &tx_stream, const size_t &Ref_N_zfc, const size_t &Ref_m_zfc, const size_t &Ref_R_zfc, const uhd::time_spec_t &tx_wait_time, bool &stop_signal_called)
 {
     // pre-fill the buffer with the waveform
     auto zfc_seq = generateZadoffChuSequence(Ref_N_zfc, Ref_m_zfc);
 
-    std::cout << "ZFC seq len " << Ref_N_zfc << ", identifier " << Ref_m_zfc << std::endl;
+    std::cout << "ZFC seq len " << Ref_N_zfc << ", identifier " << Ref_m_zfc << " Reps " << Ref_R_zfc << std::endl;
 
     // allocate a buffer which we re-use for each channel
     size_t spb = Ref_N_zfc * Ref_R_zfc;
@@ -361,30 +361,22 @@ void csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr
     txmd.start_of_burst = true;
     txmd.end_of_burst = false;
     txmd.has_time_spec = true;
-    txmd.time_spec = tx_time;
+    txmd.time_spec = usrp->get_time_now() + tx_wait_time;
 
-    size_t total_num_samps = buff.size();
-
-    // send data until the signal handler gets called
-    // or if we accumulate the number of samples specified (unless it's 0)
-    uint64_t num_acc_samps = 0;
-    while (not stop_signal_called and (total_num_samps <= num_acc_samps))
-    {
-
-        // send the entire contents of the buffer
-        num_acc_samps += tx_stream->send(&buff.front(), buff.size(), txmd);
-
-        txmd.start_of_burst = false;
-        txmd.has_time_spec = false;
-    }
+    // send the entire contents of the buffer
+    size_t num_acc_samps = tx_stream->send(&buff.front(), spb, txmd);
 
     // send a mini EOB packet
+    txmd.has_time_spec = false;
+    txmd.start_of_burst = false;
     txmd.end_of_burst = true;
     tx_stream->send("", 0, txmd);
 
     // finished
     if (DEBUG)
         std::cout << "Total number of samples transmitted: " << num_acc_samps << std::endl;
+
+    return txmd.time_spec;
 }
 
 void csd_rx_test_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_stream, const size_t &test_signal_len, const uhd::time_spec_t &rx_time, const size_t &total_rx_samples, const std::string &file, bool &stop_signal_called)
@@ -397,19 +389,19 @@ void csd_rx_test_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::spt
     rx_stream_cmd.num_samps = total_rx_samples;
     rx_stream->issue_stream_cmd(rx_stream_cmd);
 
+    std::vector<std::complex<float>> rx_buff(total_rx_samples);
     float sample_duration = 1 / usrp->get_rx_rate();
+    uhd::time_spec_t usrp_time_now = usrp->get_time_now();
+    double timeout = (rx_time - usrp_time_now).get_real_secs() + total_rx_samples * sample_duration + 0.1;
 
     if (DEBUG)
-        std::cout << "Time diff : " << (usrp->get_time_now() - rx_time).get_real_secs() * 1e6 << " = " << rx_time.get_frac_secs() * 1e6 << " - " << usrp->get_time_now().get_real_secs() * 1e6 << std::endl;
+        std::cout << "Time diff : " << (rx_time - usrp_time_now).get_real_secs() * 1e6 << " = " << rx_time.get_real_secs() * 1e6 << " - " << usrp_time_now.get_real_secs() * 1e6 << std::endl;
 
     std::ofstream outfile;
     outfile.open(file.c_str(), std::ofstream::binary);
 
     bool overflow_message = true;
     bool continue_on_bad_packet = true;
-
-    std::vector<std::complex<float>> rx_buff(total_rx_samples);
-    double timeout = (rx_time - usrp->get_time_now()).get_real_secs() + rx_buff.size() * sample_duration + 0.1;
 
     while (not stop_signal_called and (num_total_samps <= total_rx_samples))
     {

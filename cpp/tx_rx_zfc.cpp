@@ -82,8 +82,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t Ref_R_zfc = parser.getValue_int("Ref-R-zfc");
 
     // transmit REF signal
-    uhd::time_spec_t tx_time = usrp->get_time_now() + uhd::time_spec_t(0.1);
-    csd_tx_ref_signal(usrp, tx_streamer, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, tx_time, stop_signal_called);
+    uhd::time_spec_t tx_time = csd_tx_ref_signal(usrp, tx_streamer, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, uhd::time_spec_t(0.1), stop_signal_called);
+
+    if (DEBUG)
+        std::cout << "USRP Tx time = " << tx_time.get_real_secs() * 1e6 << std::endl;
 
     // compute time_stamp of beginning of last ref seq
     float sample_duration = 1 / usrp->get_tx_rate();
@@ -98,6 +100,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t test_signal_len = parser.getValue_int("test-signal-len");
     double add_rx_duration = tx_wait_time / 1e6 - (sample_duration * 5 * test_signal_len);
     uhd::time_spec_t rx_time = ref_time + uhd::time_spec_t(add_rx_duration);
+
+    if (DEBUG)
+        std::cout << "USRP Rx time = " << rx_time.get_real_secs() * 1e6 << std::endl;
 
     std::string test_outfile = parser.getValue_str("test-file");
     if (test_outfile == "NULL")
