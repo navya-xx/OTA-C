@@ -25,10 +25,6 @@ void sig_int_handler(int)
 
 extern const bool DEBUG = true;
 
-extern const size_t PEAK_DETECTION_TOLERANCE = 2;
-extern const float MAX_PEAK_MULT_FACTOR = 0.6;
-extern const size_t TIME_PEAK_FROM_LAST_INDEX = 2;
-
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
 
@@ -103,6 +99,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         float init_noise_level = get_background_noise_level(usrp, rx_streamer);
         if (DEBUG)
             std::cout << "Noise level = " << init_noise_level << std::endl;
+
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // protocol config
@@ -118,17 +115,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         // Cycle Start Detector config
         float rate = parser.getValue_float("rate");
         size_t capacity_mul = parser.getValue_int("capacity-mul") < 1 ? 1 : parser.getValue_int("capacity-mul");
-        size_t num_samp_corr = parser.getValue_int("num-samp-corr");
         size_t max_sample_size = rx_streamer->get_max_num_samps();
-        size_t capacity = capacity_mul * std::max(num_samp_corr, max_sample_size);
         float sample_duration = 1 / usrp->get_rx_rate(parser.getValue_int("channel"));
         size_t Ref_N_zfc = parser.getValue_int("Ref-N-zfc");
         size_t Ref_m_zfc = parser.getValue_int("Ref-m-zfc");
         size_t Ref_R_zfc = parser.getValue_int("Ref-R-zfc");
+        size_t num_samp_corr = Ref_N_zfc * 2;
+        size_t capacity = capacity_mul * std::max(num_samp_corr, max_sample_size);
         float pnr_threshold = parser.getValue_float("pnr-threshold");
-
-        if (num_samp_corr == 0)
-            num_samp_corr = Ref_N_zfc * Ref_R_zfc * 2;
 
         // peak detection class obj init
         PeakDetectionClass peak_det_obj(Ref_N_zfc, Ref_R_zfc, pnr_threshold, init_noise_level, save_buffer_flag);
@@ -192,14 +186,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // ------------------------------------------------------------------------------------------------------
     // ----- Transmit another sequence for csd testing --------------
 
-    size_t Tx_N_zfc = parser.getValue_int("Tx-len");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    size_t Tx_N_zfc = parser.getValue_int("test-signal-len");
     float min_ch_pow = parser.getValue_float("min-ch-pow");
     float tx_wait_microsec = parser.getValue_float("tx-wait-microsec");
     size_t Tx_m_zfc;
     if (argc > 1)
         Tx_m_zfc = static_cast<size_t>(std::stoi(argv[2]));
     else
-        Tx_m_zfc = parser.getValue_int("Tx-id");
+        std::cerr << "ERROR : m_zfc (prime) must be specified for testing CSD." << std::endl;
+
     csdtest_tx_leaf_node(usrp, tx_streamer, Tx_N_zfc, Tx_m_zfc, ch_pow, detect_time, min_ch_pow, tx_wait_microsec);
 
     return 0;

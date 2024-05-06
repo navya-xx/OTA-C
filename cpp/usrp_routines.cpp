@@ -62,7 +62,7 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
 
     // set the sample rate
     float rate = config_parser.getValue_float("rate");
-    int channel = config_parser.getValue_int("channel");
+    int channel = 0;
     if (rate <= 0.0)
     {
         throw std::runtime_error("Please specify a valid sample rate");
@@ -88,26 +88,34 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
     std::cout << boost::format("Actual Tx Freq: %f MHz...") % (usrp->get_tx_freq(channel) / 1e6) << std::endl;
 
     // set the rf gain
-    float gain = config_parser.getValue_float("gain");
-    if (gain >= 0.0)
+    float rx_gain = config_parser.getValue_float("rx-gain");
+    if (rx_gain >= 0.0)
     {
-        std::cout << boost::format("Setting Gain: %f dB...") % gain << std::endl;
-        usrp->set_rx_gain(gain, channel);
-        usrp->set_tx_gain(gain, channel);
-
+        std::cout << boost::format("Setting RX Gain: %f dB...") % rx_gain << std::endl;
+        usrp->set_rx_gain(rx_gain, channel);
         std::cout << boost::format("Actual Rx Gain: %f dB...") % usrp->get_rx_gain(channel) << std::endl;
+    }
+    float tx_gain = config_parser.getValue_float("tx-gain");
+    if (tx_gain >= 0.0)
+    {
+        std::cout << boost::format("Setting TX Gain: %f dB...") % tx_gain << std::endl;
+        usrp->set_tx_gain(tx_gain, channel);
         std::cout << boost::format("Actual Tx Gain: %f dB...") % usrp->get_tx_gain(channel) << std::endl;
     }
 
     // set the IF filter bandwidth
-    float bw = config_parser.getValue_float("bw");
-    if (bw >= 0.0)
+    float rx_bw = config_parser.getValue_float("rx-bw");
+    if (rx_bw >= 0.0)
     {
-        std::cout << boost::format("Setting Bandwidth: %f MHz...") % (bw / 1e6) << std::endl;
-        usrp->set_rx_bandwidth(bw, channel);
-        usrp->set_tx_bandwidth(bw, channel);
-
+        std::cout << boost::format("Setting RX Bandwidth: %f MHz...") % (rx_bw / 1e6) << std::endl;
+        usrp->set_rx_bandwidth(rx_bw, channel);
         std::cout << boost::format("Actual Rx Bandwidth: %f MHz...") % (usrp->get_rx_bandwidth(channel) / 1e6) << std::endl;
+    }
+    float tx_bw = config_parser.getValue_float("tx-bw");
+    if (tx_bw >= 0.0)
+    {
+        std::cout << boost::format("Setting TX Bandwidth: %f MHz...") % (tx_bw / 1e6) << std::endl;
+        usrp->set_tx_bandwidth(tx_bw, channel);
         std::cout << boost::format("Actual Tx Bandwidth: %f MHz...") % (usrp->get_tx_bandwidth(channel) / 1e6) << std::endl;
     }
 
@@ -302,7 +310,8 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
 
     txmd.time_spec = tx_timer;
 
-    std::cout << "Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
+    if (DEBUG)
+        std::cout << "Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
 
     size_t num_tx_samps = tx_stream->send(&tx_buff.front(), N_zfc, txmd, timeout);
 
@@ -312,8 +321,9 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
     txmd.end_of_burst = true;
     tx_stream->send("", 0, txmd);
 
-    std::cout << std::endl
-              << "Waiting for async burst ACK... " << std::flush;
+    if (DEBUG)
+        std::cout << std::endl
+                  << "Waiting for async burst ACK... " << std::flush;
     uhd::async_metadata_t async_md;
     bool got_async_burst_ack = false;
     // loop through all messages for the ACK packet (may have underflow messages in queue)
@@ -322,10 +332,11 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
         got_async_burst_ack =
             (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
     }
-    std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
+    if (DEBUG)
+        std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
 
-    // std::cout << "Transmitted " << num_samp_tx << " samples." << std::endl;
-    std::cout << "Transmitted " << num_tx_samps << " samples. Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
+    if (DEBUG)
+        std::cout << "Transmitted " << num_tx_samps << " samples. Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
 }
 
 void csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr &tx_stream, const size_t &Ref_N_zfc, const size_t &Ref_m_zfc, const size_t &Ref_R_zfc, uhd::time_spec_t tx_time, bool &stop_signal_called)
