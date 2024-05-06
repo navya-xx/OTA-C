@@ -2,7 +2,6 @@
 #include "utility_funcs.hpp"
 
 extern const bool DEBUG;
-extern const size_t PEAK_DETECTION_TOLERANCE;
 
 CycleStartDetector::CycleStartDetector(
     size_t capacity,

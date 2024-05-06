@@ -1,29 +1,31 @@
 #include "PeakDetection.hpp"
-
-extern const size_t PEAK_DETECTION_TOLERANCE;
-extern const float MAX_PEAK_MULT_FACTOR;
 extern const bool DEBUG;
-extern const int TIME_PEAK_FROM_LAST_INDEX;
 
 PeakDetectionClass::PeakDetectionClass(
     size_t ref_seq_len,
     size_t num_ref_seq,
     float pnr_threshold,
     float init_noise_level,
-    bool save_buffer_flag) : peaks_count(0),
-                             total_num_peaks(num_ref_seq),
-                             prev_peak_index(0),
-                             prev_peak_val(0),
-                             ref_seq_len(ref_seq_len),
-                             save_buffer_flag(save_buffer_flag),
-                             detection_flag(false),
-                             pnr_threshold(pnr_threshold),
-                             curr_pnr_threshold(pnr_threshold),
-                             init_noise_level(init_noise_level),
-                             noise_level(init_noise_level),
-                             noise_counter(0),
-                             samples_from_first_peak(0),
-                             save_buffer(ref_seq_len * (num_ref_seq * 2), std::complex<float>(0.0, 0.0))
+    bool save_buffer_flag,
+    size_t peak_det_tol,
+    float max_peak_mul,
+    size_t sync_with_peak_from_last) : peaks_count(0),
+                                       total_num_peaks(num_ref_seq),
+                                       prev_peak_index(0),
+                                       prev_peak_val(0),
+                                       ref_seq_len(ref_seq_len),
+                                       save_buffer_flag(save_buffer_flag),
+                                       detection_flag(false),
+                                       pnr_threshold(pnr_threshold),
+                                       curr_pnr_threshold(pnr_threshold),
+                                       init_noise_level(init_noise_level),
+                                       noise_level(init_noise_level),
+                                       noise_counter(0),
+                                       samples_from_first_peak(0),
+                                       save_buffer(ref_seq_len * (num_ref_seq * 2), std::complex<float>(0.0, 0.0)),
+                                       max_peak_mul(max_peak_mul),
+                                       peak_det_tol(peak_det_tol),
+                                       sync_with_peak_from_last(sync_with_peak_from_last)
 {
     peak_indices = new size_t[num_ref_seq];
     peak_vals = new float[num_ref_seq];
@@ -116,7 +118,7 @@ float PeakDetectionClass::get_max_peak_val()
 void PeakDetectionClass::update_pnr_threshold()
 {
     float max_peak_val = get_max_peak_val();
-    curr_pnr_threshold = MAX_PEAK_MULT_FACTOR * max_peak_val / noise_level;
+    curr_pnr_threshold = max_peak_mul * max_peak_val / noise_level;
 
     if (DEBUG)
         std::cout << "\t\t --> new PNR = " << curr_pnr_threshold << " <- PeakDetectionClass" << std::endl;
@@ -261,7 +263,7 @@ bool PeakDetectionClass::process_corr(const float &abs_val, const uhd::time_spec
                 std::cout << "\t\t -> Peaks diff : " << adjacent_spacing << " = " << samples_from_first_peak << " - " << prev_peak_index << std::endl;
 
             // next peak is too far from the last
-            if (adjacent_spacing > ref_seq_len + PEAK_DETECTION_TOLERANCE) // false peak -> reset
+            if (adjacent_spacing > ref_seq_len + peak_det_tol) // false peak -> reset
             {
                 // reset peaks from the start
                 if (DEBUG)
@@ -274,7 +276,7 @@ bool PeakDetectionClass::process_corr(const float &abs_val, const uhd::time_spec
 
                 insertPeak(abs_val, samp_time);
             }
-            else if (adjacent_spacing < ref_seq_len - PEAK_DETECTION_TOLERANCE) // a peak exists in close proximity to last
+            else if (adjacent_spacing < ref_seq_len - peak_det_tol) // a peak exists in close proximity to last
             {
                 if (DEBUG)
                     std::cout << "\t\t -> next peak TOO CLOSE to last." << std::endl;
@@ -347,7 +349,7 @@ float PeakDetectionClass::get_avg_ch_pow()
 
 uhd::time_spec_t PeakDetectionClass::get_sync_time()
 {
-    return peak_times[peaks_count - TIME_PEAK_FROM_LAST_INDEX];
+    return peak_times[peaks_count - sync_with_peak_from_last];
 }
 
 // PeakDetectionClass::~PeakDetectionClass()

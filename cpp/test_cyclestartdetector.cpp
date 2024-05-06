@@ -123,9 +123,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         size_t num_samp_corr = Ref_N_zfc * 2;
         size_t capacity = capacity_mul * std::max(num_samp_corr, max_sample_size);
         float pnr_threshold = parser.getValue_float("pnr-threshold");
+        size_t peak_det_tol = parser.getValue_int("peak-det-tol");
+        size_t sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
+        float max_peak_mul = parser.getValue_float("max-peak-mul");
 
         // peak detection class obj init
-        PeakDetectionClass peak_det_obj(Ref_N_zfc, Ref_R_zfc, pnr_threshold, init_noise_level, save_buffer_flag);
+        PeakDetectionClass peak_det_obj(Ref_N_zfc, Ref_R_zfc, pnr_threshold, init_noise_level, save_buffer_flag, peak_det_tol, max_peak_mul, sync_with_peak_from_last);
         CycleStartDetector csdbuffer(capacity, sample_duration, num_samp_corr, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, peak_det_obj);
 
         // Threading -- consumer-producer routine
