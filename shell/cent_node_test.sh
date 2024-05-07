@@ -59,7 +59,11 @@ delay=$(( target_time - current_time ))
 
 # Wait until the synchronization point
 echo "Waiting for ($delay) seconds until $(date -d @$target_time +'%H:%M:%S')..."
-sleep $delay
+for (( i = $delay; i > 0; i-- ))
+do
+    echo -ne "Remaining time : $i seconds\033[0K\r"
+    sleep 1
+done
 
 # Execute your program here
 echo "Wait over! Starting program at time $(date +'%H:%M:%S')."
