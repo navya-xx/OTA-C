@@ -37,13 +37,13 @@ get_current_minute() {
 # Calculate the synchronization point (nearest multiple of 3 within the next sync_window_minutes minutes)
 calculate_sync_point() {
     local current_minute=$(get_current_minute)
-    local remainder=$(( current_minute % sync_window_minutes ))
+    local remainder="$(( current_minute % sync_window_minutes ))"
     local target_minute
 
     if [[ $remainder -eq 0 ]]; then
-        target_minute=$(( current_minute + sync_window_minutes ))  # Move to the next multiple of 3
+        target_minute="$(( current_minute + sync_window_minutes ))"  # Move to the next multiple of 3
     else
-        target_minute=$(( current_minute + (sync_window_minutes - remainder) ))  # Move to the nearest multiple of 3
+        target_minute="$(( current_minute + (sync_window_minutes - remainder) ))"  # Move to the nearest multiple of 3
     fi
 
     echo "$target_minute"
@@ -55,7 +55,7 @@ sync_point=$(calculate_sync_point)
 # Calculate the delay (in seconds) until the synchronization point
 current_time=$(date +%s)
 target_time=$(date -d "$(date +'%Y-%m-%d %H'):$sync_point" +%s)
-delay=$(( target_time - current_time ))
+delay="$(( target_time - current_time ))"
 
 # Wait until the synchronization point
 echo "Waiting for ($delay) seconds until $(date -d @$target_time +'%H:%M:%S')..."
