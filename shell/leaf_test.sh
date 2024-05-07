@@ -1,6 +1,6 @@
 #!/bin/bash
 NUM_MC_RUNS=10
-run_sleep_duration=10
+run_sleep_duration=15
 sync_window_minutes=3
 
 #--------- Get Serial Number of Devices -------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ do
 
     eval "${cmd_main}"
 
-    sleep $run_sleep_duration
+    sleep "$run_sleep_duration"
 
     # kill unfinished process
     if screen -list | grep -q "$screen_name"
