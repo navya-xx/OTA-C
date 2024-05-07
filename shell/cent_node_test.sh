@@ -81,9 +81,11 @@ do
     cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${cent_node_serial_number}_${i}.log -S ${screen_name} -d -m ${HOME}/OTA-C/cpp/build/${program_name} serial=${cent_node_serial_number} ${HOME}/OTA-C/cpp/storage/run_${i}_data.dat"
     echo -e "RUN -> \t${cmd_main}\n"
 
+    sleep 1
+
     # eval "${cmd_main}"
 
-    sleep $run_sleep_duration
+    sleep "$(( run_sleep_duration - 1 ))"
 
     # kill unfinished process
     if screen -list | grep -q "$screen_name"
