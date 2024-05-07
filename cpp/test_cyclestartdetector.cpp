@@ -40,7 +40,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     const std::string file = parser.getValue_str("file");
     bool save_buffer_flag = true;
     if (file.compare("NULL"))
+    {
         save_buffer_flag = false;
+        if (DEBUG)
+            std::cout << "Do not save Ref signal. File == " << file << std::endl;
+    }
     else
     {
         if (DEBUG)
