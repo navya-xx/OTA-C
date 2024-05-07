@@ -4,7 +4,7 @@ run_sleep_duration=10
 sync_window_minutes=3
 
 #--------- Get Serial Number of Devices -------------------------------------------------------------------------------
-leaf_node_id_file="leaf_nodes_id.conf"
+leaf_node_id_file="id_leafs.conf"
 serial_number=""
 id=""
 
