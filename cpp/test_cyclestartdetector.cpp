@@ -79,6 +79,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    usrp->set_time_now(uhd::time_spec_t(0.0));
+
     if (DEBUG)
         std::cout << "USRP device setup -> Done!" << std::endl;
 
