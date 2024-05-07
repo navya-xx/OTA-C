@@ -68,8 +68,12 @@ echo "Wait over! Starting program at time $(date +'%H:%M:%S')."
 #--------------- Program execution ------------------------------------------------------------------------------------
 
 LOGFOLDER="$HOME/OTA-C/shell/LogFolder"
-if [ ! -d "$folder_path" ]; then
-    mkdir -p "$folder_path"
+if [ ! -d "$LOGFOLDER" ]; then
+    mkdir -p "$LOGFOLDER"
+fi
+STORAGE="${HOME}/OTA-C/cpp/storage"
+if [ ! -d "$STORAGE" ]; then
+    mkdir -p "$STORAGE"
 fi
 
 screen_name="cent_node_${cent_node_serial_number}"
@@ -78,12 +82,12 @@ program_name="tx_rx_zfc"
 for (( i=0; i < $NUM_MC_RUNS; i++ ))
 do
     echo -e "\n RUN $i at $(date +'%H:%M:%S') \n"
-    cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${cent_node_serial_number}_${i}.log -S ${screen_name} -d -m ${HOME}/OTA-C/cpp/build/${program_name} serial=${cent_node_serial_number} ${HOME}/OTA-C/cpp/storage/run_${i}_data.dat"
+    cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${cent_node_serial_number}_${i}.log -S ${screen_name} -d -m ${HOME}/OTA-C/cpp/build/${program_name} serial=${cent_node_serial_number} ${STORAGE}/run_${i}_data.dat"
     echo -e "RUN -> \t${cmd_main}\n"
 
     sleep 1
 
-    # eval "${cmd_main}"
+    eval "${cmd_main}"
 
     sleep "$(( run_sleep_duration - 1 ))"
 
