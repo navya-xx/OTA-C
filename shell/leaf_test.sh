@@ -53,7 +53,7 @@ calculate_sync_point() {
     local remainder=$(( current_minute % sync_window_minutes ))
     local target_minute
 
-    if [[ $remainder -le 1 ]]; then
+    if [[ $remainder -eq 0 ]]; then
         target_minute=$(( current_minute + sync_window_minutes ))  # Move to the next multiple of 3
     else
         target_minute=$(( current_minute + (sync_window_minutes - remainder) ))  # Move to the nearest multiple of 3
