@@ -53,7 +53,7 @@ calculate_sync_point() {
     local remainder=$(( current_minute % sync_window_minutes ))
     local target_minute
 
-    if [[ $remainder -eq 0 ]]; then
+    if [[ $remainder -le 1 ]]; then
         target_minute=$(( current_minute + sync_window_minutes ))  # Move to the next multiple of 3
     else
         target_minute=$(( current_minute + (sync_window_minutes - remainder) ))  # Move to the nearest multiple of 3
@@ -81,8 +81,8 @@ echo "Wait over! Starting program at time $(date +'%H:%M:%S')."
 #--------------- Program execution ------------------------------------------------------------------------------------
 
 LOGFOLDER="$HOME/OTA-C/shell/LogFolder"
-if [ ! -d "$folder_path" ]; then
-    mkdir -p "$folder_path"
+if [ ! -d "$LOGFOLDER" ]; then
+    mkdir -p "$LOGFOLDER"
 fi
 
 screen_name="leaf_node_${serial_number}"
