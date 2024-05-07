@@ -41,6 +41,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     bool save_buffer_flag = false;
     if (file != "NULL")
         save_buffer_flag = true;
+    else
+    {
+        if (DEBUG)
+            std::cout << "Ref signal save to file " << file << std::endl;
+    }
 
     // USRP init
     std::string args = parser.getValue_str("args");
@@ -122,7 +127,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         size_t Ref_N_zfc = parser.getValue_int("Ref-N-zfc");
         size_t Ref_m_zfc = parser.getValue_int("Ref-m-zfc");
         size_t Ref_R_zfc = parser.getValue_int("Ref-R-zfc");
-        size_t num_samp_corr = Ref_N_zfc * 2;
+        size_t num_samp_corr = Ref_N_zfc * 1;
         size_t capacity = capacity_mul * std::max(num_samp_corr, max_sample_size);
         float pnr_threshold = parser.getValue_float("pnr-threshold");
         size_t peak_det_tol = parser.getValue_int("peak-det-tol");

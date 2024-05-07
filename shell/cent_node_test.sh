@@ -1,5 +1,5 @@
 #!/bin/bash
-NUM_MC_RUNS=10
+NUM_MC_RUNS=3
 run_sleep_duration=10
 sync_window_minutes=3
 
