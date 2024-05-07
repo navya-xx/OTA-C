@@ -38,9 +38,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     parser.print_values();
 
     const std::string file = parser.getValue_str("file");
-    bool save_buffer_flag = false;
-    if (file != "NULL")
-        save_buffer_flag = true;
+    bool save_buffer_flag = true;
+    if (file.compare("NULL"))
+        save_buffer_flag = false;
     else
     {
         if (DEBUG)
