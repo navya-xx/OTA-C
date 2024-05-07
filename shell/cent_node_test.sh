@@ -1,12 +1,10 @@
 #!/bin/bash
 NUM_MC_RUNS=10
-run_sleep_duration=1
+run_sleep_duration=10
 sync_window_minutes=3
 
 #--------- Get Serial Number of Devices -------------------------------------------------------------------------------
-leaf_node_id_file="leaf_nodes_id.conf"
-serial_number=""
-id=""
+cent_node_serial_number="32C79C6"
 
 serial_number_exists() {
     local serial_to_check="$1"
@@ -19,22 +17,11 @@ serial_number_exists() {
     fi
 }
 
-result=$(awk -v username="$USER" '$1 == username { print $2, $3 }' "$leaf_node_id_file")
-
-if [ -z "$result" ]; then
-    echo "No entry found in leaf_nodes_id.conf for username: $USER"
+if serial_number_exists "$cent_node_serial_number"; then
+    echo "Device with serial number '$cent_node_serial_number' found."
 else
-    # Read serial number and ID from the result and store in variables
-    read serial_number id <<< "$result"
-    echo "Serial number for username '$USER': $serial_number"
-    echo "ID for username '$USER': $id"
-
-    if serial_number_exists "$serial_number"; then
-        echo "Device with serial number '$serial_number' found."
-    else
-        echo "ERROR: Device with serial number '$serial_number' not found."
-        quit
-    fi
+    echo "ERROR: Device with serial number '$cent_node_serial_number' not found."
+    quit
 fi
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -85,16 +72,16 @@ if [ ! -d "$folder_path" ]; then
     mkdir -p "$folder_path"
 fi
 
-screen_name="leaf_node_${serial_number}"
-program_name="test_cyclestartdetector"
+screen_name="cent_node_${cent_node_serial_number}"
+program_name="tx_rx_zfc"
 
 for (( i=0; i < $NUM_MC_RUNS; i++ ))
 do
     echo -e "\n RUN $i at $(date +'%H:%M:%S') \n"
-    cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${serial_number}_${i}.log -S ${screen_name} -d -m ${HOME}/OTA-C/cpp/build/${program_name} serial=${serial_number} ${id}"
+    cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${cent_node_serial_number}_${i}.log -S ${screen_name} -d -m ${HOME}/OTA-C/cpp/build/${program_name} serial=${cent_node_serial_number} ${HOME}/OTA-C/cpp/storage/run_${i}_data.dat"
     echo -e "RUN -> \t${cmd_main}\n"
 
-    eval "${cmd_main}"
+    # eval "${cmd_main}"
 
     sleep $run_sleep_duration
 
