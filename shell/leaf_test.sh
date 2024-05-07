@@ -1,6 +1,6 @@
 #!/bin/bash
 NUM_MC_RUNS=10
-run_sleep_duration=15
+run_sleep_duration=10
 sync_window_minutes=3
 
 #--------- Get Serial Number of Devices -------------------------------------------------------------------------------
