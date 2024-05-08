@@ -379,9 +379,12 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     size_t total_num_samps = pre_buffer_len + Ref_N_zfc * Ref_R_zfc;
     std::vector<std::complex<float>> buff(total_num_samps);
 
-    for (size_t n = 0; n < pre_buffer_len; n++)
+    if (pre_buffer_len > 0)
     {
-        buff[n] = std::complex<float>(0.0, 0.0);
+        for (size_t n = 0; n < pre_buffer_len; n++)
+        {
+            buff[n] = std::complex<float>(0.0, 0.0);
+        }
     }
 
     for (size_t n = pre_buffer_len; n < total_num_samps; n++)
