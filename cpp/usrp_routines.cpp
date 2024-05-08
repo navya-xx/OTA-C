@@ -401,7 +401,8 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
 
     while (not stop_signal_called and num_acc_samps < total_num_samps)
     {
-        num_acc_samps += tx_stream->send(&buff.front(), packet_max_size, txmd);
+        size_t packet_size = std::min(total_num_samps - num_acc_samps, packet_max_size);
+        num_acc_samps += tx_stream->send(&buff.front(), packet_size, txmd);
         txmd.has_time_spec = false;
     }
 
