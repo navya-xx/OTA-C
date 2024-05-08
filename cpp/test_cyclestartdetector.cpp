@@ -37,20 +37,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     parser.print_values();
 
-    const std::string file = parser.getValue_str("file");
-    bool save_buffer_flag = true;
-    if (file == "NULL")
-    {
-        save_buffer_flag = false;
-        if (DEBUG)
-            std::cout << "Do not save Ref signal. File == " << file << std::endl;
-    }
-    else
-    {
-        if (DEBUG)
-            std::cout << "Ref signal save to file " << file << std::endl;
-    }
-
     // USRP init
     std::string args = parser.getValue_str("args");
     if (args == "NULL")
@@ -59,6 +45,30 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             throw std::invalid_argument("ERROR : device address missing!");
 
         args = argv[1];
+    }
+
+    const std::string save_ref_rx = parser.getValue_str("save-ref-rx");
+    bool save_buffer_flag = true;
+    if (save_ref_rx == "NO")
+    {
+        save_buffer_flag = false;
+        if (DEBUG)
+            std::cout << "Do not save Ref signal." << std::endl;
+    }
+    else
+    {
+        std::string device_id = args;
+        for (char &ch : device_id)
+        {
+            if (ch == '=')
+            {
+                ch = '_'; // Replace '=' with '_'
+            }
+        }
+
+        std::string file = currentDir + "/OTA-C/cpp/storage/save_ref_rx_" + device_id;
+        if (DEBUG)
+            std::cout << "Ref signal save to file " << file << std::endl;
     }
 
     if (DEBUG)
