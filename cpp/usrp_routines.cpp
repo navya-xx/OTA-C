@@ -396,17 +396,21 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     txmd.end_of_burst = false;
     txmd.has_time_spec = true;
     txmd.time_spec = usrp->get_time_now() + 0.1;
+    size_t packet_max_size = tx_stream->get_max_num_samps();
     size_t num_acc_samps = 0;
 
     while (not stop_signal_called and num_acc_samps < total_num_samps)
     {
-        num_acc_samps += tx_stream->send(&buff.front(), total_num_samps, txmd);
+        num_acc_samps += tx_stream->send(&buff.front(), packet_max_size, txmd);
         txmd.has_time_spec = false;
     }
 
     // send a mini EOB packet
     txmd.end_of_burst = true;
     tx_stream->send(buff, 0, txmd);
+
+    if (DEBUG)
+        std::cout << "Total number of samples transmitted = " << num_acc_samps << std::endl;
 
     uhd::time_spec_t last_sample_tx_time = txmd.time_spec;
 
