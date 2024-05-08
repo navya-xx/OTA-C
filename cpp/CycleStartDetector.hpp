@@ -23,6 +23,7 @@
 #include <sstream>
 #include <deque>
 #include <vector>
+#include <limits>
 #include "PeakDetection.hpp"
 
 class CycleStartDetector
