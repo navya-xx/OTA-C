@@ -82,7 +82,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t Ref_R_zfc = parser.getValue_int("Ref-R-zfc");
 
     float sample_duration = 1 / usrp->get_tx_rate();
-    size_t pre_buffer_len = 0.1 / sample_duration;
+    size_t pre_buffer_len = 1000;
 
     // transmit REF signal
     uhd::time_spec_t first_sample_tx_time = csd_tx_ref_signal(usrp, tx_streamer, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, pre_buffer_len, stop_signal_called);

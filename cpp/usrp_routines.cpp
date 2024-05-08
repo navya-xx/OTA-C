@@ -386,7 +386,7 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
 
     for (size_t n = pre_buffer_len; n < total_num_samps; n++)
     {
-        buff[n] = zfc_seq[n % Ref_N_zfc];
+        buff[n] = zfc_seq[(n - pre_buffer_len) % Ref_N_zfc];
     }
 
     // Set up metadata. We start streaming a bit in the future
