@@ -118,7 +118,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     {
 
         // get initial noise level
-        float init_noise_level = get_background_noise_level(usrp, rx_streamer);
+        float init_noise_level = get_background_noise_level(usrp, rx_streamer, stop_signal_called);
         if (DEBUG)
             std::cout << "Noise level = " << init_noise_level << std::endl;
 
