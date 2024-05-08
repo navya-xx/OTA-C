@@ -127,12 +127,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         // protocol config
         bool keep_running = true;
         float total_time = parser.getValue_float("duration");
+        std::signal(SIGINT, &sig_int_handler);
+        std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
         if (total_time == 0.0)
-        {
-            std::signal(SIGINT, &sig_int_handler);
-            std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
             total_time = 24 * 3600; // run for one day at most
-        }
 
         // Cycle Start Detector config
         float rate = parser.getValue_float("rate");
