@@ -394,15 +394,14 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     uhd::tx_metadata_t txmd;
     txmd.start_of_burst = true;
     txmd.end_of_burst = false;
-    txmd.has_time_spec = false;
+    txmd.has_time_spec = true;
+    txmd.time_spec = usrp->get_time_now() + 0.1;
     size_t num_acc_samps = 0;
-    uhd::time_spec_t first_sample_tx_time = uhd::time_spec_t(0.0);
 
     while (not stop_signal_called and num_acc_samps < total_num_samps)
     {
         num_acc_samps += tx_stream->send(&buff.front(), total_num_samps, txmd);
-        if (num_acc_samps > 0 and first_sample_tx_time == uhd::time_spec_t(0.0))
-            first_sample_tx_time = txmd.time_spec;
+        txmd.has_time_spec = false;
     }
 
     // send a mini EOB packet
@@ -410,13 +409,6 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     tx_stream->send(buff, 0, txmd);
 
     uhd::time_spec_t last_sample_tx_time = txmd.time_spec;
-
-    // finished
-    if (DEBUG)
-    {
-        std::cout << "Total number of samples transmitted: " << num_acc_samps << std::endl;
-        std::cout << "Time diff (first and last sample) = " << (first_sample_tx_time - last_sample_tx_time).get_real_secs() * 1e6 << std::endl;
-    }
 
     return last_sample_tx_time;
 }

@@ -85,12 +85,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t pre_buffer_len = 0.1 / sample_duration;
 
     // transmit REF signal
-    uhd::time_spec_t last_sample_tx_time = csd_tx_ref_signal(usrp, tx_streamer, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, pre_buffer_len, stop_signal_called);
+    uhd::time_spec_t first_sample_tx_time = csd_tx_ref_signal(usrp, tx_streamer, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, pre_buffer_len, stop_signal_called);
 
-    // uhd::time_spec_t last_sample_tx_time = first_sample_tx_time + uhd::time_spec_t(sample_duration * (pre_buffer_len + Ref_N_zfc * Ref_R_zfc));
-
-    if (DEBUG)
-        std::cout << "USRP Last sample Tx time = " << last_sample_tx_time.get_real_secs() * 1e6 << std::endl;
+    uhd::time_spec_t last_sample_tx_time = first_sample_tx_time + uhd::time_spec_t(sample_duration * (pre_buffer_len + Ref_N_zfc * Ref_R_zfc));
 
     // ---------------------------------------------------------------------------------------
     // setup Rx streaming
@@ -101,7 +98,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     uhd::time_spec_t rx_time = last_sample_tx_time + uhd::time_spec_t(add_rx_duration);
 
     if (DEBUG)
-        std::cout << "USRP First sample Rx time = " << rx_time.get_real_secs() * 1e6 << std::endl;
+        std::cout << "First sample at " << first_sample_tx_time.get_real_secs() * 1e6 << ", Last sample at " << last_sample_tx_time.get_real_secs() * 1e6 << ", Rx time " << rx_time.get_real_secs() * 1e6 << std::endl;
 
     std::string test_outfile = parser.getValue_str("test-file");
     if (test_outfile == "NULL")
