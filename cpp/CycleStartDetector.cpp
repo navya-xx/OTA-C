@@ -135,7 +135,7 @@ void CycleStartDetector::correlation_operation()
         // udpate noise level
         float new_noise_level = abs_val_avg / num_samp_corr;
         peak_det_obj_ref.noise_level = (peak_det_obj_ref.noise_counter * peak_det_obj_ref.noise_level + new_noise_level) / (peak_det_obj_ref.noise_counter + 1);
-        if (peak_det_obj_ref.noise_counter < std::numeric_limits<long long>::max())
+        if (peak_det_obj_ref.noise_counter < std::numeric_limits<long>::max())
             peak_det_obj_ref.noise_counter++;
         else
             peak_det_obj_ref.noise_counter = 1;

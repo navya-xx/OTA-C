@@ -62,7 +62,7 @@ public:
     std::deque<std::complex<float>> save_buffer;
 
     float noise_level;
-    long long int noise_counter;
+    long int noise_counter;
 
     float *get_peak_vals();
     uhd::time_spec_t *get_peak_times();
