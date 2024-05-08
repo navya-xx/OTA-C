@@ -311,8 +311,10 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
     txmd.time_spec = tx_timer;
 
     if (DEBUG)
-        std::cout << "Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::endl;
-
+    {
+        std::cout << "Current USRP timer : " << static_cast<int64_t>(usrp->get_time_now().get_real_secs() * 1e6) << ", desired timer : " << static_cast<int64_t>(txmd.time_spec.get_real_secs() * 1e6) << std::flush;
+        std::cout << ", Difference " << static_cast<int64_t>((usrp->get_time_now() - txmd.time_spec).get_real_secs() * 1e6) << std::endl;
+    }
     size_t num_tx_samps = tx_stream->send(&tx_buff.front(), N_zfc, txmd, timeout);
 
     // send a mini EOB packet

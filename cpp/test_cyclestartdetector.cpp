@@ -211,7 +211,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // ------------------------------------------------------------------------------------------------------
     // ----- Transmit a ZFC sequence for csd testing --------------
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     size_t Tx_N_zfc = parser.getValue_int("test-signal-len");
     float min_ch_pow = parser.getValue_float("min-ch-pow");
