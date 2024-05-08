@@ -436,7 +436,7 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     while (not stop_signal_called and num_acc_samps < total_num_samps)
     {
         size_t packet_size = std::min(total_num_samps - num_acc_samps, packet_max_size);
-        num_acc_samps += tx_stream->send(&buff.front(), packet_size, txmd, 0.1);
+        num_acc_samps += tx_stream->send(&buff.front(), packet_size, txmd, 0.2);
         txmd.has_time_spec = false;
     }
 
@@ -449,7 +449,7 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     uhd::async_metadata_t async_md;
     bool got_async_burst_ack = false;
     // loop through all messages for the ACK packet (may have underflow messages in queue)
-    while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, 0.1))
+    while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, 0.2))
     {
         got_async_burst_ack =
             (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
