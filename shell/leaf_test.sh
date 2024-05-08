@@ -95,7 +95,14 @@ program_name="test_cyclestartdetector"
 for (( i=0; i < $NUM_MC_RUNS; i++ ))
 do
     echo -e "\n RUN $i at $(date +'%H:%M:%S') \n"
-    cmd_main="screen -L -Logfile ${LOGFOLDER}/logfile_${serial_number}_${i}.log -S ${screen_name} -d -m ${HOME}/OTA-C/cpp/build/${program_name} serial=${serial_number} ${id}"
+    LOGFILE="${LOGFOLDER}/logfile_${serial_number}_${i}.log"
+
+    if [ -f "$LOGFILE" ]
+    then
+        rm "$LOGFILE"
+    fi
+
+    cmd_main="screen -L -Logfile ${LOGFILE} -S ${screen_name} -d -m ${HOME}/OTA-C/cpp/build/${program_name} serial=${serial_number} ${id}"
     echo -e "RUN -> \t${cmd_main}\n"
 
     eval "${cmd_main}"
