@@ -119,7 +119,7 @@ float PeakDetectionClass::get_max_peak_val()
 void PeakDetectionClass::update_pnr_threshold()
 {
     float max_peak_val = get_max_peak_val();
-    curr_pnr_threshold = max_peak_mul * max_peak_val / noise_level;
+    curr_pnr_threshold = std::max(max_peak_mul * max_peak_val / noise_level, pnr_threshold);
 
     if (DEBUG)
         std::cout << "\t\t --> new PNR = " << curr_pnr_threshold << " <- PeakDetectionClass" << std::endl;
