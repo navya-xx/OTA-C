@@ -163,7 +163,7 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
     noise_stream_cmd.time_spec = uhd::time_spec_t();
     rx_streamer->issue_stream_cmd(noise_stream_cmd);
 
-    size_t noise_seq_len = spb * 5;
+    size_t noise_seq_len = spb * 1;
 
     std::vector<std::complex<float>> noise_buff(noise_seq_len);
 
@@ -177,13 +177,13 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
         std::cerr << e.what() << std::endl;
     }
 
-    float noise_power = 0.0;
+    float noise_level = 0.0;
     for (int i = 0; i < noise_seq_len; i++)
     {
-        noise_power += std::pow(std::abs(noise_buff[i]), 2);
+        noise_level += std::abs(noise_buff[i]);
     }
 
-    return std::sqrt(noise_power / noise_seq_len);
+    return noise_level / noise_seq_len;
 }
 
 void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate)
