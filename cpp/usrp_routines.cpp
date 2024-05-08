@@ -163,7 +163,7 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
     noise_stream_cmd.time_spec = uhd::time_spec_t();
     rx_streamer->issue_stream_cmd(noise_stream_cmd);
 
-    size_t noise_seq_len = spb * 1;
+    size_t noise_seq_len = spb * 10;
 
     std::vector<std::complex<float>> noise_buff(noise_seq_len);
 
@@ -177,8 +177,10 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
         std::cerr << e.what() << std::endl;
     }
 
+    // skip first few packets
+
     float noise_level = 0.0;
-    for (int i = 0; i < noise_seq_len; i++)
+    for (int i = spb * 5; i < noise_seq_len; i++)
     {
         noise_level += std::abs(noise_buff[i]);
     }
