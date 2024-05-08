@@ -194,7 +194,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         // Extract peak data
         ch_pow = peak_det_obj.get_avg_ch_pow();
-        detect_time = peak_det_obj.get_sync_time();
+        detect_time = peak_det_obj.get_sync_time() + uhd::time_spec_t(sample_duration * 2 * Ref_N_zfc);
     }
 
     // ------------------------------------------------------------------------------------------------------

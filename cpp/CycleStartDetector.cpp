@@ -111,8 +111,8 @@ void CycleStartDetector::correlation_operation()
         }
 
         // save to file only if there is at least one peak detected
-        if (peak_det_obj_ref.peaks_count > 0)
-            peak_det_obj_ref.save_into_buffer(samples_buffer[(front + i) % capacity]);
+        // if (peak_det_obj_ref.peaks_count > 0)
+        peak_det_obj_ref.save_into_buffer(samples_buffer[(front + i) % capacity]);
 
         if (not peak_det_obj_ref.next())
             break;
