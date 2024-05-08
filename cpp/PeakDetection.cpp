@@ -240,7 +240,7 @@ bool PeakDetectionClass::process_corr(const float &abs_val, const uhd::time_spec
 {
     float peak_to_noise_ratio = (abs_val / noise_level);
 
-    if (peak_to_noise_ratio > 1.0)
+    if (peak_to_noise_ratio > 1.0 and peak_to_noise_ratio < 10000)
     {
         if (DEBUG)
             std::cout << "\t\t -> PNR = " << peak_to_noise_ratio << ", current PNR threshold = " << curr_pnr_threshold << std::endl;

@@ -153,7 +153,7 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
     return {rx_streamer, tx_streamer};
 }
 
-float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_streamer)
+float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_streamer, const bool &stop_signal_called)
 {
     uhd::rx_metadata_t noise_md;
     uhd::stream_cmd_t noise_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
@@ -164,21 +164,43 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
     rx_streamer->issue_stream_cmd(noise_stream_cmd);
 
     size_t noise_seq_len = spb * 10;
+    size_t num_acc_samps = 0;
 
     std::vector<std::complex<float>> noise_buff(noise_seq_len);
 
-    try
+    while (not stop_signal_called and not(num_acc_samps >= noise_seq_len))
     {
-        rx_streamer->recv(&noise_buff.front(), noise_seq_len, noise_md, 1.0, false);
-    }
-    catch (uhd::io_error &e)
-    {
-        std::cerr << "Caught an IO exception. " << std::endl;
-        std::cerr << e.what() << std::endl;
+        try
+        {
+            num_acc_samps += rx_streamer->recv(&noise_buff.front(), noise_buff.size(), noise_md, 1.0, false);
+        }
+        catch (uhd::io_error &e)
+        {
+            std::cerr << "Caught an IO exception in CSD Receiver Thread. " << std::endl;
+            std::cerr << e.what() << std::endl;
+            return 0.0;
+        }
+
+        if (noise_md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        {
+            std::cout << boost::format("Timeout while streaming") << std::endl;
+            break;
+        }
+        if (noise_md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        {
+            std::cerr << "*** Got an overflow indication." << std::endl
+                      << std::endl;
+            ;
+            continue;
+        }
+        if (noise_md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        {
+            std::string error = str(boost::format("Receiver error: %s") % noise_md.strerror());
+            std::cerr << error << std::endl;
+        }
     }
 
     // skip first few packets
-
     float noise_level = 0.0;
     for (int i = spb * 5; i < noise_seq_len; i++)
     {
