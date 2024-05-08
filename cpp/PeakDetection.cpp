@@ -7,6 +7,7 @@ PeakDetectionClass::PeakDetectionClass(
     float pnr_threshold,
     float init_noise_level,
     bool save_buffer_flag,
+    size_t save_buffer_len,
     size_t peak_det_tol,
     float max_peak_mul,
     size_t sync_with_peak_from_last) : peaks_count(0),
@@ -22,7 +23,7 @@ PeakDetectionClass::PeakDetectionClass(
                                        noise_level(init_noise_level),
                                        noise_counter(0),
                                        samples_from_first_peak(0),
-                                       save_buffer(ref_seq_len * (num_ref_seq * 4), std::complex<float>(0.0, 0.0)),
+                                       save_buffer(save_buffer_len, std::complex<float>(0.0, 0.0)),
                                        max_peak_mul(max_peak_mul),
                                        peak_det_tol(peak_det_tol),
                                        sync_with_peak_from_last(sync_with_peak_from_last)

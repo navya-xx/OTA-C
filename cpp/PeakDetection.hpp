@@ -54,7 +54,7 @@ private:
     float get_max_peak_val();
 
 public:
-    PeakDetectionClass(size_t N, size_t R, float pnr_threshold, float init_noise_level, bool save_buffer_flag, size_t peak_det_tol, float max_peak_mul, size_t sync_with_peak_from_last);
+    PeakDetectionClass(size_t N, size_t R, float pnr_threshold, float init_noise_level, bool save_buffer_flag, size_t save_buffer_len, size_t peak_det_tol, float max_peak_mul, size_t sync_with_peak_from_last);
 
     size_t peaks_count;
     int prev_peak_index;

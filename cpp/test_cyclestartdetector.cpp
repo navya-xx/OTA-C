@@ -148,7 +148,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         float max_peak_mul = parser.getValue_float("max-peak-mul");
 
         // peak detection class obj init
-        PeakDetectionClass peak_det_obj(Ref_N_zfc, Ref_R_zfc, pnr_threshold, init_noise_level, save_buffer_flag, peak_det_tol, max_peak_mul, sync_with_peak_from_last);
+        // size_t save_buffer_len = Ref_N_zfc * 10;
+        size_t save_buffer_len = 2000000;
+        PeakDetectionClass peak_det_obj(Ref_N_zfc, Ref_R_zfc, pnr_threshold, init_noise_level, save_buffer_flag, save_buffer_len, peak_det_tol, max_peak_mul, sync_with_peak_from_last);
         CycleStartDetector csdbuffer(capacity, sample_duration, num_samp_corr, Ref_N_zfc, Ref_m_zfc, Ref_R_zfc, peak_det_obj);
 
         // Threading -- consumer-producer routine
