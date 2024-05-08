@@ -321,11 +321,12 @@ bool PeakDetectionClass::process_corr(const float &abs_val, const uhd::time_spec
 float PeakDetectionClass::get_avg_ch_pow()
 {
     float ch_pow = 0.0;
-    if (peaks_count > 2)
+    if (peaks_count > 1)
     {
-        int num_peaks_detected = peaks_count - 2;
+        int num_peaks_detected = peaks_count - 1;
 
-        for (int i = 1; i < peaks_count - 1; ++i)
+        // ignore last peak for channel power estimation
+        for (int i = 0; i < peaks_count - 1; ++i)
         {
             ch_pow += peak_vals[i];
         }
@@ -333,16 +334,7 @@ float PeakDetectionClass::get_avg_ch_pow()
         ch_pow = ch_pow / num_peaks_detected;
     }
     else
-    {
-        int num_peaks_detected = peaks_count;
-
-        for (int i = 0; i < peaks_count; ++i)
-        {
-            ch_pow += peak_vals[i];
-        }
-
-        ch_pow = ch_pow / num_peaks_detected;
-    }
+        ch_pow = peak_vals[0];
 
     return ch_pow;
 }

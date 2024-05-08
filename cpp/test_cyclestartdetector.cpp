@@ -198,7 +198,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     }
 
     // ------------------------------------------------------------------------------------------------------
-    // ----- Transmit another sequence for csd testing --------------
+    // ----- Transmit a ZFC sequence for csd testing --------------
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
