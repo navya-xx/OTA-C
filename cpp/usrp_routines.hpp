@@ -36,7 +36,7 @@ bool check_locked_sensor(std::vector<std::string> sensor_names,
                          get_sensor_fn_t get_sensor_fn,
                          double setup_time);
 
-std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(uhd::usrp::multi_usrp::sptr &usrp, ConfigParser &config_parser);
+std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(uhd::usrp::multi_usrp::sptr &usrp, ConfigParser &config_parser, const size_t &setup_time_microsec);
 
 float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_streamer, const bool &stop_signal_called);
 

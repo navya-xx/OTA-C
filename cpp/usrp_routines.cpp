@@ -48,7 +48,7 @@ bool check_locked_sensor(std::vector<std::string> sensor_names,
 
 // routines to setup USRP
 // create a usrp device
-std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(uhd::usrp::multi_usrp::sptr &usrp, ConfigParser &config_parser)
+std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(uhd::usrp::multi_usrp::sptr &usrp, ConfigParser &config_parser, const size_t &setup_time_microsecs)
 {
     // Lock mboard clocks
     std::string ref = config_parser.getValue_str("ref");
@@ -120,7 +120,7 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
     }
 
     // sleep a bit to allow setup
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(setup_time_microsecs));
 
     // check Ref and LO Lock detect
     check_locked_sensor(

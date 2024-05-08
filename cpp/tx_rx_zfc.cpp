@@ -39,15 +39,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (DEBUG)
         std::cout << "USRP = " << args << std::endl;
 
+    size_t setup_time_microsecs = static_cast<size_t>(parser.getValue_float("setup-time") * 1e6);
+
     uhd::usrp::multi_usrp::sptr usrp;
     bool device_create = false;
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         try
         {
             usrp = uhd::usrp::multi_usrp::make(args);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             device_create = true;
             break;
         }
@@ -70,7 +72,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     uhd::tx_streamer::sptr tx_streamer;
     uhd::rx_streamer::sptr rx_streamer;
 
-    auto streamers = create_usrp_streamers(usrp, parser);
+    auto streamers = create_usrp_streamers(usrp, parser, setup_time_microsecs);
     rx_streamer = streamers.first;
     tx_streamer = streamers.second;
 
