@@ -90,7 +90,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // compute time_stamp of beginning of last ref seq
     float sample_duration = 1 / usrp->get_tx_rate();
     // align to the first sample of the last sequence sent
-    double sync_shift_duration = sample_duration * (Ref_R_zfc - 2) * Ref_N_zfc;
+    double sync_shift_duration = sample_duration * Ref_R_zfc * Ref_N_zfc;
     uhd::time_spec_t ref_time = tx_time + uhd::time_spec_t(sync_shift_duration);
 
     // ---------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     float tx_wait_time = parser.getValue_float("tx-wait-microsec");
     size_t test_signal_len = parser.getValue_int("test-signal-len");
-    double add_rx_duration = tx_wait_time / 1e6 - (sample_duration * 2 * test_signal_len);
+    double add_rx_duration = tx_wait_time / 1e6 - (sample_duration * 5 * test_signal_len);
     uhd::time_spec_t rx_time = ref_time + uhd::time_spec_t(add_rx_duration);
 
     if (DEBUG)
@@ -110,9 +110,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         if (argc > 2)
             test_outfile = argv[2];
         else
+        {
             std::cerr << "ERROR : Test output filename cannot be determined." << std::endl;
+            return EXIT_FAILURE;
+        }
     }
-    csd_rx_test_signal(usrp, rx_streamer, test_signal_len, rx_time, test_signal_len * 4, test_outfile, stop_signal_called);
+
+    csd_rx_test_signal(usrp, rx_streamer, test_signal_len, rx_time, test_signal_len * 10, test_outfile, stop_signal_called);
 
     return EXIT_SUCCESS;
 }
