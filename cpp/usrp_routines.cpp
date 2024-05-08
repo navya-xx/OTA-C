@@ -370,26 +370,57 @@ void csdtest_tx_leaf_node(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::s
 
 uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_streamer::sptr &tx_stream, const size_t &Ref_N_zfc, const size_t &Ref_m_zfc, const size_t &Ref_R_zfc, const size_t &pre_buffer_len, bool &stop_signal_called)
 {
+
+    if (pre_buffer_len > 0)
+    {
+        // send initial empty buffer
+        float ampl = 0.1;
+        std::vector<std::complex<float>> buff(tx_stream->get_max_num_samps(), std::complex<float>(ampl, ampl));
+        size_t num_acc_samps = 0;
+
+        // setup metadata for the first packet
+        uhd::tx_metadata_t md;
+        md.start_of_burst = false;
+        md.end_of_burst = false;
+        md.has_time_spec = false;
+        md.time_spec = uhd::time_spec_t(0.0);
+
+        while (num_acc_samps < pre_buffer_len)
+        {
+            size_t samps_to_send = std::min(pre_buffer_len - num_acc_samps, buff.size());
+
+            // send a single packet
+            size_t num_tx_samps = tx_stream->send(&buff.front(), samps_to_send, md, 0.1);
+
+            // do not use time spec for subsequent packets
+            md.has_time_spec = false;
+
+            if (num_tx_samps < samps_to_send)
+                std::cerr << "Send timeout..." << std::endl;
+            if (DEBUG)
+                std::cout << boost::format("Sent packet: %u samples") % num_tx_samps
+                          << std::endl;
+
+            num_acc_samps += num_tx_samps;
+        }
+
+        // send a mini EOB packet
+        md.end_of_burst = true;
+        tx_stream->send("", 0, md);
+    }
+
     // pre-fill the buffer with the waveform
     auto zfc_seq = generateZadoffChuSequence(Ref_N_zfc, Ref_m_zfc);
 
     std::cout << "ZFC seq len " << Ref_N_zfc << ", identifier " << Ref_m_zfc << " Reps " << Ref_R_zfc << std::endl;
 
     // allocate a buffer which we re-use for each channel
-    size_t total_num_samps = pre_buffer_len + Ref_N_zfc * Ref_R_zfc;
+    size_t total_num_samps = Ref_N_zfc * Ref_R_zfc;
     std::vector<std::complex<float>> buff(total_num_samps);
-
-    if (pre_buffer_len > 0)
-    {
-        for (size_t n = 0; n < pre_buffer_len; n++)
-        {
-            buff[n] = std::complex<float>(0.0, 0.0);
-        }
-    }
 
     for (size_t n = pre_buffer_len; n < total_num_samps; n++)
     {
-        buff[n] = zfc_seq[(n - pre_buffer_len) % Ref_N_zfc];
+        buff[n] = zfc_seq[n % Ref_N_zfc];
     }
 
     // Set up metadata. We start streaming a bit in the future
@@ -405,13 +436,30 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     while (not stop_signal_called and num_acc_samps < total_num_samps)
     {
         size_t packet_size = std::min(total_num_samps - num_acc_samps, packet_max_size);
-        num_acc_samps += tx_stream->send(&buff.front(), packet_size, txmd);
+        num_acc_samps += tx_stream->send(&buff.front(), packet_size, txmd, 0.1);
         txmd.has_time_spec = false;
     }
 
     // send a mini EOB packet
     txmd.end_of_burst = true;
     tx_stream->send(buff, 0, txmd);
+
+    std::cout << std::endl
+              << "Waiting for async burst ACK... " << std::flush;
+    uhd::async_metadata_t async_md;
+    bool got_async_burst_ack = false;
+    // loop through all messages for the ACK packet (may have underflow messages in queue)
+    while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, 0.1))
+    {
+        got_async_burst_ack =
+            (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
+    }
+    std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
+
+    // finished
+    std::cout << std::endl
+              << "Done!" << std::endl
+              << std::endl;
 
     if (DEBUG)
         std::cout << "Total number of samples transmitted = " << num_acc_samps << std::endl;
