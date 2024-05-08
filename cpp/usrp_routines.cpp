@@ -156,7 +156,7 @@ std::pair<uhd::rx_streamer::sptr, uhd::tx_streamer::sptr> create_usrp_streamers(
 float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_streamer::sptr &rx_streamer, const bool &stop_signal_called)
 {
     uhd::rx_metadata_t noise_md;
-    uhd::stream_cmd_t noise_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
+    uhd::stream_cmd_t noise_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
     size_t spb = rx_streamer->get_max_num_samps();
     noise_stream_cmd.num_samps = size_t(spb);
     noise_stream_cmd.stream_now = true;
@@ -199,6 +199,9 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
             std::cerr << error << std::endl;
         }
     }
+
+    noise_stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+    rx_streamer->issue_stream_cmd(noise_stream_cmd);
 
     // skip first few packets
     float noise_level = 0.0;

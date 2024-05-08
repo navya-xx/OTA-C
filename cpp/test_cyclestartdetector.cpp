@@ -122,6 +122,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         if (DEBUG)
             std::cout << "Noise level = " << init_noise_level << std::endl;
 
+        if (init_noise_level > 1.0)
+            return EXIT_FAILURE;
+
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         // protocol config
