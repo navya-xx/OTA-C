@@ -117,6 +117,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // create scope for time sync process
     uhd::time_spec_t detect_time;
     float ch_pow = 0.0;
+
     {
 
         // get initial noise level

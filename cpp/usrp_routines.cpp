@@ -428,8 +428,8 @@ uhd::time_spec_t csd_tx_ref_signal(uhd::usrp::multi_usrp::sptr &usrp, uhd::tx_st
     uhd::tx_metadata_t txmd;
     txmd.start_of_burst = true;
     txmd.end_of_burst = false;
-    txmd.has_time_spec = true;
-    txmd.time_spec = usrp->get_time_now() + 0.1;
+    txmd.has_time_spec = false;
+    txmd.time_spec = usrp->get_time_now();
     size_t packet_max_size = tx_stream->get_max_num_samps();
     size_t num_acc_samps = 0;
 
