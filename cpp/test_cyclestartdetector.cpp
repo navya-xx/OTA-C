@@ -49,6 +49,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     const std::string save_ref_rx = parser.getValue_str("save-ref-rx");
     bool save_buffer_flag = true;
+    std::string file;
     if (save_ref_rx == "NO")
     {
         save_buffer_flag = false;
@@ -66,7 +67,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             }
         }
 
-        std::string file = currentDir + "/OTA-C/cpp/storage/save_ref_rx_" + device_id;
+        file = currentDir + "/OTA-C/cpp/storage/save_ref_rx_" + device_id;
         if (DEBUG)
             std::cout << "Ref signal save to file " << file << std::endl;
     }
