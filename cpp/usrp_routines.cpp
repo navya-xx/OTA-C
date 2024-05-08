@@ -210,7 +210,7 @@ float get_background_noise_level(uhd::usrp::multi_usrp::sptr &usrp, uhd::rx_stre
         noise_level += std::abs(noise_buff[i]);
     }
 
-    return noise_level / noise_seq_len;
+    return noise_level / (noise_seq_len - spb * 5);
 }
 
 void cyclestartdetector_receiver_thread(CycleStartDetector &csdbuffer, uhd::rx_streamer::sptr rx_stream, std::atomic<bool> &stop_thread_signal, bool &stop_signal_called, const std::chrono::time_point<std::chrono::steady_clock> &stop_time, const float &rate)

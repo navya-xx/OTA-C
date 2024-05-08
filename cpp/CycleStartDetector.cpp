@@ -90,6 +90,8 @@ void CycleStartDetector::correlation_operation()
 {
 
     // Perform cross-correlation
+    bool found_peak = false;
+    float abs_val_avg;
     for (size_t i = 0; i < num_samp_corr; ++i)
     {
 
@@ -102,12 +104,16 @@ void CycleStartDetector::correlation_operation()
 
         float abs_val = std::abs(corr) / N_zfc;
 
-        bool found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
+        found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
         if (found_peak)
         {
             if (DEBUG)
                 std::cout << "Found peak at absolute sample index = " << i << std::endl;
+        }
+        else
+        {
+            abs_val_avg += abs_val;
         }
 
         // save to file only if there is at least one peak detected
@@ -117,5 +123,13 @@ void CycleStartDetector::correlation_operation()
 
         if (not peak_det_obj_ref.next())
             break;
+    }
+
+    if (not found_peak)
+    {
+        // udpate noise level
+        peak_det_obj_ref.noise_level = abs_val_avg / num_samp_corr;
+        if (DEBUG)
+            std::cout << "New noise level = " << peak_det_obj_ref.noise_level;
     }
 }

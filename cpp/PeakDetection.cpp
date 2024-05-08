@@ -145,7 +145,7 @@ void PeakDetectionClass::resetPeaks()
 void PeakDetectionClass::updateNoiseLevel(const float &corr_val)
 {
     // only tolerate max 10% change in noise level
-    if (std::abs(corr_val - noise_level) / noise_level < 0.1)
+    if (std::abs(corr_val - noise_level) / noise_level < 0.5)
     {
         // update noise level by iteratively averaging
         if (corr_val < noise_level * 5)

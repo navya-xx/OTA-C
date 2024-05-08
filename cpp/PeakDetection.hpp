@@ -37,7 +37,6 @@ private:
     size_t ref_seq_len;
     float pnr_threshold, curr_pnr_threshold;
     float init_noise_level;
-    float noise_level;
     size_t noise_counter;
 
     size_t peak_det_tol;
@@ -62,6 +61,8 @@ public:
     int samples_from_first_peak;
     bool detection_flag;
     std::deque<std::complex<float>> save_buffer;
+
+    float noise_level;
 
     float *get_peak_vals();
     uhd::time_spec_t *get_peak_times();
