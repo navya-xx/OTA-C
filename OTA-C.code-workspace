@@ -8,8 +8,6 @@
 		"files.associations": {
 			"*.ipynb": "jupyter",
 			"*.jemdoc": "text",
-			"condition_variable": "cpp",
-			"complex": "cpp",
 			"cctype": "cpp",
 			"clocale": "cpp",
 			"cmath": "cpp",
@@ -29,10 +27,10 @@
 			"*.tcc": "cpp",
 			"bitset": "cpp",
 			"chrono": "cpp",
-			"codecvt": "cpp",
+			"complex": "cpp",
+			"condition_variable": "cpp",
 			"cstdint": "cpp",
 			"deque": "cpp",
-			"forward_list": "cpp",
 			"list": "cpp",
 			"map": "cpp",
 			"set": "cpp",
@@ -49,14 +47,13 @@
 			"optional": "cpp",
 			"random": "cpp",
 			"ratio": "cpp",
-			"regex": "cpp",
 			"string": "cpp",
 			"string_view": "cpp",
 			"system_error": "cpp",
 			"tuple": "cpp",
 			"type_traits": "cpp",
 			"utility": "cpp",
-			"slist": "cpp",
+			"hash_map": "cpp",
 			"fstream": "cpp",
 			"future": "cpp",
 			"initializer_list": "cpp",
@@ -68,7 +65,6 @@
 			"mutex": "cpp",
 			"new": "cpp",
 			"ostream": "cpp",
-			"shared_mutex": "cpp",
 			"sstream": "cpp",
 			"stdexcept": "cpp",
 			"streambuf": "cpp",
@@ -78,8 +74,7 @@
 			"typeindex": "cpp",
 			"typeinfo": "cpp",
 			"valarray": "cpp",
-			"variant": "cpp",
-			"hash_map": "cpp"
+			"variant": "cpp"
 		}
 	}
 }

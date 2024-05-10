@@ -47,22 +47,3 @@ po::variables_map parse_config_from_file(const std::string &file);
 
 template <typename T>
 T convertToType(const std::string &str);
-
-// Class to parse config file and store values in a dictionary-like structure
-class ConfigParser
-{
-public:
-    // Method to parse the config file and store values in the map
-    void parse(const std::string &filename);
-
-    // Method to retrieve value by variable name
-    const std::string getValue_str(const std::string &varName);
-    const size_t getValue_int(const std::string &varName);
-    const float getValue_float(const std::string &varName);
-    void print_values();
-
-private:
-    std::unordered_map<std::string, std::string> string_data;
-    std::unordered_map<std::string, size_t> int_data;
-    std::unordered_map<std::string, float> float_data;
-};

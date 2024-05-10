@@ -48,8 +48,9 @@ include_directories(
 link_directories(${Boost_LIBRARY_DIRS})
 
 ### Make the executable #######################################################
-add_executable(test_cyclestartdetector test_cyclestartdetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
-add_executable(tx_rx_zfc tx_rx_zfc.cpp CycleStartDetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
+add_executable(test_USRP_init test_USRP_init.cpp utility_funcs.cpp USRP_class.cpp ConfigParser.cpp utility_funcs.hpp USRP_class.hpp ConfigParser.hpp)
+# add_executable(test_cyclestartdetector test_cyclestartdetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
+# add_executable(tx_rx_zfc tx_rx_zfc.cpp CycleStartDetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
 
 set(CMAKE_BUILD_TYPE "Release")
 message(STATUS "******************************************************************************")
@@ -63,28 +64,16 @@ message(STATUS "****************************************************************
 # anything else we need (in this case, some Boost libraries):
 if(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against shared UHD library.")
-    target_link_libraries(test_cyclestartdetector ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    target_link_libraries(tx_rx_zfc ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(test_USRP_init ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    # target_link_libraries(test_cyclestartdetector ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    # target_link_libraries(tx_rx_zfc ${UHD_LIBRARIES} ${Boost_LIBRARIES})
 # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
 else(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against static UHD library.")
-    target_link_libraries(test_cyclestartdetector
-        # We could use ${UHD_LIBRARIES}, but linking requires some extra flags,
-        # so we use this convenience variable provided to us
-        ${UHD_STATIC_LIB_LINK_FLAG}
-        # Also, when linking statically, we need to pull in all the deps for
-        # UHD as well, because the dependencies don't get resolved automatically
-        ${UHD_STATIC_LIB_DEPS}
-    )
-    target_link_libraries(tx_rx_zfc
-        # We could use ${UHD_LIBRARIES}, but linking requires some extra flags,
-        # so we use this convenience variable provided to us
-        ${UHD_STATIC_LIB_LINK_FLAG}
-        # Also, when linking statically, we need to pull in all the deps for
-        # UHD as well, because the dependencies don't get resolved automatically
-        ${UHD_STATIC_LIB_DEPS}
-    )
+    target_link_libraries(test_USRP_init ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    # target_link_libraries(test_cyclestartdetector ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    # target_link_libraries(tx_rx_zfc ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
 endif(NOT UHD_USE_STATIC_LIBS)
 
 ### Once it's built... ########################################################

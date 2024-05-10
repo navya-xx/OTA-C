@@ -32,8 +32,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::string currentDir(homeDir);
 
     // rx and tx streamers -- initilize
-    ConfigParser parser;
-    parser.parse(currentDir + "/OTA-C/cpp/leaf_config.conf");
+    ConfigParser parser(currentDir + "/OTA-C/cpp/leaf_config.conf");
 
     parser.print_values();
 

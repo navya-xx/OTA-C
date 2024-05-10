@@ -24,6 +24,7 @@
 #include <deque>
 #include "CycleStartDetector.hpp"
 #include "utility_funcs.hpp"
+#include "ConfigParser.hpp"
 
 extern const bool DEBUG;
 
