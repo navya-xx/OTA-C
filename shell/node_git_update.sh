@@ -8,4 +8,5 @@ do
     echo $cmd_git
     eval $cmd_git
     echo "Git update on $node_name complete!"
+    eval "ssh ${node_name} 'cd \$HOME/OTA-C/cpp/build/; cmake ../; make -j4'"
 done

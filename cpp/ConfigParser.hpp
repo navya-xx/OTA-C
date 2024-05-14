@@ -34,11 +34,13 @@ public:
     ConfigParser(const std::string &filename);
 
     // Method to retrieve value by variable name
-    const std::string getValue_str(const std::string &varName);
-    const size_t getValue_int(const std::string &varName);
-    const float getValue_float(const std::string &varName);
+    std::string getValue_str(const std::string &varName);
+    size_t getValue_int(const std::string &varName);
+    float getValue_float(const std::string &varName);
     void set_value(const std::string &varname, const std::string &varval, const std::string &vartype);
     void print_values();
+    bool is_save_buffer();
+    std::string save_buffer_filename = "";
 
 private:
     std::unordered_map<std::string, std::string> string_data;

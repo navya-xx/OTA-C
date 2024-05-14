@@ -24,10 +24,13 @@
 #include <deque>
 #include <vector>
 #include <array>
+#include "ConfigParser.hpp"
 
 class PeakDetectionClass
 {
 private:
+    ConfigParser parser;
+
     size_t *peak_indices;
     float *peak_vals;
     uhd::time_spec_t *peak_times;
@@ -52,7 +55,7 @@ private:
     float get_max_peak_val();
 
 public:
-    PeakDetectionClass(size_t N, size_t R, float pnr_threshold, float init_noise_level, bool save_buffer_flag, size_t save_buffer_len, size_t peak_det_tol, float max_peak_mul, size_t sync_with_peak_from_last);
+    PeakDetectionClass(ConfigParser &parser, const float &init_noise_level, bool save_buffer_flag);
 
     size_t peaks_count;
     int prev_peak_index;
@@ -75,7 +78,7 @@ public:
     void save_into_buffer(const std::complex<float> &sample);
     void save_complex_data_to_file(const std::string &file);
 
-    void updateNoiseLevel(const float &corr_val);
+    void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
 
     float get_avg_ch_pow();
     uhd::time_spec_t get_sync_time();

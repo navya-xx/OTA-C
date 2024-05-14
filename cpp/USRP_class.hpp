@@ -22,6 +22,8 @@
 #include <iomanip>
 #include <sstream>
 #include <deque>
+#include <numeric>
+#include <algorithm>
 #include "utility_funcs.hpp"
 #include "ConfigParser.hpp"
 
@@ -41,19 +43,21 @@ public:
     std::vector<std::complex<float>> reception(const size_t &num_rx_samps, const uhd::time_spec_t &rx_time);
 
     bool stop_signal_called = false;
-
-private:
-    ConfigParser parser;
+    float init_background_noise;
+    size_t max_rx_packet_size, max_tx_packet_size;
 
     uhd::usrp::multi_usrp::sptr usrp;
     uhd::rx_streamer::sptr rx_streamer;
     uhd::tx_streamer::sptr tx_streamer;
     float tx_rate, rx_rate, tx_gain, rx_gain, tx_bw, rx_bw;
+    uhd::time_spec_t rx_sample_duration, tx_sample_duration;
 
-    typedef std::function<uhd::sensor_value_t(const std::string &)> get_sensor_fn_t;
+private:
+    ConfigParser parser;
 
-    bool check_locked_sensor(std::vector<std::string> sensor_names,
-                             const char *sensor_name,
-                             get_sensor_fn_t get_sensor_fn,
-                             double setup_time);
+    uhd::sensor_value_t get_sensor_fn_rx(const std::string &sensor_name, const size_t &channel);
+    uhd::sensor_value_t get_sensor_fn_tx(const std::string &sensor_name, const size_t &channel);
+
+    bool check_locked_sensor_rx(float setup_time = 1.0);
+    bool check_locked_sensor_tx(float setup_time = 1.0);
 };

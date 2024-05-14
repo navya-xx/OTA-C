@@ -25,11 +25,13 @@
 #include <vector>
 #include <limits>
 #include "PeakDetection.hpp"
+#include "ConfigParser.hpp"
+#include "utility_funcs.hpp"
 
 class CycleStartDetector
 {
 public:
-    CycleStartDetector(size_t capacity, uhd::time_spec_t sample_duration, size_t num_samp_corr, size_t N_zfc, size_t m_zfc, size_t R_zfc, PeakDetectionClass &peak_det_obj);
+    CycleStartDetector(ConfigParser &parser, const uhd::time_spec_t &rx_sample_duration, PeakDetectionClass &peak_det_obj);
 
     void produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time);
 
@@ -37,19 +39,25 @@ public:
 
     void correlation_operation();
 
+    uhd::time_spec_t get_wait_time(float tx_wait_microsec);
+
 private:
     std::vector<std::complex<float>> samples_buffer;
     std::vector<uhd::time_spec_t> timer;
     uhd::time_spec_t prev_timer;
+
+    ConfigParser parser;
+    uhd::time_spec_t rx_sample_duration;
+    PeakDetectionClass &peak_det_obj_ref;
+
     size_t N_zfc, m_zfc, R_zfc;
-    uhd::time_spec_t sample_duration;
     size_t num_samp_corr;
     size_t capacity;
+
     size_t front;
     size_t rear;
     size_t num_produced;
     std::vector<std::complex<float>> zfc_seq;
-    PeakDetectionClass &peak_det_obj_ref;
 
     boost::mutex mtx;
     boost::condition_variable cv_producer;

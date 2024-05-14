@@ -2,35 +2,31 @@
 extern const bool DEBUG;
 
 PeakDetectionClass::PeakDetectionClass(
-    size_t ref_seq_len,
-    size_t num_ref_seq,
-    float pnr_threshold,
-    float init_noise_level,
-    bool save_buffer_flag,
-    size_t save_buffer_len,
-    size_t peak_det_tol,
-    float max_peak_mul,
-    size_t sync_with_peak_from_last) : peaks_count(0),
-                                       total_num_peaks(num_ref_seq),
-                                       prev_peak_index(0),
-                                       prev_peak_val(0),
-                                       ref_seq_len(ref_seq_len),
-                                       save_buffer_flag(save_buffer_flag),
-                                       detection_flag(false),
-                                       pnr_threshold(pnr_threshold),
-                                       curr_pnr_threshold(pnr_threshold),
-                                       init_noise_level(init_noise_level),
-                                       noise_level(init_noise_level),
-                                       noise_counter(0),
-                                       samples_from_first_peak(0),
-                                       save_buffer(save_buffer_len, std::complex<float>(0.0, 0.0)),
-                                       max_peak_mul(max_peak_mul),
-                                       peak_det_tol(peak_det_tol),
-                                       sync_with_peak_from_last(sync_with_peak_from_last)
+    ConfigParser &parser,
+    const float &init_noise_level,
+    bool save_buffer_flag) : parser(parser),
+                             save_buffer_flag(save_buffer_flag),
+                             detection_flag(false),
+                             init_noise_level(init_noise_level)
 {
-    peak_indices = new size_t[num_ref_seq];
-    peak_vals = new float[num_ref_seq];
-    peak_times = new uhd::time_spec_t[num_ref_seq];
+    total_num_peaks = parser.getValue_int("Ref-R-zfc");
+
+    ref_seq_len = parser.getValue_int("Ref-N-zfc");
+    pnr_threshold = parser.getValue_float("pnr-threshold");
+    curr_pnr_threshold = pnr_threshold;
+
+    peak_det_tol = parser.getValue_int("peak-det-tol");
+    max_peak_mul = parser.getValue_float("max-peak-mul");
+    sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
+
+    peak_indices = new size_t[total_num_peaks];
+    peak_vals = new float[total_num_peaks];
+    peak_times = new uhd::time_spec_t[total_num_peaks];
+
+    if (save_buffer_flag)
+    {
+        save_buffer.resize(ref_seq_len * total_num_peaks * 2, std::complex<float>(0.0, 0.0));
+    }
 };
 
 float *PeakDetectionClass::get_peak_vals()
@@ -142,19 +138,21 @@ void PeakDetectionClass::resetPeaks()
         std::cout << "\t\t -> RESET <- PeakDetectionClass" << std::endl;
 }
 
-void PeakDetectionClass::updateNoiseLevel(const float &corr_val)
+void PeakDetectionClass::updateNoiseLevel(const float &sum_ampl, const size_t &num_samps)
 {
     // only tolerate max 10% change in noise level
-    if (std::abs(corr_val - noise_level) / noise_level < 0.5)
+    if (std::abs(sum_ampl - noise_level) / noise_level < 0.1)
     {
         // update noise level by iteratively averaging
-        if (corr_val < noise_level * 5)
-            noise_level = (noise_counter * noise_level + corr_val) / (noise_counter + 1);
-        else
-            noise_level = corr_val;
-        ++noise_counter;
+        noise_level = (noise_counter * noise_level + sum_ampl) / (noise_counter + num_samps);
+
         if (DEBUG)
             std::cout << "New noise level = " << noise_level << std::endl;
+
+        if (noise_counter < std::numeric_limits<long>::max())
+            noise_counter = noise_counter + sum_ampl;
+        else
+            noise_counter = 1; // restart counter
     }
 }
 

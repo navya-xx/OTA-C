@@ -1,29 +1,29 @@
 #include "CycleStartDetector.hpp"
-#include "utility_funcs.hpp"
 
 extern const bool DEBUG;
 
 CycleStartDetector::CycleStartDetector(
-    size_t capacity,
-    uhd::time_spec_t sample_duration,
-    size_t num_samp_corr,
-    size_t N_zfc,
-    size_t m_zfc,
-    size_t R_zfc,
-    PeakDetectionClass &peak_det_obj) : samples_buffer(capacity),
-                                        timer(capacity),
+    ConfigParser &parser,
+    const uhd::time_spec_t &rx_sample_duration,
+    PeakDetectionClass &peak_det_obj) : parser(parser),
+                                        rx_sample_duration(rx_sample_duration),
+                                        peak_det_obj_ref(peak_det_obj),
                                         prev_timer(uhd::time_spec_t(0.0)),
-                                        num_samp_corr(num_samp_corr),
-                                        sample_duration(sample_duration),
-                                        capacity(capacity),
                                         front(0),
                                         rear(0),
-                                        num_produced(0),
-                                        N_zfc(N_zfc),
-                                        m_zfc(m_zfc),
-                                        R_zfc(R_zfc),
-                                        zfc_seq(generateZadoffChuSequence(N_zfc, m_zfc)),
-                                        peak_det_obj_ref(peak_det_obj){};
+                                        num_produced(0)
+{
+    N_zfc = parser.getValue_int("Ref-N-zfc");
+    m_zfc = parser.getValue_int("Ref-m-zfc");
+    R_zfc = parser.getValue_int("Ref-R-zfc");
+    zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
+
+    num_samp_corr = N_zfc * parser.getValue_int("num-corr-size-mul");
+    capacity = num_samp_corr * parser.getValue_int("capacity-mul");
+
+    samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
+    timer.resize(capacity, uhd::time_spec_t(0.0));
+};
 
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time)
 {
@@ -33,22 +33,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
                      { return capacity - num_produced >= samples_size; }); // Wait for enough space to produce
 
     // insert first timer
-    uhd::time_spec_t next_time = time;
-
-    // if (DEBUG)
-    // {
-    //     if (prev_timer.get_real_secs() == 0.0)
-    //     {
-    //         prev_timer = time;
-    //     }
-    //     else
-    //     {
-    //         std::cout << "Current : " << time.get_real_secs() * 1e6 << ", Prev : " << prev_timer.get_real_secs() * 1e6 << ", sample_size : " << samples_size << std::endl;
-    //         std::cout << "T-> " << (time - prev_timer).get_real_secs() * 1e6 << " microsecs" << std::endl;
-    //         std::cout << "S-> " << (prev_timer.get_real_secs() + (sample_duration.get_real_secs() * samples_size)) * 1e6 << " || " << time.get_real_secs() * 1e6 << std::endl;
-    //         prev_timer = time;
-    //     }
-    // }
+    uhd::time_spec_t next_time = time; // USRP time of first packet
 
     // insert samples into the buffer
     for (const auto &sample : samples)
@@ -57,7 +42,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
         timer[rear] = next_time; // store absolute sample times
 
         rear = (rear + 1) % capacity;
-        next_time += sample_duration;
+        next_time += rx_sample_duration;
     }
 
     num_produced += samples_size;
@@ -81,30 +66,27 @@ bool CycleStartDetector::consume()
     {
         front = (front + num_samp_corr + 1) % capacity;
         num_produced -= (num_samp_corr + 1);
-        cv_producer.notify_one(); // Notify producer that space is available
+        // Producer is notified in the main thread
         return false;
     }
 }
 
 void CycleStartDetector::correlation_operation()
 {
-
     // Perform cross-correlation
     bool found_peak = false;
-    float abs_val_avg = 0.0;
-    bool update_noise_level = true;
+    float sum_ampl = 0.0;
 
     for (size_t i = 0; i < num_samp_corr; ++i)
     {
-
         // compute correlation
         std::complex<float> corr(0.0, 0.0);
         for (size_t j = 0; j < N_zfc; ++j)
         {
             corr += samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]);
         }
-
         float abs_val = std::abs(corr) / N_zfc;
+        sum_ampl += std::abs(samples_buffer[(front + i) % capacity]);
 
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
@@ -112,13 +94,6 @@ void CycleStartDetector::correlation_operation()
         {
             if (DEBUG)
                 std::cout << "Found peak at absolute sample index = " << i << std::endl;
-
-            update_noise_level = false;
-        }
-
-        if (update_noise_level)
-        {
-            abs_val_avg += abs_val;
         }
 
         // save to file only if there is at least one peak detected
@@ -130,14 +105,13 @@ void CycleStartDetector::correlation_operation()
             break;
     }
 
-    if (update_noise_level)
-    {
-        // udpate noise level
-        float new_noise_level = abs_val_avg / num_samp_corr;
-        peak_det_obj_ref.noise_level = (peak_det_obj_ref.noise_counter * peak_det_obj_ref.noise_level + new_noise_level) / (peak_det_obj_ref.noise_counter + 1);
-        if (peak_det_obj_ref.noise_counter < std::numeric_limits<long>::max())
-            peak_det_obj_ref.noise_counter++;
-        else
-            peak_det_obj_ref.noise_counter = 1;
-    }
+    // udpate noise level
+    if (not found_peak)
+        peak_det_obj_ref.updateNoiseLevel(sum_ampl, num_samp_corr);
+}
+
+uhd::time_spec_t CycleStartDetector::get_wait_time(float tx_wait_microsec)
+{
+    float peak_to_last_sample_duration = rx_sample_duration.get_real_secs() * parser.getValue_int("Ref-N-zfc") * parser.getValue_int("sync-with-peak-from-last");
+    return peak_det_obj_ref.get_sync_time() + uhd::time_spec_t(peak_to_last_sample_duration + tx_wait_microsec / 1e6);
 }

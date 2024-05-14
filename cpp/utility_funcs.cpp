@@ -1,7 +1,7 @@
 #include "utility_funcs.hpp"
 
 // Function to generate Zadoff-Chu sequence
-std::vector<std::complex<float>> generateZadoffChuSequence(size_t N, int m)
+std::vector<std::complex<float>> generateZadoffChuSequence(size_t N, int m, float scale)
 {
     std::vector<std::complex<float>> sequence(N);
 
@@ -9,7 +9,7 @@ std::vector<std::complex<float>> generateZadoffChuSequence(size_t N, int m)
     for (size_t n = 0; n < N; ++n)
     {
         float phase = -M_PI * m * n * (n + 1) / N;
-        sequence[n] = std::exp(std::complex<float>(0, phase));
+        sequence[n] = scale * std::exp(std::complex<float>(0, phase));
     }
 
     return sequence;

@@ -18,7 +18,7 @@ ConfigParser::ConfigParser(const std::string &filename)
         if (iss >> varName >> varValue >> varType)
         {
             if (varType == "int")
-                int_data[varName] = static_cast<int>(std::stoi(varValue));
+                int_data[varName] = static_cast<size_t>(std::stoi(varValue));
             else if (varType == "float")
                 float_data[varName] = static_cast<float>(std::stof(varValue));
             else if (varType == "str" || varType == "string")
@@ -31,7 +31,30 @@ ConfigParser::ConfigParser(const std::string &filename)
     file.close();
 }
 
-const std::string ConfigParser::getValue_str(const std::string &varName)
+bool ConfigParser::is_save_buffer()
+{
+    const std::string save_ref_rx = getValue_str("save-ref-rx");
+    if (save_ref_rx == "NO")
+    {
+        return false;
+    }
+    else
+    {
+        std::string device_id = getValue_str("args");
+        for (char &ch : device_id)
+        {
+            if (ch == '=')
+            {
+                ch = '_'; // Replace '=' with '_'
+            }
+        }
+
+        save_buffer_filename = "/OTA-C/cpp/storage/save_ref_rx_" + device_id + ".dat";
+        return true;
+    }
+}
+
+std::string ConfigParser::getValue_str(const std::string &varName)
 {
     auto it = string_data.find(varName);
     if (it != string_data.end())
@@ -45,7 +68,7 @@ const std::string ConfigParser::getValue_str(const std::string &varName)
     return std::string();
 }
 
-const size_t ConfigParser::getValue_int(const std::string &varName)
+size_t ConfigParser::getValue_int(const std::string &varName)
 {
     auto it = int_data.find(varName);
     if (it != int_data.end())
@@ -59,7 +82,7 @@ const size_t ConfigParser::getValue_int(const std::string &varName)
     return size_t();
 }
 
-const float ConfigParser::getValue_float(const std::string &varName)
+float ConfigParser::getValue_float(const std::string &varName)
 {
     auto it = float_data.find(varName);
     if (it != float_data.end())

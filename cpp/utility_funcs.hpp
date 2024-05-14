@@ -31,7 +31,7 @@ namespace po = boost::program_options;
 
 using start_time_type = std::chrono::time_point<std::chrono::steady_clock>;
 
-std::vector<std::complex<float>> generateZadoffChuSequence(size_t N, int m);
+std::vector<std::complex<float>> generateZadoffChuSequence(size_t N, int m, float scale = 1.0);
 
 inline auto time_delta(const start_time_type &ref_time);
 
