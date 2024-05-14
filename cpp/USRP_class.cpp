@@ -267,7 +267,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     auto usrp_now = usrp->get_time_now();
     if (tx_time <= usrp_now or tx_time == uhd::time_spec_t(0.0))
     {
-        std::cerr << "tx_time < current USRP time. Transmitting without delay." << std::endl;
+        std::cerr << "tx_time < current USRP time (time-diff : " << (tx_time - usrp_now).get_real_secs() * 1e6 << " microsecs). Transmitting without delay." << std::endl;
         md.has_time_spec = false;
     }
     else
@@ -334,7 +334,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
 
     if (rx_time <= usrp_now or rx_time == uhd::time_spec_t(0.0))
     {
-        std::cerr << "rx_time < current USRP time. Receiving without delay." << std::endl;
+        std::cerr << "rx_time < current USRP time (time-diff : " << (rx_time - usrp_now).get_real_secs() * 1e6 << " microsecs). Receiving without delay." << std::endl;
         stream_cmd.stream_now = true;
     }
     else
