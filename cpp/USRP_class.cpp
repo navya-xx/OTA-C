@@ -173,7 +173,7 @@ void USRP_class::initialize()
     float _tx_gain = parser.getValue_float("tx-gain");
     if (_tx_gain >= 0.0)
     {
-        std::cout << boost::format("Setting TX Gain: %f dB...") % tx_gain << std::endl;
+        std::cout << boost::format("Setting TX Gain: %f dB...") % _tx_gain << std::endl;
         usrp->set_tx_gain(_tx_gain, channel);
         tx_gain = usrp->get_tx_gain(channel);
         std::cout << boost::format("Actual Tx Gain: %f dB...") % tx_gain << std::endl;

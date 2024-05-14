@@ -64,7 +64,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         buff[i] = zfc_seq[i % N_zfc];
     }
 
-    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(0.1);
+    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(1.0);
     bool tx_ref = usrp_classobj.transmission(buff, tx_timer);
     if (tx_ref)
     {
