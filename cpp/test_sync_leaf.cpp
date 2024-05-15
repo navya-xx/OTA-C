@@ -209,6 +209,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // USRP init
     USRP_class usrp_classobj(parser);
     usrp_classobj.initialize();
+    parser.set_value("max-rx-packet-size", std::to_string(usrp_classobj.max_rx_packet_size), "int");
+    parser.set_value("max-tx-packet-size", std::to_string(usrp_classobj.max_tx_packet_size), "int");
 
     // create PeakDetector and CycleStartDetector class objects
     PeakDetectionClass peak_det_obj(parser, usrp_classobj.init_background_noise, is_save_rx_buffer);

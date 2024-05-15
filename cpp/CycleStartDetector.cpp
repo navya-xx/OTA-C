@@ -18,8 +18,12 @@ CycleStartDetector::CycleStartDetector(
     R_zfc = parser.getValue_int("Ref-R-zfc");
     zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
+    size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
     num_samp_corr = N_zfc * parser.getValue_int("num-corr-size-mul");
-    capacity = num_samp_corr * parser.getValue_int("capacity-mul");
+    capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
+
+    if (capacity < num_samp_corr + N_zfc)
+        throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
 
     samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
     timer.resize(capacity, uhd::time_spec_t(0.0));
@@ -66,7 +70,8 @@ bool CycleStartDetector::consume()
     {
         front = (front + num_samp_corr + 1) % capacity;
         num_produced -= (num_samp_corr + 1);
-        // Producer is notified in the main thread
+
+        cv_producer.notify_one();
         return false;
     }
 }
