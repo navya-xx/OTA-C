@@ -251,7 +251,10 @@ void USRP_class::initialize()
         nsum += std::accumulate(abs_rx_samples.begin() + start, abs_rx_samples.begin() + end, 0.0f);
     }
     init_background_noise = nsum / (max_rx_packet_size * num_pkts);
-    std::cout << "Average background noise for packets (except first) = " << init_background_noise << std::endl;
+    std::cout << "Average background noise for packets = " << init_background_noise << std::endl;
+
+    std::cout << "--------- USRP initilization finished -----------------" << std::endl
+              << std::endl;
 };
 
 bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time)

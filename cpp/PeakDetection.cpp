@@ -23,6 +23,8 @@ PeakDetectionClass::PeakDetectionClass(
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
+    peaks_count = 0;
+
     if (save_buffer_flag)
     {
         save_buffer.resize(ref_seq_len * total_num_peaks * 2, std::complex<float>(0.0, 0.0));
