@@ -82,7 +82,6 @@ bool CycleStartDetector::consume()
     {
         front = (front + num_samp_corr + 1) % capacity;
         num_produced -= (num_samp_corr + 1);
-        cv_producer.notify_one();
         return false;
     }
 }

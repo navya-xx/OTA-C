@@ -208,6 +208,9 @@ void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser,
                 std::cout << "*** Successful CSD detection!" << std::endl;
 
             csd_success_signal = true;
+        }
+        else
+        {
             csd_obj.cv_producer.notify_one();
         }
     }
