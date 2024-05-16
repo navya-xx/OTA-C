@@ -152,7 +152,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
                     got_async_burst_ack =
                         (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
                 }
-                std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
+                std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl
+                          << std::endl;
 
                 tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_reps_gap);
             }

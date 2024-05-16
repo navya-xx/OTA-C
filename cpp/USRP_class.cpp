@@ -313,7 +313,8 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     while (not got_async_burst_ack and tx_streamer->recv_async_msg(async_md, timeout))
         got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
     if (DEBUG)
-        std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
+        std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl
+                  << std::endl;
 
     if (not got_async_burst_ack)
         std::cerr << "ACK FAIL..! " << std::endl;

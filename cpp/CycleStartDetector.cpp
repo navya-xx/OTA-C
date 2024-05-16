@@ -91,6 +91,7 @@ void CycleStartDetector::correlation_operation()
     // Perform cross-correlation
     bool found_peak = false;
     float sum_ampl = 0.0;
+    bool update_noise_level = false;
 
     for (size_t i = 0; i < num_samp_corr; ++i)
     {
@@ -101,7 +102,9 @@ void CycleStartDetector::correlation_operation()
             corr += samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]);
         }
         float abs_val = std::abs(corr) / N_zfc;
-        sum_ampl += std::abs(samples_buffer[(front + i) % capacity]);
+
+        if (update_noise_level)
+            sum_ampl += std::abs(samples_buffer[(front + i) % capacity]);
 
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
@@ -121,7 +124,7 @@ void CycleStartDetector::correlation_operation()
     }
 
     // udpate noise level
-    if (not found_peak)
+    if (not found_peak and update_noise_level)
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
 }
 
