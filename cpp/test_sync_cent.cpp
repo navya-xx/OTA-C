@@ -91,12 +91,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         total_runtime = 1 * 3600; // run for one hour at most
     const auto start_time = std::chrono::steady_clock::now();
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
-    const float csd_wait_time_millisec = parser.getValue_int("csd-wait-time-millisec");
+    size_t csd_wait_time_millisec = parser.getValue_int("csd-wait-time-millisec");
 
     float tx_wait_time = parser.getValue_float("tx-wait-microsec");
     size_t test_signal_len = parser.getValue_int("test-signal-len");
     float sample_duration = usrp_classobj.tx_sample_duration.get_real_secs();
-    double add_rx_duration = tx_wait_time / 1e6 - (sample_duration * 5 * test_signal_len);
     size_t test_tx_reps = parser.getValue_int("test-tx-reps");
     float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
 
@@ -107,7 +106,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
         // wait before sending next csd ref signal
-        uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
+        std::this_thread::sleep_for(std::chrono::milliseconds(csd_wait_time_millisec));
+        uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(0.1);
 
         if (usrp_classobj.transmission(buff, tx_timer))
         {
@@ -119,8 +119,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return EXIT_FAILURE;
         }
 
-        uhd::time_spec_t last_sample_tx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * R_zfc));
-        uhd::time_spec_t rx_time = last_sample_tx_time + uhd::time_spec_t(add_rx_duration);
+        uhd::time_spec_t last_sample_tx_time = tx_timer + uhd::time_spec_t(sample_duration * buff.size());
+        uhd::time_spec_t rx_time = last_sample_tx_time + uhd::time_spec_t(tx_wait_time / 1e6 - (sample_duration * 5 * test_signal_len));
 
         auto rx_symbols = usrp_classobj.reception(num_rx_samps, rx_time);
 
@@ -128,6 +128,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         {
             std::cerr << "Reception failure!" << std::endl;
             return EXIT_FAILURE;
+        }
+        else
+        {
+            std::cout << "Successful reception in round " << iter_counter << std::endl
+                      << std::endl;
         }
 
         // save received data into file

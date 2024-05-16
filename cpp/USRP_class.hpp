@@ -50,7 +50,7 @@ public:
     uhd::rx_streamer::sptr rx_streamer;
     uhd::tx_streamer::sptr tx_streamer;
     float tx_rate, rx_rate, tx_gain, rx_gain, tx_bw, rx_bw;
-    uhd::time_spec_t rx_sample_duration, tx_sample_duration;
+    uhd::time_spec_t rx_sample_duration, tx_sample_duration, rx_md_time, tx_md_time;
 
 private:
     ConfigParser parser;
