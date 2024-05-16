@@ -43,8 +43,11 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
+    // if (csd_success_signal)
+    //     std::cout << "CSD success - waiting producer" << std::endl;
+
     cv_producer.wait(lock, [this, &samples_size, &csd_success_signal]
-                     { return (capacity - num_produced >= samples_size) and (not csd_success_signal); }); // Wait for enough space to produce
+                     { return (capacity - num_produced >= samples_size); }); // Wait for enough space to produce
 
     // insert first timer
     uhd::time_spec_t next_time = time; // USRP time of first packet
@@ -69,6 +72,9 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
+    // if (csd_success_signal)
+    //     std::cout << "CSD success - waiting consumer" << std::endl;
+
     // Wait until correlation with N_zfc length seq for num_samp_corr samples can be computed
     cv_consumer.wait(lock, [this, &csd_success_signal]
                      { return (num_produced >= num_samp_corr + N_zfc) and (not csd_success_signal); });
@@ -82,7 +88,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         peak_det_obj_ref.detection_flag = false;
         reset();
         peak_det_obj_ref.resetPeaks();
-        // cv_producer.notify_one();
+        cv_producer.notify_one();
         return true;
     }
     else
