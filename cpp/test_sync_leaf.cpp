@@ -122,13 +122,13 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, min_ch_pow / ch_pow);
 
             // start tx process
-            uhd::tx_metadata_t txmd;
 
             for (size_t i = 0; i < csd_test_tx_reps; ++i)
             {
-                txmd.has_time_spec = true;
+                uhd::tx_metadata_t txmd;
                 txmd.start_of_burst = true;
                 txmd.end_of_burst = false;
+                txmd.has_time_spec = true;
                 float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + 0.1;
                 txmd.time_spec = tx_start_timer;
 
