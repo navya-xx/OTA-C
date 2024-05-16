@@ -29,7 +29,7 @@ PeakDetectionClass::PeakDetectionClass(
 
     if (save_buffer_flag)
     {
-        save_buffer.resize(ref_seq_len * total_num_peaks * 2, std::complex<float>(0.0, 0.0));
+        save_buffer.resize(ref_seq_len * total_num_peaks * 20, std::complex<float>(0.0, 0.0));
     }
 };
 
@@ -73,7 +73,7 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
     prev_peak_index = samples_from_first_peak;
     prev_peak_val = peak_val;
 
-    // update_pnr_threshold();
+    update_pnr_threshold();
 
     if (DEBUG)
         std::cout << "***Peak " << peaks_count << " -- PNR " << peak_val / noise_level << ", threshold " << curr_pnr_threshold << std::endl

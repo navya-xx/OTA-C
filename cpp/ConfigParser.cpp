@@ -49,7 +49,7 @@ bool ConfigParser::is_save_buffer()
             }
         }
 
-        save_buffer_filename = "/OTA-C/cpp/storage/save_ref_rx_" + device_id + ".dat";
+        save_buffer_filename = "/OTA-C/cpp/storage/save_ref_rx_" + device_id;
         return true;
     }
 }

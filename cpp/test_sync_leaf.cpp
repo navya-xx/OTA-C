@@ -26,7 +26,7 @@ void sig_int_handler(int)
 
 extern const bool DEBUG = true;
 
-void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal)
+void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal, const std::string &currentDir)
 {
     size_t tx_N_zfc = parser.getValue_int("test-signal-len");
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
@@ -183,6 +183,10 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
         csd_success_signal = false;
 
+        // get peaks info
+        std::string save_rx_buffer_filepath = currentDir + parser.save_buffer_filename + "_" + std::to_string(round) + ".dat";
+        peak_det_obj.save_complex_data_to_file(save_rx_buffer_filepath);
+
         ++round;
     }
 }
@@ -276,10 +280,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     thread_group.join_all();
-
-    // get peaks info
-    std::string save_rx_buffer_filepath = currentDir + parser.save_buffer_filename;
-    peak_det_obj.save_complex_data_to_file(save_rx_buffer_filepath);
 
     peak_det_obj.print_peaks_data();
 
