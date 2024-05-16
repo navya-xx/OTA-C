@@ -268,7 +268,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     boost::thread_group thread_group;
 
     auto producer_thread = thread_group.create_thread([=, &csd_obj, &peak_det_obj, &parser, &usrp_classobj, &csd_success_signal]()
-                                                      { csd_test_producer_thread(peak_det_obj, csd_obj, usrp_classobj, parser, tx_m_zfc, csd_success_signal); });
+                                                      { csd_test_producer_thread(peak_det_obj, csd_obj, usrp_classobj, parser, tx_m_zfc, csd_success_signal, currentDir); });
 
     uhd::set_thread_name(producer_thread, "producer_thread");
 
