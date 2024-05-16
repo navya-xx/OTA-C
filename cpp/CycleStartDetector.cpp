@@ -61,7 +61,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
 
     num_produced += samples_size;
 
-    cv_consumer.notify_one(); // Notify consumer that new data is available
+    // Notify consumer in the main file
 }
 
 bool CycleStartDetector::consume()

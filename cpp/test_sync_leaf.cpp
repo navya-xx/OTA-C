@@ -109,6 +109,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             // pass on to the cycle start detector
             csd_obj.produce(buff, num_rx_samps, md.time_spec);
+            if (not csd_success_signal)
+                csd_obj.cv_consumer.notify_one();
         }
         // issue stop streaming command
         stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
@@ -120,7 +122,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             return;
 
         // Start information transmission
-        if (csd_success_signal)
+        if (csd_success_signal and not stop_signal_called)
         {
             if (DEBUG)
                 std::cout << "Starting transmission after CSD..." << std::endl;
@@ -132,9 +134,6 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             float tx_duration = tx_zfc_seq.size();
             tx_duration = tx_duration / usrp_classobj.tx_sample_duration.get_real_secs();
 
-            csd_success_signal = false;
-            csd_obj.reset();
-
             // start tx process
             uhd::tx_metadata_t txmd;
             txmd.start_of_burst = true;
@@ -142,6 +141,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             for (size_t i = 0; i < csd_test_tx_reps; ++i)
             {
+                if (stop_signal_called)
+                    return;
                 txmd.has_time_spec = true;
                 txmd.time_spec = tx_start_timer;
                 float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + tx_duration;
@@ -179,6 +180,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             // std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
+
+        csd_success_signal = false;
+        csd_obj.reset();
         ++round;
     }
 }
