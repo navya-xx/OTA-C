@@ -75,12 +75,13 @@ bool CycleStartDetector::consume()
     correlation_operation();
 
     if (peak_det_obj_ref.detection_flag)
+    {
         return true;
+    }
     else
     {
         front = (front + num_samp_corr + 1) % capacity;
         num_produced -= (num_samp_corr + 1);
-
         cv_producer.notify_one();
         return false;
     }

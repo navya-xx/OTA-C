@@ -44,8 +44,15 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
     const float burst_pkt_time = std::max<float>(0.100f, (2 * max_rx_packet_size / rate));
 
+    size_t round = 1;
+
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
+        if (DEBUG)
+        {
+            std::cout << "Round " << round << std::endl
+                      << std::endl;
+        }
         uhd::rx_metadata_t md;
         bool overflow_message = true;
 
@@ -115,6 +122,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         // Start information transmission
         if (csd_success_signal)
         {
+            if (DEBUG)
+                std::cout << "Starting transmission after CSD..." << std::endl;
             // Extract data
             uhd::time_spec_t tx_start_timer = csd_obj.get_wait_time(tx_wait_microsec);
             float ch_pow = peak_det_obj.get_avg_ch_pow();
@@ -141,6 +150,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
                 if (num_tx_samps < tx_zfc_seq.size())
                     std::cerr << "Transmission " << i << " timed-out!!" << std::endl;
+                else
+                    std::cout << "Transmission number " << i << " over." << std::endl;
 
                 txmd.start_of_burst = false;
                 tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_reps_gap);
@@ -168,6 +179,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             // std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
+        ++round;
     }
 }
 
@@ -192,7 +204,7 @@ void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser,
                 std::cout << "*** Successful CSD detection!" << std::endl;
 
             csd_success_signal = true;
-            // break;
+            csd_obj.cv_producer.notify_one();
         }
     }
 }

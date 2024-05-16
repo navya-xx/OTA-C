@@ -43,6 +43,9 @@ public:
 
     uhd::time_spec_t get_wait_time(float tx_wait_microsec);
 
+    boost::condition_variable cv_producer;
+    boost::condition_variable cv_consumer;
+
 private:
     std::vector<std::complex<float>> samples_buffer;
     std::vector<uhd::time_spec_t> timer;
@@ -62,6 +65,4 @@ private:
     std::vector<std::complex<float>> zfc_seq;
 
     boost::mutex mtx;
-    boost::condition_variable cv_producer;
-    boost::condition_variable cv_consumer;
 };
