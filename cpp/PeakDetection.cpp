@@ -123,7 +123,7 @@ void PeakDetectionClass::update_pnr_threshold()
 void PeakDetectionClass::resetPeaks()
 {
     peaks_count = 0;
-    // curr_pnr_threshold = pnr_threshold;
+    curr_pnr_threshold = pnr_threshold;
     // noise_level = init_noise_level;
     samples_from_first_peak = 0;
     detection_flag = false;
@@ -219,7 +219,6 @@ bool PeakDetectionClass::next()
                     else
                         std::cout << "\t\t -> Less peaks detected! <- PeakDetectionClass" << std::endl;
                 }
-                detection_flag = false;
                 resetPeaks();
             }
             return false; // iterations stop here
@@ -236,15 +235,12 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
 {
     float abs_corr_to_noise_ratio = abs_corr_val / noise_level;
 
-    // if (peak_to_noise_ratio > 1.0)
-    //     std::cout << "PNR: " << abs_corr_to_noise_ratio << ", noise level: " << noise_level << std::endl;
-
     if (abs_corr_to_noise_ratio > curr_pnr_threshold)
     {
         if (DEBUG)
         {
             std::cout << std::endl;
-            std::cout << "PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
+            std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
         }
 
         // First peak

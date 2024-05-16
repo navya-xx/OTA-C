@@ -36,15 +36,15 @@ void CycleStartDetector::reset()
     rear = 0;
     // samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
     // timer.resize(capacity, uhd::time_spec_t(0.0));
-    peak_det_obj_ref.resetPeaks();
+    prev_timer = uhd::time_spec_t(0.0);
 }
 
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time, std::atomic<bool> &csd_success_signal)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
-    cv_producer.wait(lock, [this, &samples_size]
-                     { return (capacity - num_produced >= samples_size); }); // Wait for enough space to produce
+    cv_producer.wait(lock, [this, &samples_size, &csd_success_signal]
+                     { return (capacity - num_produced >= samples_size) and (not csd_success_signal); }); // Wait for enough space to produce
 
     // insert first timer
     uhd::time_spec_t next_time = time; // USRP time of first packet
@@ -79,8 +79,10 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     {
         csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
         ch_pow = peak_det_obj_ref.get_avg_ch_pow();
+        peak_det_obj_ref.detection_flag = false;
         reset();
-        cv_producer.notify_one();
+        peak_det_obj_ref.resetPeaks();
+        // cv_producer.notify_one();
         return true;
     }
     else
