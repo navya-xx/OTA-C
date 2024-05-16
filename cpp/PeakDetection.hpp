@@ -49,7 +49,7 @@ private:
 
     void insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time);
     void update_pnr_threshold();
-    void updatePrevPeak(const float &pnr_value, const float &peak_val, const uhd::time_spec_t &peak_time);
+    void updatePrevPeak(const float &peak_val, const uhd::time_spec_t &peak_time);
     void removeLastPeak();
     float get_max_peak_val();
 

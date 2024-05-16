@@ -29,7 +29,6 @@ extern const bool DEBUG = true;
 void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal)
 {
     size_t tx_N_zfc = parser.getValue_int("test-signal-len");
-    float tx_wait_microsec = parser.getValue_float("tx-wait-microsec");
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
     float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
     float total_runtime = parser.getValue_float("duration");
@@ -108,9 +107,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             }
 
             // pass on to the cycle start detector
-            csd_obj.produce(buff, num_rx_samps, md.time_spec);
-            if (not csd_success_signal)
-                csd_obj.cv_consumer.notify_one();
+            // std::cout << "Received " << num_rx_samps << " samples. Producing..." << std::endl;
+
+            csd_obj.produce(buff, num_rx_samps, md.time_spec, csd_success_signal);
         }
         // issue stop streaming command
         stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
@@ -126,9 +125,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         {
             if (DEBUG)
                 std::cout << "Starting transmission after CSD..." << std::endl;
-            // Extract data
-            uhd::time_spec_t tx_start_timer = csd_obj.get_wait_time(tx_wait_microsec);
-            float ch_pow = peak_det_obj.get_avg_ch_pow();
+
+            float ch_pow = csd_obj.ch_pow;
+            uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
             float min_ch_pow = parser.getValue_float("min-ch-pow");
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, min_ch_pow / ch_pow);
             float tx_duration = tx_zfc_seq.size();
@@ -182,7 +181,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         }
 
         csd_success_signal = false;
-        csd_obj.reset();
+
         ++round;
     }
 }
@@ -199,19 +198,14 @@ void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser,
 
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
-        result = csd_obj.consume();
+        result = csd_obj.consume(csd_success_signal);
 
         // check result
         if (result)
         {
+            csd_success_signal = true;
             if (DEBUG)
                 std::cout << "*** Successful CSD detection!" << std::endl;
-
-            csd_success_signal = true;
-        }
-        else
-        {
-            csd_obj.cv_producer.notify_one();
         }
     }
 }
