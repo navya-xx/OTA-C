@@ -64,7 +64,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         // the requested number of samples were collected (if such a number was
         // given), or until Ctrl-C was pressed.
 
-        while (not csd_success_signal)
+        while (not csd_success_signal and not stop_signal_called)
         {
             try
             {
