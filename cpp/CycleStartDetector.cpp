@@ -29,6 +29,15 @@ CycleStartDetector::CycleStartDetector(
     timer.resize(capacity, uhd::time_spec_t(0.0));
 };
 
+void CycleStartDetector::reset()
+{
+    num_produced = 0;
+    front = 0;
+    rear = 0;
+    samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
+    timer.resize(capacity, uhd::time_spec_t(0.0));
+}
+
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
@@ -54,13 +63,13 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     cv_consumer.notify_one(); // Notify consumer that new data is available
 }
 
-bool CycleStartDetector::consume()
+bool CycleStartDetector::consume(const bool &csd_success_signal)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
     // Wait until correlation with N_zfc length seq for num_samp_corr samples can be computed
-    cv_consumer.wait(lock, [this]
-                     { return num_produced >= num_samp_corr + N_zfc; });
+    cv_consumer.wait(lock, [this, &csd_success_signal]
+                     { return (num_produced >= num_samp_corr + N_zfc) and (not csd_success_signal); });
 
     correlation_operation();
 

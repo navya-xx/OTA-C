@@ -131,6 +131,7 @@ void PeakDetectionClass::resetPeaks()
     curr_pnr_threshold = pnr_threshold;
     noise_level = init_noise_level;
     samples_from_first_peak = 0;
+    detection_flag = false;
 
     // if (save_buffer_flag)
     // {

@@ -35,9 +35,11 @@ public:
 
     void produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time);
 
-    bool consume();
+    bool consume(const bool &csd_success_signal);
 
     void correlation_operation();
+
+    void reset();
 
     uhd::time_spec_t get_wait_time(float tx_wait_microsec);
 

@@ -175,7 +175,7 @@ void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser,
 
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
-        result = csd_obj.consume();
+        result = csd_obj.consume(csd_success_signal);
 
         // check result
         if (result)
