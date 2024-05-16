@@ -91,7 +91,7 @@ void CycleStartDetector::correlation_operation()
     // Perform cross-correlation
     bool found_peak = false;
     float sum_ampl = 0.0;
-    bool update_noise_level = false;
+    bool update_noise_level = true;
 
     for (size_t i = 0; i < num_samp_corr; ++i)
     {

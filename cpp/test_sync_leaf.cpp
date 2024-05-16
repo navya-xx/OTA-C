@@ -122,41 +122,40 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, min_ch_pow / ch_pow);
 
             // start tx process
+            uhd::tx_metadata_t txmd;
+            txmd.start_of_burst = true;
+            txmd.end_of_burst = false;
 
             for (size_t i = 0; i < csd_test_tx_reps; ++i)
             {
-                uhd::tx_metadata_t txmd;
-                txmd.start_of_burst = true;
-                txmd.end_of_burst = false;
                 txmd.has_time_spec = true;
-                float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + 0.1;
                 txmd.time_spec = tx_start_timer;
 
-                size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, timeout);
+                size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, 0.1);
+
                 if (num_tx_samps < tx_zfc_seq.size())
                     std::cerr << "Transmission " << i << " timed-out!!" << std::endl;
 
-                // send a mini EOB packet
-                txmd.has_time_spec = false;
                 txmd.start_of_burst = false;
-                txmd.end_of_burst = true;
-                tx_stream->send("", 0, txmd);
-
-                std::cout << std::endl
-                          << i << ": Waiting for async burst ACK... " << std::flush;
-                uhd::async_metadata_t async_md;
-                bool got_async_burst_ack = false;
-                // loop through all messages for the ACK packet (may have underflow messages in queue)
-                while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, timeout))
-                {
-                    got_async_burst_ack =
-                        (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
-                }
-                std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl
-                          << std::endl;
-
                 tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_reps_gap);
             }
+
+            txmd.end_of_burst = true;
+            txmd.has_time_spec = false;
+            tx_stream->send("", 0, txmd);
+
+            std::cout << std::endl
+                      << ": Waiting for async burst ACK... " << std::flush;
+            uhd::async_metadata_t async_md;
+            bool got_async_burst_ack = false;
+            // loop through all messages for the ACK packet (may have underflow messages in queue)
+            while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, timeout))
+            {
+                got_async_burst_ack =
+                    (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
+            }
+            std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl
+                      << std::endl;
 
             // std::this_thread::sleep_for(std::chrono::milliseconds(100));
             csd_success_signal = false;

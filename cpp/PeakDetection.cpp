@@ -316,7 +316,7 @@ bool PeakDetectionClass::process_corr(const float &abs_val, const uhd::time_spec
 
         return true; // a peak is found
     }
-    else // use abs_corr for updating the noise_level
+    else
     {
         // updateNoiseLevel(abs_val);
         return false;
