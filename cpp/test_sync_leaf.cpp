@@ -137,28 +137,29 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             uhd::tx_metadata_t txmd;
             txmd.start_of_burst = true;
             txmd.end_of_burst = false;
+            txmd.has_time_spec = true;
+            txmd.time_spec = tx_start_timer;
+            float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + tx_duration;
 
             for (size_t i = 0; i < csd_test_tx_reps; ++i)
             {
                 if (stop_signal_called)
                     return;
-                txmd.has_time_spec = true;
-                txmd.time_spec = tx_start_timer;
-                float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + tx_duration;
 
                 size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, timeout);
+                timeout = tx_duration;
+                txmd.start_of_burst = false;
+                txmd.has_time_spec = false;
 
                 if (num_tx_samps < tx_zfc_seq.size())
                     std::cerr << "Transmission " << i << " timed-out!!" << std::endl;
                 else
                     std::cout << "Transmission number " << i << " over." << std::endl;
 
-                txmd.start_of_burst = false;
-                tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_reps_gap);
+                // tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_reps_gap);
             }
 
             txmd.end_of_burst = true;
-            txmd.has_time_spec = false;
             tx_stream->send("", 0, txmd);
 
             std::cout << "CSD Test TX complete!" << std::endl
