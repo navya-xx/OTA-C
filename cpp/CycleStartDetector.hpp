@@ -35,7 +35,7 @@ public:
 
     void produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time);
 
-    bool consume(const bool &csd_success_signal);
+    bool consume();
 
     void correlation_operation();
 

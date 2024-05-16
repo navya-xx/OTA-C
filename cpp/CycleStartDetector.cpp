@@ -64,13 +64,13 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     cv_consumer.notify_one(); // Notify consumer that new data is available
 }
 
-bool CycleStartDetector::consume(const bool &csd_success_signal)
+bool CycleStartDetector::consume()
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
     // Wait until correlation with N_zfc length seq for num_samp_corr samples can be computed
-    cv_consumer.wait(lock, [this, &csd_success_signal]
-                     { return (num_produced >= num_samp_corr + N_zfc) and (not csd_success_signal); });
+    cv_consumer.wait(lock, [this]
+                     { return (num_produced >= num_samp_corr + N_zfc); });
 
     correlation_operation();
 
