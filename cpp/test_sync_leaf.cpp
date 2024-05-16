@@ -120,6 +120,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             float ch_pow = peak_det_obj.get_avg_ch_pow();
             float min_ch_pow = parser.getValue_float("min-ch-pow");
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, min_ch_pow / ch_pow);
+            float tx_duration = tx_zfc_seq.size();
+            tx_duration = tx_duration / usrp_classobj.tx_sample_duration.get_real_secs();
 
             csd_success_signal = false;
             csd_obj.reset();
@@ -133,8 +135,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             {
                 txmd.has_time_spec = true;
                 txmd.time_spec = tx_start_timer;
+                float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + tx_duration;
 
-                size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, 0.1);
+                size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, timeout);
 
                 if (num_tx_samps < tx_zfc_seq.size())
                     std::cerr << "Transmission " << i << " timed-out!!" << std::endl;
