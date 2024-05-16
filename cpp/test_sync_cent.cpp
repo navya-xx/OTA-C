@@ -29,6 +29,9 @@ extern const bool DEBUG = true;
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
 
+    std::signal(SIGINT, &sig_int_handler);
+    std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
+
     const char *homeDir = std::getenv("HOME");
     std::string currentDir(homeDir);
 
@@ -47,6 +50,25 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     parser.print_values();
 
+    // file to save Rx symbols
+    std::string filename = parser.getValue_str("test-file");
+    if (filename == "NULL")
+    {
+        if (argc < 3)
+        {
+            filename = currentDir + "/OTA-C/cpp/storage/cent_test_def";
+            std::cerr << "Filename not specified. Using default filename : " << filename << std::endl;
+        }
+        else
+        {
+            filename = currentDir + "/OTA-C/cpp/storage/" + argv[2];
+        }
+    }
+    else
+    {
+        filename = currentDir + "/OTA-C/cpp/storage/" + filename;
+    }
+
     // USRP init
     USRP_class usrp_classobj(parser);
     usrp_classobj.initialize();
@@ -64,61 +86,62 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         buff[i] = zfc_seq[i % N_zfc];
     }
 
-    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(1.0);
-    bool tx_ref = usrp_classobj.transmission(buff, tx_timer);
-    if (tx_ref)
-    {
-        std::cout << "ZFC transmission successful" << std::endl;
-    }
-    else
-    {
-        std::cerr << "ZFC ref signal transmission FAILED!" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    float sample_duration = usrp_classobj.tx_sample_duration.get_real_secs();
-    uhd::time_spec_t last_sample_tx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * R_zfc));
+    float total_runtime = parser.getValue_float("duration");
+    if (total_runtime == 0.0)
+        total_runtime = 1 * 3600; // run for one hour at most
+    const auto start_time = std::chrono::steady_clock::now();
+    const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
+    const float csd_wait_time_millisec = parser.getValue_int("csd-wait-time-millisec");
 
     float tx_wait_time = parser.getValue_float("tx-wait-microsec");
     size_t test_signal_len = parser.getValue_int("test-signal-len");
+    float sample_duration = usrp_classobj.tx_sample_duration.get_real_secs();
     double add_rx_duration = tx_wait_time / 1e6 - (sample_duration * 5 * test_signal_len);
-    uhd::time_spec_t rx_time = last_sample_tx_time + uhd::time_spec_t(add_rx_duration);
     size_t test_tx_reps = parser.getValue_int("test-tx-reps");
-    size_t num_rx_samps = test_signal_len * (10 + test_tx_reps);
+    float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
 
-    auto rx_symbols = usrp_classobj.reception(num_rx_samps, rx_time);
+    size_t num_rx_samps = test_tx_reps * (test_signal_len + tx_reps_gap * sample_duration) + 10 * test_signal_len;
 
-    if (rx_symbols.size() < num_rx_samps)
+    int iter_counter = 1;
+
+    while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
-        std::cerr << "Reception failure!" << std::endl;
-        return EXIT_FAILURE;
-    }
+        // wait before sending next csd ref signal
+        uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
 
-    // save received data into file
-    std::string filename = parser.getValue_str("test-file");
-    if (filename == "NULL")
-    {
-        if (argc < 3)
+        if (usrp_classobj.transmission(buff, tx_timer))
         {
-            filename = currentDir + "/OTA-C/cpp/storage/cent_test_def.dat";
-            std::cerr << "Filename not specified. Using default filename : " << filename << std::endl;
+            std::cout << "ZFC transmission successful" << std::endl;
         }
         else
         {
-            filename = currentDir + "/OTA-C/cpp/storage/" + argv[2];
+            std::cerr << "ZFC ref signal transmission FAILED!" << std::endl;
+            return EXIT_FAILURE;
         }
-    }
-    else
-    {
-        filename = currentDir + "/OTA-C/cpp/storage/" + filename;
-    }
 
-    std::ofstream outfile;
-    outfile.open(filename.c_str(), std::ofstream::binary);
-    if (outfile.is_open())
-    {
-        outfile.write((const char *)&rx_symbols.front(), num_rx_samps * sizeof(std::complex<float>));
-        outfile.close();
+        uhd::time_spec_t last_sample_tx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * R_zfc));
+        uhd::time_spec_t rx_time = last_sample_tx_time + uhd::time_spec_t(add_rx_duration);
+
+        auto rx_symbols = usrp_classobj.reception(num_rx_samps, rx_time);
+
+        if (rx_symbols.size() < num_rx_samps)
+        {
+            std::cerr << "Reception failure!" << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        // save received data into file
+        std::string filename_it = filename + "_" + std::to_string(iter_counter) + ".dat";
+
+        std::ofstream outfile;
+        outfile.open(filename_it.c_str(), std::ofstream::binary);
+        if (outfile.is_open())
+        {
+            outfile.write((const char *)&rx_symbols.front(), num_rx_samps * sizeof(std::complex<float>));
+            outfile.close();
+        }
+
+        ++iter_counter;
     }
 
     return EXIT_SUCCESS;

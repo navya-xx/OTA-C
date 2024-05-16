@@ -112,7 +112,7 @@ void CycleStartDetector::correlation_operation()
 
     // udpate noise level
     if (not found_peak)
-        peak_det_obj_ref.updateNoiseLevel(sum_ampl, num_samp_corr);
+        peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
 }
 
 uhd::time_spec_t CycleStartDetector::get_wait_time(float tx_wait_microsec)

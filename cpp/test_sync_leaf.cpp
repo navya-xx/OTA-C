@@ -28,131 +28,137 @@ extern const bool DEBUG = true;
 
 void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal)
 {
+    size_t tx_N_zfc = parser.getValue_int("test-signal-len");
+    float tx_wait_microsec = parser.getValue_float("tx-wait-microsec");
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
+    float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
+    float total_runtime = parser.getValue_float("duration");
+
     auto rx_stream = usrp_classobj.rx_streamer;
     auto tx_stream = usrp_classobj.tx_streamer;
     size_t max_rx_packet_size = usrp_classobj.max_rx_packet_size;
     float rate = usrp_classobj.rx_rate;
-    float tx_wait_microsec = parser.getValue_float("tx-wait-microsec");
-
-    float total_runtime = parser.getValue_float("duration");
     if (total_runtime == 0.0)
         total_runtime = 1 * 3600; // run for one hour at most
     const auto start_time = std::chrono::steady_clock::now();
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
-
-    size_t tx_N_zfc = parser.getValue_int("test-signal-len");
-
-    uhd::rx_metadata_t md;
-    bool overflow_message = true;
-
-    // setup streaming
-    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
-    stream_cmd.num_samps = max_rx_packet_size;
-    stream_cmd.stream_now = true;
-    rx_stream->issue_stream_cmd(stream_cmd);
-
-    std::vector<std::complex<float>> buff(max_rx_packet_size, std::complex<float>(0.0, 0.0));
-
     const float burst_pkt_time = std::max<float>(0.100f, (2 * max_rx_packet_size / rate));
-    float recv_timeout = burst_pkt_time + 0.05;
-    size_t num_rx_samps = 0;
 
-    // Run this loop until either time expired (if a duration was given), until
-    // the requested number of samples were collected (if such a number was
-    // given), or until Ctrl-C was pressed.
-
-    while (not stop_signal_called and not csd_success_signal and not(std::chrono::steady_clock::now() > stop_time))
+    while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
-        try
+        uhd::rx_metadata_t md;
+        bool overflow_message = true;
+
+        // setup streaming
+        uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+        stream_cmd.num_samps = max_rx_packet_size;
+        stream_cmd.stream_now = true;
+        rx_stream->issue_stream_cmd(stream_cmd);
+
+        std::vector<std::complex<float>> buff(max_rx_packet_size, std::complex<float>(0.0, 0.0));
+
+        float recv_timeout = burst_pkt_time + 0.05;
+        size_t num_rx_samps = 0;
+
+        // Run this loop until either time expired (if a duration was given), until
+        // the requested number of samples were collected (if such a number was
+        // given), or until Ctrl-C was pressed.
+
+        while (not csd_success_signal)
         {
-            num_rx_samps = rx_stream->recv(&buff.front(), buff.size(), md, recv_timeout, false);
-            // recv_timeout = burst_pkt_time;
+            try
+            {
+                num_rx_samps = rx_stream->recv(&buff.front(), buff.size(), md, recv_timeout, false);
+                // recv_timeout = burst_pkt_time;
+            }
+            catch (uhd::io_error &e)
+            {
+                std::cerr << "Caught an IO exception in CSD Receiver Thread. " << std::endl;
+                std::cerr << e.what() << std::endl;
+                return;
+            }
+
+            if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+            {
+                std::cout << boost::format("Timeout while streaming") << std::endl;
+                break;
+            }
+            if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+            {
+                if (overflow_message)
+                {
+                    overflow_message = false;
+                    std::cerr << "*** Got an overflow indication." << std::endl
+                              << std::endl;
+                    ;
+                }
+                continue;
+            }
+            if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+            {
+                std::string error = str(boost::format("Receiver error: %s") % md.strerror());
+                std::cerr << error << std::endl;
+            }
+
+            // pass on to the cycle start detector
+            csd_obj.produce(buff, num_rx_samps, md.time_spec);
         }
-        catch (uhd::io_error &e)
-        {
-            std::cerr << "Caught an IO exception in CSD Receiver Thread. " << std::endl;
-            std::cerr << e.what() << std::endl;
+        // issue stop streaming command
+        stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+        rx_stream->issue_stream_cmd(stream_cmd);
+
+        std::cout << "Producer finished" << std::endl;
+
+        if (stop_signal_called)
             return;
-        }
 
-        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        // Start information transmission
+        if (csd_success_signal)
         {
-            std::cout << boost::format("Timeout while streaming") << std::endl;
-            break;
-        }
-        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
-        {
-            if (overflow_message)
+            // Extract data
+            uhd::time_spec_t tx_start_timer = csd_obj.get_wait_time(tx_wait_microsec);
+            float ch_pow = peak_det_obj.get_avg_ch_pow();
+            float min_ch_pow = parser.getValue_float("min-ch-pow");
+            auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, min_ch_pow / ch_pow);
+
+            // start tx process
+            uhd::tx_metadata_t txmd;
+
+            for (size_t i = 0; i < csd_test_tx_reps; ++i)
             {
-                overflow_message = false;
-                std::cerr << "*** Got an overflow indication." << std::endl
-                          << std::endl;
-                ;
+                txmd.has_time_spec = true;
+                txmd.start_of_burst = true;
+                txmd.end_of_burst = false;
+                float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + 0.1;
+                txmd.time_spec = tx_start_timer;
+
+                size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, timeout);
+                if (num_tx_samps < tx_zfc_seq.size())
+                    std::cerr << "Transmission " << i << " timed-out!!" << std::endl;
+
+                // send a mini EOB packet
+                txmd.has_time_spec = false;
+                txmd.start_of_burst = false;
+                txmd.end_of_burst = true;
+                tx_stream->send("", 0, txmd);
+
+                std::cout << std::endl
+                          << i << ": Waiting for async burst ACK... " << std::flush;
+                uhd::async_metadata_t async_md;
+                bool got_async_burst_ack = false;
+                // loop through all messages for the ACK packet (may have underflow messages in queue)
+                while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, timeout))
+                {
+                    got_async_burst_ack =
+                        (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
+                }
+                std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
+
+                tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_reps_gap);
             }
-            continue;
-        }
-        if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
-        {
-            std::string error = str(boost::format("Receiver error: %s") % md.strerror());
-            std::cerr << error << std::endl;
-        }
 
-        // pass on to the cycle start detector
-        csd_obj.produce(buff, num_rx_samps, md.time_spec);
-    }
-    // issue stop streaming command
-    stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
-    rx_stream->issue_stream_cmd(stream_cmd);
-
-    std::cout << "Producer finished" << std::endl;
-
-    if (stop_signal_called)
-        return;
-
-    if (csd_success_signal)
-    {
-        // Extract data
-        float ch_pow = peak_det_obj.get_avg_ch_pow();
-        float min_ch_pow = parser.getValue_float("min-ch-pow");
-        auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, min_ch_pow / ch_pow);
-        uhd::time_spec_t tx_start_timer = csd_obj.get_wait_time(tx_wait_microsec);
-
-        // start tx process
-        uhd::tx_metadata_t txmd;
-        float tx_gap_millisec = 10.0;
-
-        for (size_t i = 0; i < csd_test_tx_reps; ++i)
-        {
-            txmd.has_time_spec = true;
-            txmd.start_of_burst = true;
-            txmd.end_of_burst = false;
-            float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + 0.1;
-            txmd.time_spec = tx_start_timer;
-
-            size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, timeout);
-            if (num_tx_samps < tx_zfc_seq.size())
-                std::cerr << "Transmission " << i << " timed-out!!" << std::endl;
-
-            // send a mini EOB packet
-            txmd.has_time_spec = false;
-            txmd.start_of_burst = false;
-            txmd.end_of_burst = true;
-            tx_stream->send("", 0, txmd);
-
-            std::cout << std::endl
-                      << i << ": Waiting for async burst ACK... " << std::flush;
-            uhd::async_metadata_t async_md;
-            bool got_async_burst_ack = false;
-            // loop through all messages for the ACK packet (may have underflow messages in queue)
-            while (not got_async_burst_ack and tx_stream->recv_async_msg(async_md, timeout))
-            {
-                got_async_burst_ack =
-                    (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
-            }
-            std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl;
-
-            tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_gap_millisec / 1e3);
+            // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            csd_success_signal = false;
         }
     }
 }
@@ -167,7 +173,7 @@ void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser,
     const auto start_time = std::chrono::steady_clock::now();
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
-    while (not stop_signal_called and not csd_success_signal and not(std::chrono::steady_clock::now() > stop_time))
+    while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
         result = csd_obj.consume();
 
@@ -175,10 +181,10 @@ void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser,
         if (result)
         {
             if (DEBUG)
-                std::cout << "Finished detection process! Closing thread..." << std::endl;
+                std::cout << "*** Successful CSD detection!" << std::endl;
 
             csd_success_signal = true;
-            break;
+            // break;
         }
     }
 }

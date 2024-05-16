@@ -24,6 +24,8 @@ PeakDetectionClass::PeakDetectionClass(
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
     peaks_count = 0;
+    noise_counter = 0;
+    noise_level = init_noise_level;
 
     if (save_buffer_flag)
     {
@@ -140,19 +142,22 @@ void PeakDetectionClass::resetPeaks()
         std::cout << "\t\t -> RESET <- PeakDetectionClass" << std::endl;
 }
 
-void PeakDetectionClass::updateNoiseLevel(const float &sum_ampl, const size_t &num_samps)
+void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)
 {
     // only tolerate max 10% change in noise level
-    if (std::abs(sum_ampl - noise_level) / noise_level < 0.1)
+    // if (DEBUG)
+    //     std::cout << "Update noise :  current val = " << std::abs(avg_ampl) << ", curr noise lev = " << noise_level << std::endl;
+
+    if (std::abs(avg_ampl - noise_level) / noise_level < 0.1)
     {
         // update noise level by iteratively averaging
-        noise_level = (noise_counter * noise_level + sum_ampl) / (noise_counter + num_samps);
+        noise_level = (noise_counter * noise_level + avg_ampl * num_samps) / (noise_counter + num_samps);
 
         if (DEBUG)
             std::cout << "New noise level = " << noise_level << std::endl;
 
         if (noise_counter < std::numeric_limits<long>::max())
-            noise_counter = noise_counter + sum_ampl;
+            noise_counter = noise_counter + num_samps;
         else
             noise_counter = 1; // restart counter
     }
@@ -243,9 +248,7 @@ bool PeakDetectionClass::process_corr(const float &abs_val, const uhd::time_spec
     if (peak_to_noise_ratio > curr_pnr_threshold)
     {
         if (DEBUG)
-            std::cout << "Peak time as input = " << samp_time.get_real_secs() * 1e6 << " microsecs" << std::endl;
-        if (DEBUG)
-            std::cout << "\t\t -> PNR " << peak_to_noise_ratio << " > " << curr_pnr_threshold << ", peak_index = " << samples_from_first_peak << std::endl;
+            std::cout << "\t\t -> PNR = " << abs_val << "/" << noise_level << " = " << peak_to_noise_ratio << " > " << curr_pnr_threshold << ", peak_index = " << samples_from_first_peak << std::endl;
 
         // First peak
         if (peaks_count == 0)
