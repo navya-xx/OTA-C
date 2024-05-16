@@ -99,7 +99,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t test_tx_reps = parser.getValue_int("test-tx-reps");
     float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
 
-    size_t num_rx_samps = test_tx_reps * (test_signal_len + tx_reps_gap * sample_duration) + 10 * test_signal_len;
+    // size_t num_rx_samps = test_tx_reps * (test_signal_len + tx_reps_gap * sample_duration) + 10 * test_signal_len;
+    size_t num_rx_samps = test_tx_reps * test_signal_len + 10 * test_signal_len;
 
     int iter_counter = 1;
 
