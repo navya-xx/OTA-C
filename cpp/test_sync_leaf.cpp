@@ -159,6 +159,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             // std::this_thread::sleep_for(std::chrono::milliseconds(100));
             csd_success_signal = false;
+            csd_obj.reset();
         }
     }
 }

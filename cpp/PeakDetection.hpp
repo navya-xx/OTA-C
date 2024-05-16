@@ -48,7 +48,6 @@ private:
     bool save_buffer_flag;
 
     void insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time);
-    void resetPeaks();
     void update_pnr_threshold();
     void updatePrevPeak(const float &pnr_value, const float &peak_val, const uhd::time_spec_t &peak_time);
     void removeLastPeak();
@@ -70,6 +69,8 @@ public:
     float *get_peak_vals();
     uhd::time_spec_t *get_peak_times();
     void print_peaks_data();
+
+    void resetPeaks();
 
     bool process_corr(const float &abs_val, const uhd::time_spec_t &samp_time);
 

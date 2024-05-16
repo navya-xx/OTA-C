@@ -36,6 +36,7 @@ void CycleStartDetector::reset()
     rear = 0;
     samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
     timer.resize(capacity, uhd::time_spec_t(0.0));
+    peak_det_obj_ref.resetPeaks();
 }
 
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time)
