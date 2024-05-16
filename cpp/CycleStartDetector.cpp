@@ -103,10 +103,10 @@ void CycleStartDetector::correlation_operation()
         }
         float abs_val = std::abs(corr) / N_zfc;
 
-        if (update_noise_level)
-            sum_ampl += std::abs(samples_buffer[(front + i) % capacity]);
-
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
+
+        if (update_noise_level)
+            sum_ampl += abs_val;
 
         if (found_peak)
         {

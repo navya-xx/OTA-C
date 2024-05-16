@@ -239,18 +239,18 @@ void USRP_class::initialize()
     }
 
     // compute backgroud noise
-    std::vector<float> abs_rx_samples(rx_samples.size());
-    std::transform(rx_samples.begin(), rx_samples.end(), abs_rx_samples.begin(),
-                   [](const std::complex<float> &x)
-                   { return std::abs(x); });
-    float nsum = 0.0;
-    for (int i = 0; i < num_pkts; ++i)
+    auto zfc_seq = generateZadoffChuSequence(parser.getValue_int("Ref-N-zfc"), parser.getValue_int("Ref-m-zfc"), 1.0);
+    for (int i = 0; i < rx_samples.size() - zfc_seq.size(); ++i)
     {
-        int start = i * max_rx_packet_size;
-        int end = start + max_rx_packet_size;
-        nsum += std::accumulate(abs_rx_samples.begin() + start, abs_rx_samples.begin() + end, 0.0f);
+        auto corr = std::complex<float>(0.0, 0.0);
+        for (int j = 0; j < zfc_seq.size(); ++j)
+        {
+            corr += rx_samples[i + j] * std::conj(zfc_seq[j]);
+        }
+        init_background_noise += std::abs(corr) / zfc_seq.size();
     }
-    init_background_noise = nsum / (max_rx_packet_size * num_pkts);
+
+    init_background_noise = init_background_noise / (rx_samples.size() - zfc_seq.size());
     std::cout << "Average background noise for packets = " << init_background_noise << std::endl;
 
     std::cout << "--------- USRP initilization finished -----------------" << std::endl
