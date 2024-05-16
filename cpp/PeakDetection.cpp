@@ -9,9 +9,9 @@ PeakDetectionClass::PeakDetectionClass(
                              detection_flag(false),
                              init_noise_level(init_noise_level)
 {
-    total_num_peaks = parser.getValue_int("Ref-R-zfc");
 
     ref_seq_len = parser.getValue_int("Ref-N-zfc");
+    total_num_peaks = parser.getValue_int("Ref-R-zfc");
     pnr_threshold = parser.getValue_float("pnr-threshold");
     curr_pnr_threshold = pnr_threshold;
 
@@ -116,13 +116,20 @@ float PeakDetectionClass::get_max_peak_val()
 
 void PeakDetectionClass::update_pnr_threshold()
 {
-    float max_peak_val = get_max_peak_val();
-    curr_pnr_threshold = std::max(max_peak_mul * max_peak_val / noise_level, pnr_threshold);
+    // float max_peak_val = get_max_peak_val();
+    curr_pnr_threshold = std::max(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), curr_pnr_threshold);
 }
 
 void PeakDetectionClass::resetPeaks()
 {
     peaks_count = 0;
+    delete[] peak_indices;
+    delete[] peak_vals;
+    delete[] peak_times;
+    peak_indices = new size_t[total_num_peaks];
+    peak_vals = new float[total_num_peaks];
+    peak_times = new uhd::time_spec_t[total_num_peaks];
+
     curr_pnr_threshold = pnr_threshold;
     // noise_level = init_noise_level;
     samples_from_first_peak = 0;
@@ -256,23 +263,16 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             // next peak is too far from the last
             if (adjacent_spacing > ref_seq_len + peak_det_tol) // false peak -> reset
             {
-
                 resetPeaks();
                 insertPeak(abs_corr_val, samp_time);
             }
             else if (adjacent_spacing < ref_seq_len - peak_det_tol) // a peak exists in close proximity to last
             {
-
                 if (prev_peak_val < abs_corr_val) // check if this peak is higher than the previous
-                {
                     updatePrevPeak(abs_corr_val, samp_time);
-
-                } // otherwise ignore this peak and continue
             }
             else // new peak found within tolerance levels
-            {
                 insertPeak(abs_corr_val, samp_time);
-            }
         }
         return true; // a peak is found
     }
