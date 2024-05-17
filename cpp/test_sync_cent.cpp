@@ -84,8 +84,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
     auto ch_zfc_seq = generateZadoffChuSequence(ch_N_zfc, ch_M_zfc);
 
-    size_t ch_seq_reps = 1;
-    size_t ref_ch_gap = ch_N_zfc;
+    size_t ch_seq_reps = 2;
+    size_t ref_ch_gap = 2 * ch_N_zfc;
 
     std::vector<std::complex<float>> buff(N_zfc * R_zfc + ref_ch_gap + ch_seq_reps * ch_N_zfc, std::complex<float>(0.0, 0.0));
     for (int i = 0; i < N_zfc * R_zfc; ++i)
