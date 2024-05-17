@@ -23,6 +23,7 @@ CycleStartDetector::CycleStartDetector(
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
     min_num_produced = num_samp_corr + N_zfc;
 
+    ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
     ch_est_start = true;
     ch_est_done = false;
     ch_seq_len = parser.getValue_int("ch-seq-len");
@@ -108,7 +109,10 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         }
         else
         {
-            ch_est_process();
+            capture_ch_est_seq();
+            front = (front + min_num_produced) % capacity;
+            num_produced = std::max((num_produced - min_num_produced), size_t(0));
+            min_num_produced = std::min(ch_seq_len, parser.getValue_int("max-rx-packet-size"));
             cv_producer.notify_one();
             return false;
         }
@@ -157,24 +161,9 @@ void CycleStartDetector::correlation_operation()
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
 }
 
-void CycleStartDetector::ch_est_process()
-{
-    if (ch_est_start)
-    {
-        // reset to capture new data
-        ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
-        // min_num_produced = std::min(ch_seq_len, capacity - 1);
-        ch_est_start = false;
-    }
-
-    capture_ch_est_seq();
-    front = (front + min_num_produced) % capacity;
-    num_produced = std::max((num_produced - min_num_produced), size_t(0));
-}
-
 void CycleStartDetector::capture_ch_est_seq()
 {
-    std::cout << "Entering capture_ch_est_seq" << std::endl;
+    std::cout << "Entering capture_ch_est_seq, min_num_produced = " << min_num_produced << std::endl;
     size_t num_samps_capture = std::min(min_num_produced, ch_est_samps_size - ch_est_samps_it);
 
     for (size_t i = 0; i < num_samps_capture; ++i)
@@ -231,6 +220,7 @@ float CycleStartDetector::get_ch_power()
     }
 
     ch_est_samps.clear();
+    ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
     ch_est_samps_it = 0;
     ch_est_done = false;
     ch_est_start = true;
