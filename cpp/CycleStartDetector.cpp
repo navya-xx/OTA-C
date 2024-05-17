@@ -172,10 +172,11 @@ void CycleStartDetector::ch_est_process()
     }
     else
     {
-        capture_ch_est_seq();
         front = (front + min_num_produced) % capacity;
         num_produced = std::min((num_produced - min_num_produced), size_t(0));
     }
+
+    capture_ch_est_seq();
 }
 
 void CycleStartDetector::capture_ch_est_seq()
