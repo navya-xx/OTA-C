@@ -74,7 +74,6 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         uhd::rx_metadata_t md;
-        bool overflow_message = true;
 
         // setup streaming
         uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
@@ -112,13 +111,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             }
             if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
             {
-                if (overflow_message)
-                {
-                    overflow_message = false;
-                    std::cerr << std::endl
-                              << RED << "*** Got an overflow indication." << RESET << std::endl
-                              << std::endl;
-                }
+                std::cerr << std::endl
+                          << RED << "*** Got an overflow indication." << RESET << std::endl
+                          << std::endl;
                 continue;
             }
             if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)

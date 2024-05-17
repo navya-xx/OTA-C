@@ -169,7 +169,7 @@ void CycleStartDetector::ch_est_process()
 
     capture_ch_est_seq();
     front = (front + min_num_produced) % capacity;
-    num_produced = std::min((num_produced - min_num_produced), size_t(0));
+    num_produced = std::max((num_produced - min_num_produced), size_t(0));
 }
 
 void CycleStartDetector::capture_ch_est_seq()
