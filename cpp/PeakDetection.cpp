@@ -127,12 +127,12 @@ void PeakDetectionClass::resetPeaks()
     detection_flag = false;
     // noise_level = init_noise_level;
 
-    delete[] peak_indices;
-    delete[] peak_vals;
-    delete[] peak_times;
-    peak_indices = new size_t[total_num_peaks];
-    peak_vals = new float[total_num_peaks];
-    peak_times = new uhd::time_spec_t[total_num_peaks];
+    // delete[] peak_indices;
+    // delete[] peak_vals;
+    // delete[] peak_times;
+    // peak_indices = new size_t[total_num_peaks];
+    // peak_vals = new float[total_num_peaks];
+    // peak_times = new uhd::time_spec_t[total_num_peaks];
 }
 
 void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)
@@ -279,9 +279,7 @@ bool PeakDetectionClass::next()
             }
             else
             {
-                std::cout << '\r';
-                std::cout << "\t\t -> CheckPeak unsuccessful! Waiting for another " << (ref_seq_len - peak_det_tol - adjacent_spacing) << " samples.";
-                std::cout.flush();
+                std::cout << "\t\t -> CheckPeak unsuccessful! Waiting for another " << (ref_seq_len - peak_det_tol - adjacent_spacing) << " samples." << std::endl;
 
                 ++samples_from_first_peak;
                 return true;
