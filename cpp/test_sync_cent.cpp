@@ -78,12 +78,21 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t m_zfc = parser.getValue_int("Ref-m-zfc");
     size_t R_zfc = parser.getValue_int("Ref-R-zfc");
 
-    auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
+    size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
+    size_t ch_M_zfc = parser.getValue_int("ch-seq-M");
 
-    std::vector<std::complex<float>> buff(N_zfc * R_zfc);
+    auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
+    auto ch_zfc_seq = generateZadoffChuSequence(ch_N_zfc, ch_M_zfc);
+
+    std::vector<std::complex<float>> buff(N_zfc * R_zfc + N_zfc + ch_N_zfc, std::complex<float>(0.0, 0.0));
     for (int i = 0; i < N_zfc * R_zfc; ++i)
     {
         buff[i] = zfc_seq[i % N_zfc];
+    }
+
+    for (int i = N_zfc * R_zfc + N_zfc; i < buff.size(); ++i)
+    {
+        buff[i] = ch_zfc_seq[i - N_zfc * R_zfc + N_zfc];
     }
 
     float total_runtime = parser.getValue_float("duration");

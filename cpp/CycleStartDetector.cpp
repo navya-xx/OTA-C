@@ -22,6 +22,8 @@ CycleStartDetector::CycleStartDetector(
     num_samp_corr = N_zfc * parser.getValue_int("num-corr-size-mul");
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
 
+    ch_est_done = false;
+
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
 
@@ -81,12 +83,17 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     cv_consumer.wait(lock, [this, &csd_success_signal]
                      { return (num_produced >= num_samp_corr + N_zfc) and (not csd_success_signal); });
 
-    correlation_operation();
+    if (not peak_det_obj_ref.detection_flag)
+        correlation_operation();
+    else
+        ch_est_routine();
 
-    if (peak_det_obj_ref.detection_flag)
+    if (peak_det_obj_ref.detection_flag and ch_est_done)
     {
+        csd_success_signal = true;
+        cv_producer.notify_one();
         csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
-        ch_pow = peak_det_obj_ref.get_avg_ch_pow();
+        ch_pow = get_ch_power();
         peak_det_obj_ref.print_peaks_data();
         peak_det_obj_ref.detection_flag = false;
 
@@ -94,7 +101,6 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         reset();
         peak_det_obj_ref.resetPeaks();
 
-        cv_producer.notify_one();
         return true;
     }
     else
@@ -104,6 +110,46 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         cv_producer.notify_one();
         return false;
     }
+}
+
+float CycleStartDetector::get_ch_power()
+{
+    size_t N = parser.getValue_int("ch-seq-len");
+    size_t M = parser.getValue_int("ch-seq-M");
+    auto ch_zfc_seq = generateZadoffChuSequence(N, M);
+    float max_val = 0.0;
+    float curr_val = 0.0;
+    for (size_t i = 0; i < ch_est_samps.size() - N; ++i)
+    {
+        std::complex<float> corr(0.0, 0.0);
+        for (size_t j = 0; j < N; ++j)
+        {
+            corr += ch_est_samps[i + j] * std::conj(ch_zfc_seq[j]);
+        }
+        curr_val = std::abs(corr) / N;
+        if (max_val < curr_val)
+            max_val = curr_val;
+    }
+    return max_val;
+}
+
+void CycleStartDetector::ch_est_routine()
+{
+    // a separate sequence is sent for channel estimation
+    size_t ch_seq_len = parser.getValue_int("ch-seq-len");
+    if (ch_est_samps.empty())
+        ch_est_samps.resize(ch_seq_len * 3);
+
+    size_t max_size = std::min(num_samp_corr, ch_est_samps.size() - num_samp_corr);
+
+    for (size_t i = 0; i < max_size; ++i)
+    {
+        ch_est_samps[i + ch_est_samps_it] = samples_buffer[(front + i) % capacity];
+    }
+    ch_est_samps_it += max_size;
+
+    if (ch_est_samps_it >= ch_est_samps.size())
+        ch_est_done = true;
 }
 
 void CycleStartDetector::correlation_operation()

@@ -238,8 +238,8 @@ bool PeakDetectionClass::next()
         int adjacent_spacing = samples_from_first_peak - prev_peak_index;
         ++samples_from_first_peak;
 
-        // run for another (2 * ref_seq_len) times to save extra symbols in save_buffer
-        if (adjacent_spacing > 2 * ref_seq_len)
+        // run for another (ref_seq_len) times to save extra symbols in save_buffer
+        if (adjacent_spacing > ref_seq_len)
         {
             if (peaks_count == total_num_peaks)
             {

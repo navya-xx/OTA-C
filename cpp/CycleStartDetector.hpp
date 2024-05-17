@@ -37,14 +37,7 @@ public:
 
     bool consume(std::atomic<bool> &csd_success_signal);
 
-    void correlation_operation();
-
-    void reset();
-
     uhd::time_spec_t get_wait_time(float tx_wait_microsec);
-
-    boost::condition_variable cv_producer;
-    boost::condition_variable cv_consumer;
 
     uhd::time_spec_t csd_tx_start_timer;
     float ch_pow;
@@ -58,6 +51,11 @@ private:
     uhd::time_spec_t rx_sample_duration;
     PeakDetectionClass &peak_det_obj_ref;
 
+    void correlation_operation();
+    void reset();
+    void ch_est_routine();
+    float get_ch_power();
+
     size_t N_zfc, m_zfc, R_zfc;
     size_t num_samp_corr;
     size_t capacity;
@@ -67,5 +65,11 @@ private:
     size_t num_produced;
     std::vector<std::complex<float>> zfc_seq;
 
+    bool ch_est_done;
+    std::vector<std::complex<float>> ch_est_samps;
+    size_t ch_est_samps_it = 0;
+
     boost::mutex mtx;
+    boost::condition_variable cv_producer;
+    boost::condition_variable cv_consumer;
 };
