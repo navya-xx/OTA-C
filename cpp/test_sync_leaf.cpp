@@ -26,6 +26,12 @@ void sig_int_handler(int)
 
 extern const bool DEBUG = true;
 
+const std::string RED = "\033[31m";
+const std::string GREEN = "\033[32m";
+const std::string YELLOW = "\033[33m";
+const std::string BLUE = "\033[34m";
+const std::string RESET = "\033[0m";
+
 void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal, const std::string &homeDirStr)
 {
     size_t tx_N_zfc = parser.getValue_int("test-signal-len");
@@ -110,9 +116,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
                 {
                     overflow_message = false;
                     std::cerr << std::endl
-                              << "*** Got an overflow indication." << std::endl
+                              << RED << "*** Got an overflow indication." << RESET << std::endl
                               << std::endl;
-                    ;
                 }
                 continue;
             }

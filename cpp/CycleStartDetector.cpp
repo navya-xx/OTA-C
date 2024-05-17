@@ -166,14 +166,14 @@ void CycleStartDetector::ch_est_process()
     {
         // reset to capture new data
         ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
-        min_num_produced = std::min(ch_seq_len, capacity - 1);
+        // min_num_produced = std::min(ch_seq_len, capacity - 1);
         ch_est_start = false;
     }
     else
     {
+        capture_ch_est_seq();
         front = (front + min_num_produced) % capacity;
         num_produced = std::min((num_produced - min_num_produced), size_t(0));
-        capture_ch_est_seq();
     }
 }
 
