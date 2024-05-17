@@ -96,7 +96,8 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         cv_producer.notify_one();
         csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
         ch_pow = get_ch_power();
-        peak_det_obj_ref.print_peaks_data();
+
+        std::cout << "Estimated channel power = " << ch_pow << std::endl;
         peak_det_obj_ref.detection_flag = false;
 
         // reset corr and peak det objects
