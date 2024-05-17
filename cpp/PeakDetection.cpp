@@ -294,15 +294,10 @@ bool PeakDetectionClass::next()
 bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
 {
     float abs_corr_to_noise_ratio = abs_corr_val / noise_level;
+    int adjacent_spacing;
 
     if (abs_corr_to_noise_ratio > curr_pnr_threshold)
     {
-        if (DEBUG)
-        {
-            std::cout << std::endl;
-            std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
-        }
-
         // First peak
         if (peaks_count == 0)
         {
@@ -311,7 +306,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
         else // next peaks
         {
             // distance of current peak from last
-            int adjacent_spacing = samples_from_first_peak - prev_peak_index;
+            adjacent_spacing = samples_from_first_peak - prev_peak_index;
 
             // next peak is too far from the last
             if (adjacent_spacing > ref_seq_len + peak_det_tol) // false peak -> reset
@@ -326,6 +321,11 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             }
             else // new peak found within tolerance levels
                 insertPeak(abs_corr_val, samp_time);
+        }
+        if (DEBUG)
+        {
+            std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::flush;
+            std::cout << "\t spacing " << adjacent_spacing << std::endl;
         }
         return true; // a peak is found
     }
