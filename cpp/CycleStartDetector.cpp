@@ -111,7 +111,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         }
         else if (ch_est_start)
         {
-            min_num_produced = std::min(ch_est_samps_size, capacity);
+            min_num_produced = std::min(ch_seq_len, capacity - 1);
             // reset to capture new data
             reset();
             cv_producer.notify_one();
