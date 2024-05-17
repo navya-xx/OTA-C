@@ -21,10 +21,12 @@ CycleStartDetector::CycleStartDetector(
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
     num_samp_corr = N_zfc * parser.getValue_int("num-corr-size-mul");
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
+    min_num_produced = num_samp_corr + N_zfc;
 
+    ch_est_start = true;
     ch_est_done = false;
     ch_seq_len = parser.getValue_int("ch-seq-len");
-    ch_est_samps.resize(ch_seq_len * 3);
+    ch_est_samps_size = 3 * ch_seq_len;
 
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
@@ -83,73 +85,55 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
     // Wait until correlation with N_zfc length seq for num_samp_corr samples can be computed
     cv_consumer.wait(lock, [this, &csd_success_signal]
-                     { return (num_produced >= num_samp_corr + N_zfc) and (not csd_success_signal); });
+                     { return (num_produced >= min_num_produced) and (not csd_success_signal); });
 
     if (not peak_det_obj_ref.detection_flag)
         correlation_operation();
-    else
-        ch_est_routine();
 
-    if (peak_det_obj_ref.detection_flag and ch_est_done)
+    if (peak_det_obj_ref.detection_flag)
     {
-        csd_success_signal = true;
-        cv_producer.notify_one();
-        csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
-        ch_pow = get_ch_power();
+        if (ch_est_done)
+        {
+            csd_success_signal = true;
+            cv_producer.notify_one();
+            csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
+            ch_pow = get_ch_power();
+            min_num_produced = num_samp_corr + N_zfc;
 
-        std::cout << "Estimated channel power = " << ch_pow << std::endl;
-        peak_det_obj_ref.detection_flag = false;
+            std::cout << "Estimated channel power = " << ch_pow << std::endl;
+            peak_det_obj_ref.detection_flag = false;
 
-        // reset corr and peak det objects
-        reset();
-        peak_det_obj_ref.resetPeaks();
+            // reset corr and peak det objects
+            reset();
+            peak_det_obj_ref.resetPeaks();
 
-        return true;
+            return true;
+        }
+        else if (ch_est_start)
+        {
+            min_num_produced = std::min(ch_est_samps_size, capacity);
+            // reset to capture new data
+            reset();
+            cv_producer.notify_one();
+            ch_est_start = false;
+            return false;
+        }
+        else
+        {
+            capture_ch_est_seq();
+            front = (front + min_num_produced) % capacity;
+            num_produced = std::min((num_produced - min_num_produced), size_t(0));
+            cv_producer.notify_one();
+            return false;
+        }
     }
     else
     {
-        front = (front + num_samp_corr + 1) % capacity;
-        num_produced -= (num_samp_corr + 1);
+        front = (front + num_samp_corr) % capacity;
+        num_produced = std::min((num_produced - num_samp_corr), size_t(0));
         cv_producer.notify_one();
         return false;
     }
-}
-
-float CycleStartDetector::get_ch_power()
-{
-    size_t N = parser.getValue_int("ch-seq-len");
-    size_t M = parser.getValue_int("ch-seq-M");
-    auto ch_zfc_seq = generateZadoffChuSequence(N, M);
-    float max_val = 0.0;
-    float curr_val = 0.0;
-    for (size_t i = 0; i < ch_est_samps.size() - N; ++i)
-    {
-        std::complex<float> corr(0.0, 0.0);
-        for (size_t j = 0; j < N; ++j)
-        {
-            corr += ch_est_samps[i + j] * std::conj(ch_zfc_seq[j]);
-        }
-        curr_val = std::abs(corr) / N;
-        if (max_val < curr_val)
-            max_val = curr_val;
-    }
-    return max_val;
-}
-
-void CycleStartDetector::ch_est_routine()
-{
-    std::cout << "Entering ch_est_routine" << std::endl;
-    // a separate sequence is sent for channel estimation
-    size_t max_size = std::min(num_samp_corr, ch_est_samps.size() - num_samp_corr);
-
-    for (size_t i = 0; i < max_size; ++i)
-    {
-        ch_est_samps[i + ch_est_samps_it] = samples_buffer[(front + i) % capacity];
-    }
-    ch_est_samps_it += max_size;
-
-    if (ch_est_samps_it >= ch_est_samps.size())
-        ch_est_done = true;
 }
 
 void CycleStartDetector::correlation_operation()
@@ -185,6 +169,72 @@ void CycleStartDetector::correlation_operation()
     // udpate noise level
     if ((not found_peak) and update_noise_level)
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
+}
+
+void CycleStartDetector::capture_ch_est_seq()
+{
+    if (ch_est_samps.size() < ch_est_samps_size)
+        ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
+
+    std::cout << "Entering capture_ch_est_seq" << std::endl;
+    // a separate sequence is sent for channel estimation
+    size_t num_samps_capture = std::min(min_num_produced, ch_est_samps_size - ch_est_samps_it);
+
+    for (size_t i = 0; i < num_samps_capture; ++i)
+    {
+        ch_est_samps[i + ch_est_samps_it] = samples_buffer[(front + i) % capacity];
+    }
+    ch_est_samps_it += num_samps_capture;
+
+    if (ch_est_samps_it >= ch_est_samps_size)
+        ch_est_done = true;
+}
+
+float CycleStartDetector::get_ch_power()
+{
+    size_t N = ch_seq_len;
+    size_t M = parser.getValue_int("ch-seq-M");
+    auto ch_zfc_seq = generateZadoffChuSequence(N, M);
+    float max_val = 0.0;
+    float curr_val = 0.0;
+    for (size_t i = 0; i < ch_est_samps_size - N; ++i)
+    {
+        std::complex<float> corr(0.0, 0.0);
+        for (size_t j = 0; j < N; ++j)
+        {
+            corr += (ch_est_samps[i + j] * std::conj(ch_zfc_seq[j]));
+        }
+        curr_val = std::abs(corr) / N;
+        if (max_val < curr_val)
+            max_val = curr_val;
+    }
+
+    if (true)
+    { // save data to file
+        std::ofstream choutfile("../storage/ch_samps_capture.dat", std::ios::out | std::ios::binary);
+
+        // Check if the file was opened successfully
+        if (!choutfile.is_open())
+        {
+            std::cerr << "Error: Could not open file for writing." << std::endl;
+        }
+
+        size_t size = ch_est_samps.size();
+        choutfile.write(reinterpret_cast<char *>(&size), sizeof(size));
+
+        // Write each complex number (real and imaginary parts)
+        for (const auto &complex_value : ch_est_samps)
+        {
+            float real_val = complex_value.real();
+            float complex_val = complex_value.imag();
+            choutfile.write(reinterpret_cast<char *>(&real_val), sizeof(complex_value.real()));
+            choutfile.write(reinterpret_cast<char *>(&complex_val), sizeof(complex_value.imag()));
+        }
+        choutfile.close();
+    }
+
+    ch_est_samps.clear();
+    return max_val;
 }
 
 uhd::time_spec_t CycleStartDetector::get_wait_time(float tx_wait_microsec)
