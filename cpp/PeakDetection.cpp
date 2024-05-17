@@ -262,7 +262,7 @@ bool PeakDetectionClass::next()
 
         if (check_peaks())
         {
-            std::cout << "Successful Detection! Processed " << adjacent_spacing << " samples without detecting peak." << std::endl;
+            std::cout << "Check peaks -> Success! Peaks Detection Successful! Finishing..." << std::endl;
             detection_flag = true;
             print_peaks_data();
             return false;

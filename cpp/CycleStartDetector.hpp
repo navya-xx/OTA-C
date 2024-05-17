@@ -68,6 +68,7 @@ private:
     bool ch_est_done;
     std::vector<std::complex<float>> ch_est_samps;
     size_t ch_est_samps_it = 0;
+    size_t ch_seq_len;
 
     boost::mutex mtx;
     boost::condition_variable cv_producer;

@@ -23,6 +23,8 @@ CycleStartDetector::CycleStartDetector(
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
 
     ch_est_done = false;
+    ch_seq_len = parser.getValue_int("ch-seq-len");
+    ch_est_samps.resize(ch_seq_len * 3);
 
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
@@ -135,11 +137,8 @@ float CycleStartDetector::get_ch_power()
 
 void CycleStartDetector::ch_est_routine()
 {
+    std::cout << "Entering ch_est_routine" << std::endl;
     // a separate sequence is sent for channel estimation
-    size_t ch_seq_len = parser.getValue_int("ch-seq-len");
-    if (ch_est_samps.empty())
-        ch_est_samps.resize(ch_seq_len * 3);
-
     size_t max_size = std::min(num_samp_corr, ch_est_samps.size() - num_samp_corr);
 
     for (size_t i = 0; i < max_size; ++i)
