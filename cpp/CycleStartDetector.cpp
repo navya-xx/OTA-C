@@ -147,7 +147,8 @@ void CycleStartDetector::correlation_operation()
 
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
-        peak_det_obj_ref.save_float_data_into_buffer(abs_val);
+        // peak_det_obj_ref.save_float_data_into_buffer(abs_val);
+        peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
 
         if (update_noise_level)
             sum_ampl += abs_val;
@@ -169,6 +170,7 @@ void CycleStartDetector::capture_ch_est_seq()
     for (size_t i = 0; i < num_samps_capture; ++i)
     {
         ch_est_samps[i + ch_est_samps_it] = samples_buffer[(front + i) % capacity];
+        peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
     }
     ch_est_samps_it += num_samps_capture;
 
@@ -195,7 +197,7 @@ float CycleStartDetector::get_ch_power()
             max_val = curr_val;
     }
 
-    if (true)
+    if (false)
     { // save data to file
         std::ofstream choutfile("../storage/ch_samps_capture.dat", std::ios::out | std::ios::binary);
 
