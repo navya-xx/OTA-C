@@ -7,3 +7,4 @@ shell/LogFolder
 .vscode
 OTA-C.code-workspace
 .gitignore
+*.ipynb
