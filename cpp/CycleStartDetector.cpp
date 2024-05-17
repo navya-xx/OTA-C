@@ -96,8 +96,6 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     {
         if (ch_est_done)
         {
-            csd_success_signal = true;
-            cv_producer.notify_one();
             csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
             ch_pow = get_ch_power();
 
@@ -107,6 +105,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
             reset();
             peak_det_obj_ref.resetPeaks();
 
+            cv_producer.notify_one();
             return true;
         }
         else
@@ -174,9 +173,8 @@ void CycleStartDetector::ch_est_process()
     {
         front = (front + min_num_produced) % capacity;
         num_produced = std::min((num_produced - min_num_produced), size_t(0));
+        capture_ch_est_seq();
     }
-
-    capture_ch_est_seq();
 }
 
 void CycleStartDetector::capture_ch_est_seq()
