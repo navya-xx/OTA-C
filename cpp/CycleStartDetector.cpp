@@ -105,6 +105,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
             reset();
             peak_det_obj_ref.resetPeaks();
 
+            csd_success_signal = true;
             cv_producer.notify_one();
             return true;
         }
@@ -164,7 +165,6 @@ void CycleStartDetector::ch_est_process()
     if (ch_est_start)
     {
         // reset to capture new data
-        reset();
         ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
         min_num_produced = std::min(ch_seq_len, capacity - 1);
         ch_est_start = false;
@@ -237,6 +237,9 @@ float CycleStartDetector::get_ch_power()
 
     ch_est_samps.clear();
     ch_est_samps_it = 0;
+    ch_est_done = false;
+    ch_est_start = true;
+    min_num_produced = num_samp_corr + N_zfc;
     return max_val;
 }
 
