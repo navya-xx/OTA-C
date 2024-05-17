@@ -250,7 +250,6 @@ bool PeakDetectionClass::check_peaks()
 
 bool PeakDetectionClass::next()
 {
-    int adjacent_spacing = samples_from_first_peak - prev_peak_index;
     if (peaks_count > 0 and peaks_count < total_num_peaks)
     {
         ++samples_from_first_peak;
@@ -261,6 +260,8 @@ bool PeakDetectionClass::next()
     else
     {
         size_t tol = ref_seq_len - peak_det_tol;
+        int adjacent_spacing = samples_from_first_peak - prev_peak_index;
+        ++samples_from_first_peak;
         if (adjacent_spacing > tol)
         {
             if (peaks_count == total_num_peaks)
@@ -294,7 +295,6 @@ bool PeakDetectionClass::next()
 bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
 {
     float abs_corr_to_noise_ratio = abs_corr_val / noise_level;
-    int adjacent_spacing;
 
     if (abs_corr_to_noise_ratio > curr_pnr_threshold)
     {
@@ -302,11 +302,13 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
         if (peaks_count == 0)
         {
             insertPeak(abs_corr_val, samp_time);
+            if (DEBUG)
+                std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
         }
         else // next peaks
         {
             // distance of current peak from last
-            adjacent_spacing = samples_from_first_peak - prev_peak_index;
+            int adjacent_spacing = samples_from_first_peak - prev_peak_index;
 
             // next peak is too far from the last
             if (adjacent_spacing > ref_seq_len + peak_det_tol) // false peak -> reset
@@ -321,11 +323,11 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             }
             else // new peak found within tolerance levels
                 insertPeak(abs_corr_val, samp_time);
-        }
-        if (DEBUG)
-        {
-            std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::flush;
-            std::cout << "\t spacing " << adjacent_spacing << std::endl;
+            if (DEBUG)
+            {
+                std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::flush;
+                std::cout << "\t spacing " << adjacent_spacing << std::endl;
+            }
         }
         return true; // a peak is found
     }
