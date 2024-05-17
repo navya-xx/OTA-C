@@ -26,7 +26,7 @@ CycleStartDetector::CycleStartDetector(
     ch_est_start = true;
     ch_est_done = false;
     ch_seq_len = parser.getValue_int("ch-seq-len");
-    ch_est_samps_size = 3 * ch_seq_len;
+    ch_est_samps_size = 4 * ch_seq_len;
 
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
