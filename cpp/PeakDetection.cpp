@@ -231,42 +231,64 @@ void PeakDetectionClass::save_data_to_file(const std::string &file)
     }
 }
 
+bool PeakDetectionClass::check_peaks()
+{
+    size_t gap;
+
+    for (int i = 0; i < total_num_peaks - 1; ++i)
+    {
+        gap = peak_indices[i + 1] - peak_indices[i];
+        if (gap < ref_seq_len - peak_det_tol or gap > ref_seq_len + peak_det_tol)
+        {
+            std::cerr << "Incorrect peak index : peak " << i << " at " << peak_indices[i] << " and  peak " << i + 1 << " at " << peak_indices[i + 1] << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool PeakDetectionClass::next()
 {
-    if (peaks_count > 0)
+    int adjacent_spacing = samples_from_first_peak - prev_peak_index;
+    if (peaks_count > 0 and peaks_count < total_num_peaks)
     {
-        int adjacent_spacing = samples_from_first_peak - prev_peak_index;
         ++samples_from_first_peak;
-
-        // run for another (ref_seq_len) times to save extra symbols in save_buffer
-        if (adjacent_spacing > ref_seq_len)
+        return true;
+    }
+    else if (peaks_count == 0)
+        return true;
+    else
+    {
+        size_t tol = ref_seq_len - peak_det_tol;
+        if (adjacent_spacing > tol)
         {
             if (peaks_count == total_num_peaks)
             {
-                if (DEBUG)
-                    std::cout << "Successful Detection! Processed " << adjacent_spacing << " samples without detecting peak." << std::endl;
-
-                detection_flag = true;
-            }
-            else // reset peaks
-            {
-                if (DEBUG)
+                // check if peaks are correct, if not, reset
+                if (check_peaks())
                 {
-                    if (peaks_count > total_num_peaks)
-                        std::cerr << "\t\t -> More peaks than expected! <- PeakDetectionClass" << std::endl;
-                    else
-                        std::cout << "\t\t -> Less peaks detected! <- PeakDetectionClass" << std::endl;
+                    std::cout << "Successful Detection! Processed " << adjacent_spacing << " samples without detecting peak." << std::endl;
+                    detection_flag = true;
+                    return false;
                 }
-                resetPeaks();
+                else
+                {
+                    std::cerr << "Detection unsuccessful. Resetting peaks." << std::endl;
+                    resetPeaks();
+                    return true;
+                }
             }
-            return false; // iterations stop here
+            else
+            {
+                std::cerr << "More than " << total_num_peaks << " peaks. Resetting peaks." << std::endl;
+                resetPeaks();
+                return true;
+            }
         }
         else
-            return true; // else continue
+            return true;
     }
-
-    else
-        return true;
 }
 
 bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
