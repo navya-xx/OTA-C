@@ -34,8 +34,10 @@ void CycleStartDetector::reset()
     num_produced = 0;
     front = 0;
     rear = 0;
-    // samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
-    // timer.resize(capacity, uhd::time_spec_t(0.0));
+    samples_buffer.clear();
+    timer.clear();
+    samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
+    timer.resize(capacity, uhd::time_spec_t(0.0));
     prev_timer = uhd::time_spec_t(0.0);
 }
 
@@ -85,9 +87,13 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     {
         csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
         ch_pow = peak_det_obj_ref.get_avg_ch_pow();
+        peak_det_obj_ref.print_peaks_data();
         peak_det_obj_ref.detection_flag = false;
+
+        // reset corr and peak det objects
         reset();
         peak_det_obj_ref.resetPeaks();
+
         cv_producer.notify_one();
         return true;
     }
@@ -107,21 +113,21 @@ void CycleStartDetector::correlation_operation()
     float sum_ampl = 0.0;
     bool update_noise_level = false;
     float abs_val = 0.0;
-    std::complex<float> corr;
 
     for (size_t i = 0; i < num_samp_corr; ++i)
     {
         // compute correlation
-        corr = std::complex<float>(0.0, 0.0);
+        std::complex<float> corr(0.0, 0.0);
         for (size_t j = 0; j < N_zfc; ++j)
         {
             corr += (samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
         }
+
         abs_val = std::abs(corr) / N_zfc;
 
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
-        peak_det_obj_ref.save_into_buffer(corr);
+        peak_det_obj_ref.save_float_data_into_buffer(abs_val);
 
         if (update_noise_level)
             sum_ampl += abs_val;

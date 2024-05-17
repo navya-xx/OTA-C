@@ -27,9 +27,14 @@ PeakDetectionClass::PeakDetectionClass(
     noise_counter = 0;
     noise_level = init_noise_level;
 
+    is_save_buffer_complex = false;
+
     if (save_buffer_flag)
     {
-        save_buffer.resize(ref_seq_len * total_num_peaks * 20, std::complex<float>(0.0, 0.0));
+        if (is_save_buffer_complex)
+            save_buffer_complex.resize(ref_seq_len * total_num_peaks * 10, float(0.0));
+        else
+            save_buffer_float.resize(ref_seq_len * total_num_peaks * 10, float(0.0));
     }
 };
 
@@ -161,42 +166,68 @@ void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &n
     }
 }
 
-void PeakDetectionClass::save_into_buffer(const std::complex<float> &sample)
+void PeakDetectionClass::save_float_data_into_buffer(const float &sample)
 {
     if (save_buffer_flag)
     {
-        save_buffer.pop_front();
-        save_buffer.push_back(sample);
+        save_buffer_float.pop_front();
+        save_buffer_float.push_back(sample);
     }
 }
 
-void PeakDetectionClass::save_complex_data_to_file(const std::string &file)
+void PeakDetectionClass::save_complex_data_into_buffer(const std::complex<float> &sample)
+{
+    if (save_buffer_flag)
+    {
+        save_buffer_complex.pop_front();
+        save_buffer_complex.push_back(sample);
+    }
+}
+
+void PeakDetectionClass::save_data_to_file(const std::string &file)
 {
     if (save_buffer_flag)
     {
         if (DEBUG)
             std::cout << "Saving data to file " << file << std::endl;
 
-        std::ofstream outfile;
-        outfile.open(file);
+        std::ofstream outfile(file, std::ios::out | std::ios::binary);
 
-        if (outfile.is_open()) // we save as csv for analysis in python
+        // Check if the file was opened successfully
+        if (!outfile.is_open())
         {
-            for (auto it = save_buffer.begin(); it != save_buffer.end(); ++it)
+            std::cerr << "Error: Could not open file for writing." << std::endl;
+            return;
+        }
+
+        if (is_save_buffer_complex)
+        { // Write the size of the deque to the file
+            size_t size = save_buffer_complex.size();
+            outfile.write(reinterpret_cast<char *>(&size), sizeof(size));
+
+            // Write each complex number (real and imaginary parts)
+            for (const auto &complex_value : save_buffer_complex)
             {
-                outfile << it->real() << "|" << it->imag();
-                if (std::next(it) != save_buffer.end())
-                {
-                    outfile << ",";
-                }
+                float real_val = complex_value.real();
+                float complex_val = complex_value.imag();
+                outfile.write(reinterpret_cast<char *>(&real_val), sizeof(complex_value.real()));
+                outfile.write(reinterpret_cast<char *>(&complex_val), sizeof(complex_value.imag()));
             }
-            outfile << std::endl;
-            outfile.close();
         }
         else
         {
-            std::cerr << "ERROR: File not open!" << std::endl;
+            size_t size = save_buffer_float.size();
+            outfile.write(reinterpret_cast<char *>(&size), sizeof(size));
+
+            // Write each complex number (real and imaginary parts)
+            for (float &float_value : save_buffer_float)
+            {
+                outfile.write(reinterpret_cast<char *>(&float_value), sizeof(float_value));
+            }
         }
+
+        outfile.close();
+        std::cout << "Data saved successfully to " << file << "." << std::endl;
     }
 }
 

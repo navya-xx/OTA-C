@@ -185,7 +185,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
         // get peaks info
         std::string save_rx_buffer_filepath = currentDir + parser.save_buffer_filename + "_" + std::to_string(round) + ".dat";
-        peak_det_obj.save_complex_data_to_file(save_rx_buffer_filepath);
+        peak_det_obj.save_data_to_file(save_rx_buffer_filepath);
 
         ++round;
     }
@@ -280,8 +280,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     thread_group.join_all();
-
-    peak_det_obj.print_peaks_data();
 
     return EXIT_SUCCESS;
 }

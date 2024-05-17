@@ -61,7 +61,9 @@ public:
     float prev_peak_val;
     int samples_from_first_peak;
     bool detection_flag;
-    std::deque<std::complex<float>> save_buffer;
+    std::deque<float> save_buffer_float;
+    std::deque<std::complex<float>> save_buffer_complex;
+    bool is_save_buffer_complex;
 
     float noise_level;
     long int noise_counter;
@@ -76,8 +78,9 @@ public:
 
     bool next();
 
-    void save_into_buffer(const std::complex<float> &sample);
-    void save_complex_data_to_file(const std::string &file);
+    void save_float_data_into_buffer(const float &sample);
+    void save_complex_data_into_buffer(const std::complex<float> &sample);
+    void save_data_to_file(const std::string &file);
 
     void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
 
