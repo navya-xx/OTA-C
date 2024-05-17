@@ -104,70 +104,29 @@ void print_duration(std::chrono::steady_clock::duration &time_duration)
     //           << std::setw(3) << milliseconds.count() << std::endl;
 }
 
-po::variables_map parse_config_from_file(const std::string &file)
+void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream)
 {
-    po::variables_map vm;
-    std::ifstream configFile(file);
-
-    std::cout << "Reading configuration from 'leaf_config.conf'" << std::endl;
-
-    if (!configFile.is_open())
+    // Open the file in append mode (if not already open)
+    if (!outfile.is_open())
     {
-        throw std::runtime_error("Failed to find config file 'leaf_config.conf'.");
-    }
-
-    // skip first line
-    // std::string firstLine;
-    // std::getline(configFile, firstLine);
-
-    std::string line;
-    while (std::getline(configFile, line))
-    {
-        std::istringstream iss(line);
-        std::string varName, defaultValue, varType;
-
-        if (!(iss >> varName >> defaultValue >> varType))
+        outfile.open(filename, std::ios::out | std::ios::binary | std::ios::app);
+        if (!outfile.is_open())
         {
-            std::cerr << "Error: Invalid line in config file '" << file << "': " << line << std::endl;
-            continue; // Skip invalid lines
+            std::cerr << "Error: Could not open file for writing." << std::endl;
+            return;
         }
-
-        vm.emplace(varName, po::variable_value(po::value<std::string>()->default_value(defaultValue), ""));
-
-        // if (varType == "int")
-        // {
-        //     int value = std::stoi(defaultValue);
-        //     vm.emplace(varName, po::variable_value(po::value<int>()->default_value(value), 0));
-        // }
-        // else if (varType == "float")
-        // {
-        //     double value = std::stod(defaultValue);
-        //     vm.emplace(varName, po::variable_value(po::value<float>()->default_value(value), 0.0));
-        // }
-        // else if (varType == "str")
-        // {
-        //     vm.emplace(varName, po::variable_value(po::value<std::string>()->default_value(defaultValue), ""));
-        // }
-        // else
-        // {
-        //     std::cerr << "Error: Unsupported variable type in config file '" << file << "': " << varType << std::endl;
-        //     continue; // Skip unsupported types
-        // }
     }
 
-    configFile.close();
+    for (const auto &complex_value : stream)
+    {
+        float real_val = complex_value.real();
+        float complex_val = complex_value.imag();
+        outfile.write(reinterpret_cast<char *>(&real_val), sizeof(complex_value.real()));
+        outfile.write(reinterpret_cast<char *>(&complex_val), sizeof(complex_value.imag()));
+    }
 
-    std::cout << "Reading configuration -> Done!" << std::endl;
-
-    return vm;
-}
-
-// Helper function to convert string to specified type
-template <typename T>
-T convertToType(const std::string &str)
-{
-    std::istringstream iss(str);
-    T value;
-    iss >> value;
-    return value;
+    if (outfile.is_open())
+    {
+        outfile.close();
+    }
 }

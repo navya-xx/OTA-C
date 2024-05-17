@@ -26,7 +26,7 @@ void sig_int_handler(int)
 
 extern const bool DEBUG = true;
 
-void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal, const std::string &currentDir)
+void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal, const std::string &homeDirStr)
 {
     size_t tx_N_zfc = parser.getValue_int("test-signal-len");
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
@@ -45,6 +45,19 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
     size_t round = 1;
 
+    bool is_save_stream_data;
+    std::ofstream outfile;
+    std::string save_stream_file;
+    std::istringstream iss(parser.getValue_str("is-save-stream-data"));
+    iss >> is_save_stream_data;
+    if (is_save_stream_data)
+    {
+        save_stream_file = homeDirStr + "OTA-C/cpp/storage/stream_data.dat";
+        // remove existing file
+        std::remove(save_stream_file.c_str());
+        outfile.open(save_stream_file, std::ios::out | std::ios::binary | std::ios::app);
+    }
+
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
         if (DEBUG)
@@ -52,6 +65,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             std::cout << "Round " << round << std::endl
                       << std::endl;
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         uhd::rx_metadata_t md;
         bool overflow_message = true;
 
@@ -108,6 +123,10 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             // pass on to the cycle start detector
             // std::cout << "Received " << num_rx_samps << " samples. Producing..." << std::endl;
+
+            // save data to file for later analysis
+            if (is_save_stream_data)
+                save_stream_to_file(save_stream_file, outfile, buff);
 
             csd_obj.produce(buff, num_rx_samps, md.time_spec, csd_success_signal);
         }
@@ -184,7 +203,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         csd_success_signal = false;
 
         // get peaks info
-        std::string save_rx_buffer_filepath = currentDir + parser.save_buffer_filename + "_" + std::to_string(round) + ".dat";
+        std::string save_rx_buffer_filepath = homeDirStr + parser.save_buffer_filename + "_" + std::to_string(round) + ".dat";
         peak_det_obj.save_data_to_file(save_rx_buffer_filepath);
 
         ++round;
@@ -222,10 +241,10 @@ void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser,
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     const char *homeDir = std::getenv("HOME");
-    std::string currentDir(homeDir);
+    std::string homeDirStr(homeDir);
 
     // rx and tx streamers -- initilize
-    ConfigParser parser(currentDir + "/OTA-C/cpp/leaf_config.conf");
+    ConfigParser parser(homeDirStr + "/OTA-C/cpp/leaf_config.conf");
 
     std::string args = parser.getValue_str("args");
     if (args == "NULL")
@@ -268,7 +287,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     boost::thread_group thread_group;
 
     auto producer_thread = thread_group.create_thread([=, &csd_obj, &peak_det_obj, &parser, &usrp_classobj, &csd_success_signal]()
-                                                      { csd_test_producer_thread(peak_det_obj, csd_obj, usrp_classobj, parser, tx_m_zfc, csd_success_signal, currentDir); });
+                                                      { csd_test_producer_thread(peak_det_obj, csd_obj, usrp_classobj, parser, tx_m_zfc, csd_success_signal, homeDirStr); });
 
     uhd::set_thread_name(producer_thread, "producer_thread");
 

@@ -43,7 +43,4 @@ std::chrono::steady_clock::duration convert_timestr_to_duration(const std::strin
 
 void print_duration(std::chrono::steady_clock::duration &time_duration);
 
-po::variables_map parse_config_from_file(const std::string &file);
-
-template <typename T>
-T convertToType(const std::string &str);
+void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream);
