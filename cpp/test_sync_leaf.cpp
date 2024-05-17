@@ -85,7 +85,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         // the requested number of samples were collected (if such a number was
         // given), or until Ctrl-C was pressed.
 
-        while (not csd_success_signal and not stop_signal_called)
+        while (not csd_success_signal and not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
         {
             try
             {
@@ -136,7 +136,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
         std::cout << "Producer finished" << std::endl;
 
-        if (stop_signal_called)
+        if (stop_signal_called or std::chrono::steady_clock::now() > stop_time)
             return;
 
         // Start information transmission
@@ -148,7 +148,10 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             float ch_pow = csd_obj.ch_pow;
             uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
             float min_ch_pow = parser.getValue_float("min-ch-pow");
-            auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, min_ch_pow / ch_pow);
+            float tx_scaling_factor = min_ch_pow / ch_pow;
+            if (tx_scaling_factor > 1)
+                std::cerr << "(min_ch_pow) " << min_ch_pow << " > " << ch_pow << " (est avg ch pow)" << std::endl;
+            auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
             float tx_duration = tx_zfc_seq.size();
             tx_duration = tx_duration / usrp_classobj.tx_sample_duration.get_real_secs();
 
