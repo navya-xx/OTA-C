@@ -55,6 +55,7 @@ private:
     void reset();
     void capture_ch_est_seq();
     float get_ch_power();
+    void ch_est_process();
 
     size_t N_zfc, m_zfc, R_zfc;
     size_t num_samp_corr;

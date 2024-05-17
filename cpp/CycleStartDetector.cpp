@@ -26,7 +26,7 @@ CycleStartDetector::CycleStartDetector(
     ch_est_start = true;
     ch_est_done = false;
     ch_seq_len = parser.getValue_int("ch-seq-len");
-    ch_est_samps_size = 4 * ch_seq_len;
+    ch_est_samps_size = 6 * ch_seq_len;
 
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
@@ -40,6 +40,7 @@ void CycleStartDetector::reset()
     num_produced = 0;
     front = 0;
     rear = 0;
+    min_num_produced = num_samp_corr + N_zfc;
     samples_buffer.clear();
     timer.clear();
     samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
@@ -98,10 +99,8 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
             cv_producer.notify_one();
             csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
             ch_pow = get_ch_power();
-            min_num_produced = num_samp_corr + N_zfc;
 
             std::cout << "Estimated channel power = " << ch_pow << std::endl;
-            peak_det_obj_ref.detection_flag = false;
 
             // reset corr and peak det objects
             reset();
@@ -109,20 +108,9 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
             return true;
         }
-        else if (ch_est_start)
-        {
-            min_num_produced = std::min(ch_seq_len, capacity - 1);
-            // reset to capture new data
-            reset();
-            cv_producer.notify_one();
-            ch_est_start = false;
-            return false;
-        }
         else
         {
-            capture_ch_est_seq();
-            front = (front + min_num_produced) % capacity;
-            num_produced = std::min((num_produced - min_num_produced), size_t(0));
+            ch_est_process();
             cv_producer.notify_one();
             return false;
         }
@@ -171,13 +159,27 @@ void CycleStartDetector::correlation_operation()
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
 }
 
+void CycleStartDetector::ch_est_process()
+{
+    if (ch_est_start)
+    {
+        // reset to capture new data
+        reset();
+        ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
+        min_num_produced = std::min(ch_seq_len, capacity - 1);
+        ch_est_start = false;
+    }
+    else
+    {
+        capture_ch_est_seq();
+        front = (front + min_num_produced) % capacity;
+        num_produced = std::min((num_produced - min_num_produced), size_t(0));
+    }
+}
+
 void CycleStartDetector::capture_ch_est_seq()
 {
-    if (ch_est_samps.size() < ch_est_samps_size)
-        ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
-
     std::cout << "Entering capture_ch_est_seq" << std::endl;
-    // a separate sequence is sent for channel estimation
     size_t num_samps_capture = std::min(min_num_produced, ch_est_samps_size - ch_est_samps_it);
 
     for (size_t i = 0; i < num_samps_capture; ++i)

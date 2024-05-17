@@ -109,7 +109,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
                 if (overflow_message)
                 {
                     overflow_message = false;
-                    std::cerr << "*** Got an overflow indication." << std::endl
+                    std::cerr << std::endl
+                              << "*** Got an overflow indication." << std::endl
                               << std::endl;
                     ;
                 }
