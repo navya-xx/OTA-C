@@ -36,7 +36,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 {
     size_t tx_N_zfc = parser.getValue_int("test-signal-len");
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
-    float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
+    // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
     float total_runtime = parser.getValue_float("duration");
 
     auto rx_stream = usrp_classobj.rx_streamer;
