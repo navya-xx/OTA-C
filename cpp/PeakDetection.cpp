@@ -142,7 +142,7 @@ void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &n
     // if (DEBUG)
     //     std::cout << "Update noise :  current val = " << std::abs(avg_ampl) << ", curr noise lev = " << noise_level << std::endl;
 
-    if (std::abs(avg_ampl - noise_level) / noise_level < 0.1)
+    if (std::abs(avg_ampl - noise_level) / noise_level < 1.0)
     {
         // update noise level by iteratively averaging
         noise_level = (noise_counter * noise_level + avg_ampl * num_samps) / (noise_counter + num_samps);

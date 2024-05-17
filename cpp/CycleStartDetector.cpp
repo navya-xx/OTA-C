@@ -115,13 +115,13 @@ void CycleStartDetector::correlation_operation()
         corr = std::complex<float>(0.0, 0.0);
         for (size_t j = 0; j < N_zfc; ++j)
         {
-            corr += samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]);
+            corr += (samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
         }
         abs_val = std::abs(corr) / N_zfc;
 
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
-        peak_det_obj_ref.save_into_buffer(samples_buffer[(front + i) % capacity]);
+        peak_det_obj_ref.save_into_buffer(corr);
 
         if (update_noise_level)
             sum_ampl += abs_val;
@@ -131,7 +131,7 @@ void CycleStartDetector::correlation_operation()
     }
 
     // udpate noise level
-    if (not found_peak and update_noise_level)
+    if ((not found_peak) and update_noise_level)
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
 }
 
