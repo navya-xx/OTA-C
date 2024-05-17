@@ -82,10 +82,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
-    // if (csd_success_signal)
-    //     std::cout << "CSD success - waiting consumer" << std::endl;
-
-    // Wait until correlation with N_zfc length seq for num_samp_corr samples can be computed
+    // Wait until min_num_produced samples are produced by producer
     cv_consumer.wait(lock, [this, &csd_success_signal]
                      { return (num_produced >= min_num_produced) and (not csd_success_signal); });
 
@@ -169,12 +166,10 @@ void CycleStartDetector::ch_est_process()
         // min_num_produced = std::min(ch_seq_len, capacity - 1);
         ch_est_start = false;
     }
-    else
-    {
-        capture_ch_est_seq();
-        front = (front + min_num_produced) % capacity;
-        num_produced = std::min((num_produced - min_num_produced), size_t(0));
-    }
+
+    capture_ch_est_seq();
+    front = (front + min_num_produced) % capacity;
+    num_produced = std::min((num_produced - min_num_produced), size_t(0));
 }
 
 void CycleStartDetector::capture_ch_est_seq()
