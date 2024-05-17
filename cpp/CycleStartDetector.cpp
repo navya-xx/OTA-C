@@ -130,7 +130,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     else
     {
         front = (front + num_samp_corr) % capacity;
-        num_produced = std::min((num_produced - num_samp_corr), size_t(0));
+        num_produced = std::max((num_produced - num_samp_corr), size_t(0));
         cv_producer.notify_one();
         return false;
     }
