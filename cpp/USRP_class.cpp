@@ -105,14 +105,10 @@ bool USRP_class::check_locked_sensor_tx(float setup_time)
 void USRP_class::initialize()
 {
     // Entire routine to setup USRP, streamers, testing Rx/Tx capabilities, etc.
-    std::string args = parser.getValue_str("args");
-    if (args == "NULL" or args == "")
-        throw std::invalid_argument("ERROR : device address missing!");
-
-    if (DEBUG)
-        std::cout << "USRP = " << args << std::endl;
+    std::string device_id = parser.getValue_str("device-id");
 
     bool device_create = false;
+    std::string args = "serial=" + device_id;
 
     for (int i = 0; i < 3; ++i)
     {
@@ -253,6 +249,8 @@ void USRP_class::initialize()
     init_background_noise = init_background_noise / (rx_samples.size() - zfc_seq.size());
     std::cout << "Average background noise for packets = " << init_background_noise << std::endl;
 
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     std::cout << "--------- USRP initilization finished -----------------" << std::endl
               << std::endl;
 };
@@ -264,7 +262,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
 
     // setup metadata for the first packet
     uhd::tx_metadata_t md;
-    md.start_of_burst = false;
+    md.start_of_burst = true;
     md.end_of_burst = false;
 
     auto usrp_now = usrp->get_time_now();
@@ -295,6 +293,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
         if (num_tx_samps_sent_now < samps_to_send)
             std::cerr << "TX-TIMEOUT: Transmission timeout!!" << std::endl;
 
+        md.start_of_burst = false;
         md.has_time_spec = false;
         num_acc_samps += num_tx_samps_sent_now;
     }
@@ -384,8 +383,6 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
             std::string error = str(boost::format("Receiver error: %s") % md.strerror());
             std::cerr << error << std::endl;
         }
-
-        // std::cout << "Received " << num_acc_samps << " out of " << num_rx_samps << std::endl;
     }
 
     stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;

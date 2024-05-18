@@ -36,15 +36,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // rx and tx streamers -- initilize
     ConfigParser parser(currentDir + "/OTA-C/cpp/leaf_config.conf");
 
-    std::string args = parser.getValue_str("args");
-    if (args == "NULL")
-    {
-        if (argc < 2)
-            throw std::invalid_argument("ERROR : device address missing!");
+    if (argc < 2)
+        throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
 
-        args = argv[1];
-        parser.set_value("args", args, "str");
-    }
+    std::string device_id = argv[1];
 
     parser.print_values();
 
@@ -58,14 +53,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             std::cerr << "Filename not specified. Using default filename : " << filename << std::endl;
         }
         else
-        {
             filename = currentDir + "/OTA-C/cpp/storage/" + argv[2];
-        }
     }
     else
-    {
         filename = currentDir + "/OTA-C/cpp/storage/" + filename;
-    }
 
     // USRP init
     USRP_class usrp_classobj(parser);
@@ -76,53 +67,37 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t m_zfc = parser.getValue_int("Ref-m-zfc");
     size_t R_zfc = parser.getValue_int("Ref-R-zfc");
 
-    // size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
-    // size_t ch_M_zfc = parser.getValue_int("ch-seq-M");
-    size_t ch_N_zfc = 0;
-    size_t ch_M_zfc = 0;
-
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
-    size_t ch_seq_reps = 0;
-    size_t ref_ch_gap = 0 * ch_N_zfc;
-
-    std::vector<std::complex<float>> buff(N_zfc * R_zfc + ref_ch_gap + ch_seq_reps * ch_N_zfc, std::complex<float>(0.0, 0.0));
+    std::vector<std::complex<float>> buff(N_zfc * R_zfc, std::complex<float>(0.0, 0.0));
     for (int i = 0; i < N_zfc * R_zfc; ++i)
     {
         buff[i] = zfc_seq[i % N_zfc];
     }
 
-    if (ch_seq_reps > 0)
-    {
-        auto ch_zfc_seq = generateZadoffChuSequence(ch_N_zfc, ch_M_zfc);
-        for (int i = 0; i < ch_seq_reps * ch_N_zfc; ++i)
-        {
-            buff[i + N_zfc * R_zfc + ref_ch_gap] = ch_zfc_seq[i % ch_N_zfc];
-        }
-    }
-
     float total_runtime = parser.getValue_float("duration");
     if (total_runtime == 0.0)
-        total_runtime = 1 * 3600; // run for one hour at most
+        total_runtime = 5 * 60; // run for 5 minutes
     const auto start_time = std::chrono::steady_clock::now();
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
-    size_t csd_wait_time_millisec = parser.getValue_int("csd-wait-time-millisec");
 
-    float tx_wait_time = parser.getValue_float("tx-wait-microsec");
+    size_t csd_wait_time_millisec = parser.getValue_int("csd-wait-time-millisec");
+    float tx_wait_time = parser.getValue_float("tx-wait-microsec") / 1e6;
     size_t test_signal_len = parser.getValue_int("test-signal-len");
     float sample_duration = usrp_classobj.tx_sample_duration.get_real_secs();
     size_t test_tx_reps = parser.getValue_int("test-tx-reps");
+    size_t sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
     // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
 
-    // size_t num_rx_samps = test_tx_reps * (test_signal_len + tx_reps_gap * sample_duration) + 10 * test_signal_len;
-    size_t num_rx_samps = test_tx_reps * test_signal_len + 10 * test_signal_len;
+    size_t save_extra_mul = 2;
+    // save data from tx_time - save_extra_mul * test_signal_duration to end of test signal + save_extra_mul * test_signal_duration
+    size_t num_rx_samps = test_tx_reps * test_signal_len + 2 * save_extra_mul * test_signal_len;
 
     int iter_counter = 1;
 
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
         // wait before sending next csd ref signal
-        // std::this_thread::sleep_for(std::chrono::milliseconds(csd_wait_time_millisec));
         uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
 
         if (usrp_classobj.transmission(buff, tx_timer))
@@ -135,8 +110,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return EXIT_FAILURE;
         }
 
-        uhd::time_spec_t last_sample_tx_time = tx_timer + uhd::time_spec_t(sample_duration * buff.size());
-        uhd::time_spec_t rx_time = last_sample_tx_time + uhd::time_spec_t(tx_wait_time / 1e6 - (sample_duration * 5 * test_signal_len));
+        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * N_zfc * (R_zfc - sync_with_peak_from_last)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_mul * test_signal_len));
 
         auto rx_symbols = usrp_classobj.reception(num_rx_samps, rx_time);
 

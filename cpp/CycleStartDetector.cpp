@@ -28,12 +28,6 @@ CycleStartDetector::CycleStartDetector(
     else
         update_noise_level = false;
 
-    // ch_est_done = false;
-    // ch_seq_len = parser.getValue_int("ch-seq-len");
-    // ch_est_samps_size = 5 * ch_seq_len;
-    // ch_est_samps_it = 0;
-    // ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
-
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
 
@@ -54,14 +48,11 @@ void CycleStartDetector::reset()
     prev_timer = uhd::time_spec_t(0.0);
 }
 
-void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time, std::atomic<bool> &csd_success_signal)
+void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
-    // if (csd_success_signal)
-    //     std::cout << "CSD success - waiting producer" << std::endl;
-
-    cv_producer.wait(lock, [this, &samples_size, &csd_success_signal]
+    cv_producer.wait(lock, [this, &samples_size]
                      { return (capacity - num_produced >= samples_size); }); // Wait for enough space to produce
 
     // insert first timer

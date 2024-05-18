@@ -3,11 +3,9 @@ extern const bool DEBUG;
 
 PeakDetectionClass::PeakDetectionClass(
     ConfigParser &parser,
-    const float &init_noise_level,
-    bool save_buffer_flag) : parser(parser),
-                             save_buffer_flag(save_buffer_flag),
-                             detection_flag(false),
-                             init_noise_level(init_noise_level)
+    const float &init_noise_level) : parser(parser),
+                                     detection_flag(false),
+                                     init_noise_level(init_noise_level)
 {
 
     ref_seq_len = parser.getValue_int("Ref-N-zfc");
@@ -27,8 +25,9 @@ PeakDetectionClass::PeakDetectionClass(
     noise_counter = 0;
     noise_level = init_noise_level;
 
-    // size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
+    save_buffer_flag = parser.is_save_buffer();
 
+    // whether to save complex samples or floats (see CycleStartDetector::correlation_operation() )
     is_save_buffer_complex = true;
 
     if (save_buffer_flag)

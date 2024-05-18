@@ -55,7 +55,7 @@ private:
     bool check_peaks();
 
 public:
-    PeakDetectionClass(ConfigParser &parser, const float &init_noise_level, bool save_buffer_flag);
+    PeakDetectionClass(ConfigParser &parser, const float &init_noise_level);
 
     size_t peaks_count;
     int prev_peak_index;

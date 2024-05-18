@@ -26,36 +26,32 @@ void sig_int_handler(int)
 
 extern const bool DEBUG = true;
 
-const std::string RED = "\033[31m";
-const std::string GREEN = "\033[32m";
-const std::string YELLOW = "\033[33m";
-const std::string BLUE = "\033[34m";
-const std::string RESET = "\033[0m";
-
-void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const size_t &tx_m_zfc, std::atomic<bool> &csd_success_signal, const std::string &homeDirStr)
+void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, const std::string &homeDirStr)
 {
     size_t tx_N_zfc = parser.getValue_int("test-signal-len");
+    size_t tx_m_zfc = parser.getValue_int("tx-m-zfc");
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
     // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
     float total_runtime = parser.getValue_float("duration");
+    float min_ch_pow = parser.getValue_float("min-ch-pow");
 
     auto rx_stream = usrp_classobj.rx_streamer;
     auto tx_stream = usrp_classobj.tx_streamer;
     size_t max_rx_packet_size = usrp_classobj.max_rx_packet_size;
     float rate = usrp_classobj.rx_rate;
-    if (total_runtime == 0.0)
-        total_runtime = 1 * 3600; // run for one hour at most
-    const auto start_time = std::chrono::steady_clock::now();
-    const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
     const float burst_pkt_time = std::max<float>(0.100f, (2 * max_rx_packet_size / rate));
 
-    size_t round = 1;
+    if (total_runtime == 0.0)
+        total_runtime = 5 * 60; // run for 5 minutes at most
+    const auto start_time = std::chrono::steady_clock::now();
+    const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
+    size_t round = 1;
     bool is_save_stream_data;
-    std::ofstream outfile;
-    std::string save_stream_file;
     std::istringstream iss(parser.getValue_str("is-save-stream-data"));
     iss >> is_save_stream_data;
+    std::ofstream outfile;
+    std::string save_stream_file;
     if (is_save_stream_data)
     {
         save_stream_file = homeDirStr + "OTA-C/cpp/storage/stream_data.dat";
@@ -66,13 +62,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
-        if (DEBUG)
-        {
-            std::cout << "Round " << round << std::endl
-                      << std::endl;
-        }
+        std::cout << "------------  Round " << round << " -----------------" << std::endl
+                  << std::endl;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         uhd::rx_metadata_t md;
 
         // setup streaming
@@ -84,7 +76,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         std::vector<std::complex<float>> buff(max_rx_packet_size, std::complex<float>(0.0, 0.0));
 
         float recv_timeout = burst_pkt_time + 0.05;
-        size_t num_rx_samps = 0;
+        size_t num_rx_samps;
 
         // Run this loop until either time expired (if a duration was given), until
         // the requested number of samples were collected (if such a number was
@@ -95,7 +87,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             try
             {
                 num_rx_samps = rx_stream->recv(&buff.front(), buff.size(), md, recv_timeout, false);
-                // recv_timeout = burst_pkt_time;
+                recv_timeout = burst_pkt_time;
             }
             catch (uhd::io_error &e)
             {
@@ -112,7 +104,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
             {
                 std::cerr << std::endl
-                          << RED << "*** Got an overflow indication." << RESET << std::endl
+                          << "*** Got an overflow indication." << std::endl
                           << std::endl;
                 continue;
             }
@@ -122,47 +114,54 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
                 std::cerr << error << std::endl;
             }
 
-            // pass on to the cycle start detector
-            // std::cout << "Received " << num_rx_samps << " samples. Producing..." << std::endl;
-
             // save data to file for later analysis
             if (is_save_stream_data)
                 save_stream_to_file(save_stream_file, outfile, buff);
 
-            csd_obj.produce(buff, num_rx_samps, md.time_spec, csd_success_signal);
+            csd_obj.produce(buff, num_rx_samps, md.time_spec);
         }
+
         // issue stop streaming command
         stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
         rx_stream->issue_stream_cmd(stream_cmd);
 
         std::cout << "Producer finished" << std::endl;
 
-        if (stop_signal_called or std::chrono::steady_clock::now() > stop_time)
+        if (stop_signal_called)
             return;
 
         // Start information transmission
         if (csd_success_signal and not stop_signal_called)
         {
-            if (DEBUG)
-                std::cout << "Starting transmission after CSD..." << std::endl;
+            std::cout << "Starting transmission after CSD..." << std::endl;
 
             float ch_pow = csd_obj.ch_pow;
-            uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
-            float min_ch_pow = parser.getValue_float("min-ch-pow");
             float tx_scaling_factor = min_ch_pow / ch_pow;
             if (tx_scaling_factor > 1)
-                std::cerr << RED << "(min_ch_pow) " << min_ch_pow << " > " << ch_pow << " (est avg ch pow)" << RESET << std::endl;
+                std::cerr << "(min_ch_pow) " << min_ch_pow << " > " << ch_pow << " (est avg ch pow)" << std::endl;
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
-            float tx_duration = tx_zfc_seq.size();
-            tx_duration = tx_duration / usrp_classobj.tx_sample_duration.get_real_secs();
+            float tx_duration = tx_zfc_seq.size() / usrp_classobj.tx_rate;
 
             // start tx process
             uhd::tx_metadata_t txmd;
             txmd.start_of_burst = true;
             txmd.end_of_burst = false;
-            txmd.has_time_spec = true;
-            txmd.time_spec = tx_start_timer;
-            float timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + tx_duration;
+            float timeout;
+
+            // match time at both leaf and cent
+            uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
+            if (tx_start_timer < usrp_classobj.usrp->get_time_now())
+            {
+                std::cerr << "tx-wait-microsec is not enough. Consider increasing tx-wait-microsec!" << std::endl;
+                txmd.has_time_spec = true;
+                timeout = tx_duration + 0.05;
+            }
+            else
+            {
+                txmd.has_time_spec = true;
+                txmd.time_spec = tx_start_timer;
+                timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + tx_duration;
+            }
 
             for (size_t i = 0; i < csd_test_tx_reps; ++i)
             {
@@ -201,24 +200,17 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
 void csd_test_consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal)
 {
-    bool result;
 
     float total_runtime = parser.getValue_float("duration");
     if (total_runtime == 0.0)
-        total_runtime = 1 * 3600; // run for one hour at most
+        total_runtime = 5 * 60; // run for 5 minutes at most
     const auto start_time = std::chrono::steady_clock::now();
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
-        result = csd_obj.consume(csd_success_signal);
-
-        // check result
-        if (result)
-        {
-            if (DEBUG)
-                std::cout << "*** Successful CSD detection!" << std::endl;
-        }
+        if (csd_obj.consume(csd_success_signal))
+            std::cout << "*** Successful CSD detection!" << std::endl;
     }
 }
 
@@ -230,34 +222,33 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // rx and tx streamers -- initilize
     ConfigParser parser(homeDirStr + "/OTA-C/cpp/leaf_config.conf");
 
-    std::string args = parser.getValue_str("args");
-    if (args == "NULL")
-    {
-        if (argc < 2)
-            throw std::invalid_argument("ERROR : device address missing!");
+    if (argc < 2)
+        throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
+    if (argc < 3)
+        throw std::invalid_argument("ERROR : TX ZFC device identifier `m´ missing !");
 
-        args = argv[1];
-        parser.set_value("args", args, "str");
-    }
+    std::string device_id = argv[1];
+    parser.set_value("device-id", device_id, "str", "USRP device number");
+    size_t tx_m_zfc = std::stoi(argv[2]);
+    parser.set_value("tx-m-zfc", std::to_string(tx_m_zfc), "int", "Test signal ZFC seq param m");
+
+    // Logger
+    // Logger logger(homeDirStr + "/OTA-C/cpp/logs/log_" + device_id + ".log", Logger::Level::DEBUG, true);
 
     parser.print_values();
-
-    // save rx buffer to a file
-    bool is_save_rx_buffer = parser.is_save_buffer();
 
     // USRP init
     USRP_class usrp_classobj(parser);
     usrp_classobj.initialize();
     parser.set_value("max-rx-packet-size", std::to_string(usrp_classobj.max_rx_packet_size), "int");
     parser.set_value("max-tx-packet-size", std::to_string(usrp_classobj.max_tx_packet_size), "int");
+    uhd::time_spec_t rx_sample_duration = usrp_classobj.rx_sample_duration;
+
+    //----------- CycleStartDetector and PeakDetector classes ---------------------
 
     // create PeakDetector and CycleStartDetector class objects
-    PeakDetectionClass peak_det_obj(parser, usrp_classobj.init_background_noise, is_save_rx_buffer);
-    std::cout << "PeakDetectionClass object set." << std::endl;
-
-    uhd::time_spec_t rx_sample_duration = usrp_classobj.rx_sample_duration;
+    PeakDetectionClass peak_det_obj(parser, usrp_classobj.init_background_noise);
     CycleStartDetector csd_obj(parser, rx_sample_duration, peak_det_obj);
-    std::cout << "CycleStartDetector object set." << std::endl;
 
     //----------- THREADS - producer (Rx/Tx) thread and consumer thread ---------------------
     std::atomic<bool> csd_success_signal(false);
@@ -265,15 +256,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::signal(SIGINT, &sig_int_handler);
     std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
 
-    if (argc < 3)
-        throw std::invalid_argument("ERROR : TX ZFC device identifier `m´ missing !");
-    size_t tx_m_zfc = std::stoi(argv[2]);
-
     // setup thread_group
     boost::thread_group thread_group;
 
     auto producer_thread = thread_group.create_thread([=, &csd_obj, &peak_det_obj, &parser, &usrp_classobj, &csd_success_signal]()
-                                                      { csd_test_producer_thread(peak_det_obj, csd_obj, usrp_classobj, parser, tx_m_zfc, csd_success_signal, homeDirStr); });
+                                                      { csd_test_producer_thread(peak_det_obj, csd_obj, usrp_classobj, parser, csd_success_signal, homeDirStr); });
 
     uhd::set_thread_name(producer_thread, "producer_thread");
 
