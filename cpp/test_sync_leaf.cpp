@@ -47,14 +47,15 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
     size_t round = 1;
-    bool is_save_stream_data;
-    std::istringstream iss(parser.getValue_str("is-save-stream-data"));
-    iss >> is_save_stream_data;
+    bool is_save_stream_data = false;
+    if (parser.getValue_str("is-save-stream-data") == "true")
+        is_save_stream_data = true;
+
     std::ofstream outfile;
     std::string save_stream_file;
     if (is_save_stream_data)
     {
-        save_stream_file = homeDirStr + "OTA-C/cpp/storage/stream_data.dat";
+        save_stream_file = homeDirStr + "/OTA-C/cpp/storage/stream_data.dat";
         // remove existing file
         std::remove(save_stream_file.c_str());
         outfile.open(save_stream_file, std::ios::out | std::ios::binary | std::ios::app);
