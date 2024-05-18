@@ -70,11 +70,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
+    // pre- and post- append buff with some random signal
+    auto app_buff = generateUnitCircleRandom(2 * N_zfc, 1.0);
+
     std::vector<std::complex<float>> buff(N_zfc * R_zfc, std::complex<float>(0.0, 0.0));
     for (int i = 0; i < N_zfc * R_zfc; ++i)
     {
         buff[i] = zfc_seq[i % N_zfc];
     }
+
+    buff.insert(buff.begin(), app_buff.begin(), app_buff.end());
+    buff.insert(buff.end(), app_buff.begin(), app_buff.end());
 
     float total_runtime = parser.getValue_float("duration");
     if (total_runtime == 0.0)
@@ -111,7 +117,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return EXIT_FAILURE;
         }
 
-        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * N_zfc * (R_zfc - sync_with_peak_from_last)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_mul * test_signal_len));
+        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + app_buff.size())) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_mul * test_signal_len));
 
         auto rx_symbols = usrp_classobj.reception(num_rx_samps, rx_time);
 

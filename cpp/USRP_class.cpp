@@ -214,7 +214,7 @@ void USRP_class::initialize()
     tx_sample_duration = 1 / tx_rate;
 
     //_____________________ TEST TX - RX _____________________
-    std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.3, 0.3));
+    std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
     bool tx_success = transmission(tx_buff, uhd::time_spec_t(0.0));
     if (tx_success)
         std::cout << "Transmit test successful!" << std::endl;

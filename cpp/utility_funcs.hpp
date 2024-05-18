@@ -24,6 +24,8 @@
 #include <deque>
 #include <map>
 #include <unordered_map>
+#include <random>
+#include <cmath>
 
 extern const bool DEBUG;
 
@@ -44,3 +46,5 @@ std::chrono::steady_clock::duration convert_timestr_to_duration(const std::strin
 void print_duration(std::chrono::steady_clock::duration &time_duration);
 
 void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream);
+
+std::vector<std::complex<float>> generateUnitCircleRandom(size_t size, float scale);
