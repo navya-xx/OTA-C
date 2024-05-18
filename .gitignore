@@ -9,3 +9,4 @@ OTA-C.code-workspace
 .gitignore
 **/*.ipynb
 .ipynb_checkpoints
+cpp/*.ipynb

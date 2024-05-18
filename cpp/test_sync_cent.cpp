@@ -1,8 +1,6 @@
 #include "USRP_class.hpp"
 #include "utility_funcs.hpp"
 #include "ConfigParser.hpp"
-#include "PeakDetection.hpp"
-#include "CycleStartDetector.hpp"
 #include <stdexcept>
 
 /***************************************************************

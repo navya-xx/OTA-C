@@ -172,32 +172,38 @@ void CycleStartDetector::correlation_operation()
 
 float CycleStartDetector::get_ch_power()
 {
-    std::vector<std::complex<float>> zfc_rep(N_zfc * (R_zfc - 1));
-
-    for (int i = 0; i < R_zfc - 1; ++i)
-    {
-        std::copy(zfc_seq.begin(), zfc_seq.end(), zfc_rep.begin() + i * N_zfc);
-    }
-
-    // correlation
     float max_val = 0.0;
-    float curr_val = 0.0;
-    for (int i = 0; i < peak_det_obj_ref.save_buffer_complex.size() - zfc_rep.size(); ++i)
+    if (peak_det_obj_ref.is_save_buffer_complex)
     {
-        std::complex<float> corr(0.0, 0.0);
-        for (int j = 0; j < zfc_rep.size(); ++j)
+        std::vector<std::complex<float>> zfc_rep(N_zfc * (R_zfc - 1));
+
+        for (int i = 0; i < R_zfc - 1; ++i)
         {
-            corr += (peak_det_obj_ref.save_buffer_complex[i + j] * std::conj(zfc_rep[j]));
+            std::copy(zfc_seq.begin(), zfc_seq.end(), zfc_rep.begin() + i * N_zfc);
         }
-        curr_val = std::abs(corr) / zfc_rep.size();
-        if (max_val < curr_val)
-            max_val = curr_val;
+
+        // correlation
+        max_val = 0.0;
+        float curr_val = 0.0;
+        for (int i = 0; i < peak_det_obj_ref.save_buffer_complex.size() - zfc_rep.size(); ++i)
+        {
+            std::complex<float> corr(0.0, 0.0);
+            for (int j = 0; j < zfc_rep.size(); ++j)
+            {
+                corr += (peak_det_obj_ref.save_buffer_complex[i + j] * std::conj(zfc_rep[j]));
+            }
+            curr_val = std::abs(corr) / zfc_rep.size();
+            if (max_val < curr_val)
+                max_val = curr_val;
+        }
     }
 
     float pch_power = peak_det_obj_ref.get_avg_ch_pow();
     std::cout << std::endl
-              << "\t\t -> Est. ch-pow (" << pch_power << ", " << max_val << ")" << std::endl;
-    return max_val;
+              << "\t\t -> Est. ch-pow (" << pch_power << ", " << max_val << ")" << std::endl
+              << std::endl;
+
+    return pch_power;
 }
 
 // void CycleStartDetector::capture_ch_est_seq()

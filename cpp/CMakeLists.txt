@@ -49,7 +49,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 ### Make the executable #######################################################
 add_executable(test_sync_leaf test_sync_leaf.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp PeakDetection.cpp CycleStartDetector.cpp)
-add_executable(test_sync_cent test_sync_cent.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp PeakDetection.cpp CycleStartDetector.cpp)
+add_executable(test_sync_cent test_sync_cent.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp)
 # add_executable(test_USRP_init test_USRP_init.cpp utility_funcs.cpp USRP_class.cpp ConfigParser.cpp utility_funcs.hpp USRP_class.hpp ConfigParser.hpp)
 # add_executable(test_cyclestartdetector test_cyclestartdetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
 # add_executable(tx_rx_zfc tx_rx_zfc.cpp CycleStartDetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
