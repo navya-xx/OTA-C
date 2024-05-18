@@ -82,10 +82,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t ch_M_zfc = parser.getValue_int("ch-seq-M");
 
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
-    auto ch_zfc_seq = generateZadoffChuSequence(ch_N_zfc, ch_M_zfc);
 
-    size_t ch_seq_reps = 1;
-    size_t ref_ch_gap = 1 * ch_N_zfc;
+    size_t ch_seq_reps = 0;
+    size_t ref_ch_gap = 0 * ch_N_zfc;
 
     std::vector<std::complex<float>> buff(N_zfc * R_zfc + ref_ch_gap + ch_seq_reps * ch_N_zfc, std::complex<float>(0.0, 0.0));
     for (int i = 0; i < N_zfc * R_zfc; ++i)
@@ -95,6 +94,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     if (ch_seq_reps > 0)
     {
+        auto ch_zfc_seq = generateZadoffChuSequence(ch_N_zfc, ch_M_zfc);
         for (int i = 0; i < ch_seq_reps * ch_N_zfc; ++i)
         {
             buff[i + N_zfc * R_zfc + ref_ch_gap] = ch_zfc_seq[i % ch_N_zfc];
