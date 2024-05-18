@@ -27,16 +27,16 @@ PeakDetectionClass::PeakDetectionClass(
     noise_counter = 0;
     noise_level = init_noise_level;
 
-    size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
+    // size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
 
     is_save_buffer_complex = true;
 
     if (save_buffer_flag)
     {
         if (is_save_buffer_complex)
-            save_buffer_complex.resize(ref_seq_len * total_num_peaks + 5 * ch_N_zfc, std::complex<float>(0.0, 0.0));
+            save_buffer_complex.resize(ref_seq_len * total_num_peaks * 2, std::complex<float>(0.0, 0.0));
         else
-            save_buffer_float.resize(ref_seq_len * total_num_peaks * 10, float(0.0));
+            save_buffer_float.resize(ref_seq_len * total_num_peaks * 2, float(0.0));
     }
 };
 
