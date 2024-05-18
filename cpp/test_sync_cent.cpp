@@ -40,6 +40,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
 
     std::string device_id = argv[1];
+    parser.set_value("device-id", device_id, "str", "USRP device number");
 
     parser.print_values();
 
