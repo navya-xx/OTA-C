@@ -343,11 +343,11 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             else
                 insertPeak(abs_corr_val, samp_time);
 
-            if (DEBUG)
-            {
-                std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::flush;
-                std::cout << "\t spacing " << adjacent_spacing << std::endl;
-            }
+            // if (DEBUG)
+            // {
+            //     std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::flush;
+            //     std::cout << "\t spacing " << adjacent_spacing << std::endl;
+            // }
         }
         // a peak is found
         return true;
