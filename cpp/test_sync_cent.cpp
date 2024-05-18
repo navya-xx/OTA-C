@@ -122,8 +122,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
         // wait before sending next csd ref signal
-        std::this_thread::sleep_for(std::chrono::milliseconds(csd_wait_time_millisec));
-        uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(0.1);
+        // std::this_thread::sleep_for(std::chrono::milliseconds(csd_wait_time_millisec));
+        uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
 
         if (usrp_classobj.transmission(buff, tx_timer))
         {
