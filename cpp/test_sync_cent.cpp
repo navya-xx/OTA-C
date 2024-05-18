@@ -78,8 +78,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t m_zfc = parser.getValue_int("Ref-m-zfc");
     size_t R_zfc = parser.getValue_int("Ref-R-zfc");
 
-    size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
-    size_t ch_M_zfc = parser.getValue_int("ch-seq-M");
+    // size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
+    // size_t ch_M_zfc = parser.getValue_int("ch-seq-M");
+    size_t ch_N_zfc = 0;
+    size_t ch_M_zfc = 0;
 
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
