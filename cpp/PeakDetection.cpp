@@ -120,6 +120,12 @@ void PeakDetectionClass::update_pnr_threshold()
     curr_pnr_threshold = std::max(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), curr_pnr_threshold);
 }
 
+void PeakDetectionClass::update_pnr_threshold_via_ch_pow(const float &ch_pow)
+{
+    // float max_peak_val = get_max_peak_val();
+    curr_pnr_threshold = std::max(std::max(max_peak_mul * ch_pow / noise_level, pnr_threshold), curr_pnr_threshold);
+}
+
 void PeakDetectionClass::resetPeaks()
 {
     peaks_count = 0;
@@ -305,8 +311,8 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
         if (peaks_count == 0)
         {
             insertPeak(abs_corr_val, samp_time);
-            if (DEBUG)
-                std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
+            // if (DEBUG)
+            //     std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
         }
         else // next peaks
         {
@@ -380,6 +386,8 @@ float PeakDetectionClass::get_avg_ch_pow()
     }
     else
         ch_pow = peak_vals[0];
+
+    update_pnr_threshold_via_ch_pow(ch_pow);
 
     return ch_pow;
 }
