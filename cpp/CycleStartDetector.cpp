@@ -145,19 +145,12 @@ void CycleStartDetector::correlation_operation()
         if (update_noise_level)
             sum_ampl += abs_val;
 
-        if (not peak_det_obj_ref.next())
-        {
-            // insert last samples into buffer
-            // for (int k = 1; k <= N_zfc; ++k)
-            // {
-            //     peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i + k) % capacity]);
-            // }
+        if (peak_det_obj_ref.detection_flag)
             break;
-        }
     }
 
     // udpate noise level
-    if ((not found_peak) and update_noise_level)
+    if ((not found_peak) and update_noise_level and (not peak_det_obj_ref.detection_flag))
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
 }
 

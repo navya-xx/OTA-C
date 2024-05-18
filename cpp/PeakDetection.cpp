@@ -68,42 +68,6 @@ void PeakDetectionClass::print_peaks_data()
     }
 }
 
-void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time)
-{
-    if (peaks_count == 0) // First peak starts with index 0
-        samples_from_first_peak = 0;
-
-    peak_indices[peaks_count] = size_t(samples_from_first_peak);
-    peak_vals[peaks_count] = peak_val;
-    peak_times[peaks_count] = peak_time;
-    ++peaks_count;
-    prev_peak_index = samples_from_first_peak;
-    prev_peak_val = peak_val;
-
-    update_pnr_threshold();
-
-    if (DEBUG)
-        std::cout << "***Peak " << peaks_count << " -- PNR " << peak_val / noise_level << ", threshold " << curr_pnr_threshold << std::endl
-                  << std::endl;
-}
-
-void PeakDetectionClass::removeLastPeak()
-{
-    // decrement counter
-    --peaks_count;
-}
-
-void PeakDetectionClass::updatePrevPeak()
-{
-    if (peaks_count == 0)
-        std::cerr << "ERROR: Cannot update! No peaks found." << std::endl;
-    // update last peak
-    else
-    {
-        removeLastPeak();
-    }
-}
-
 float PeakDetectionClass::get_max_peak_val()
 {
     float max_val = 0;
@@ -151,6 +115,160 @@ void PeakDetectionClass::resetPeaks()
     // peak_times = new uhd::time_spec_t[total_num_peaks];
 }
 
+void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time)
+{
+
+    // when more than 2 peaks, check previous registered peaks for correctness
+    if (peaks_count > 1)
+    {
+        size_t reg_peaks_spacing = peak_indices[peaks_count - 1] - peak_indices[peaks_count - 2];
+        // if spacing is not as expected, cancel all previous peaks,
+        // and reset starting with the new found peak
+        if (reg_peaks_spacing > ref_seq_len + peak_det_tol or reg_peaks_spacing < ref_seq_len - peak_det_tol)
+            resetPeaks();
+    }
+
+    // we transmit additional ref signal for this purpose
+    if (peaks_count == total_num_peaks + 1)
+    {
+        // all total_num_peaks are clear
+        detection_flag = true;
+        return;
+    }
+
+    if (peaks_count == 0) // First peak starts with index 0
+        samples_from_first_peak = 0;
+
+    peak_indices[peaks_count] = size_t(samples_from_first_peak);
+    peak_vals[peaks_count] = peak_val;
+    peak_times[peaks_count] = peak_time;
+    ++peaks_count;
+    prev_peak_index = samples_from_first_peak;
+    prev_peak_val = peak_val;
+
+    update_pnr_threshold();
+
+    if (DEBUG)
+    {
+        std::cout << "***Peak " << peaks_count << " -- PNR " << peak_val / noise_level << ", threshold " << curr_pnr_threshold << std::endl;
+        if (peaks_count > 1)
+            std::cout << "\t\t -> Peaks diff " << peak_indices[peaks_count - 1] - peak_indices[peaks_count - 2] << std::endl;
+        std::cout << std::endl;
+    }
+}
+
+void PeakDetectionClass::removeLastPeak()
+{
+    // decrement counter
+    --peaks_count;
+}
+
+void PeakDetectionClass::updatePrevPeak()
+{
+    if (peaks_count == 0)
+        std::cerr << "ERROR: Cannot update! No peaks found." << std::endl;
+    // update last peak
+    else
+    {
+        removeLastPeak();
+    }
+}
+
+bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
+{
+    float abs_corr_to_noise_ratio = abs_corr_val / noise_level;
+
+    if (abs_corr_to_noise_ratio > curr_pnr_threshold)
+    {
+        // First peak
+        if (peaks_count == 0)
+        {
+            insertPeak(abs_corr_val, samp_time);
+            // if (DEBUG)
+            //     std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
+        }
+        else
+        {
+            // distance of current peak from last
+            size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
+
+            // next peak is too far from the last
+            // reset peaks and mark this peak as first
+            if (samples_from_last_peak > ref_seq_len + peak_det_tol)
+            {
+                resetPeaks();
+                insertPeak(abs_corr_val, samp_time);
+            }
+            // a higher peak exists in close proximity to last
+            // update previous peak
+            else if (samples_from_last_peak < ref_seq_len / 2 + peak_det_tol)
+            {
+                // check if this peak is higher than the previous
+                if (prev_peak_val < abs_corr_val)
+                {
+                    updatePrevPeak();
+                    insertPeak(abs_corr_val, samp_time);
+                }
+                // else -> do nothing
+            }
+            // insert as a new peak and wait till its updated to the right spot
+            else
+                insertPeak(abs_corr_val, samp_time);
+
+            // if (DEBUG)
+            // {
+            //     std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::flush;
+            //     std::cout << "\t spacing " << samples_from_last_peak << std::endl;
+            // }
+        }
+        // a peak is found
+        return true;
+    }
+    else
+    {
+        // No peak found
+        return false;
+    }
+}
+
+float PeakDetectionClass::get_avg_ch_pow()
+{
+    float ch_pow = 0.0;
+    float max_peak = 0.0;
+    if (total_num_peaks > 1)
+    {
+        for (int i = 0; i < peaks_count; ++i)
+        {
+            if (max_peak < peak_vals[i])
+                max_peak = peak_vals[i];
+        }
+
+        // ignore last peak for channel power estimation
+        size_t c = 0;
+        for (int i = 0; i < peaks_count; ++i)
+        {
+            if (peak_vals[i] > 0.9 * max_peak)
+            {
+                ch_pow += peak_vals[i];
+                ++c;
+            }
+        }
+
+        ch_pow = ch_pow / c;
+    }
+    else
+        ch_pow = peak_vals[0];
+
+    update_pnr_threshold_after_success(ch_pow);
+
+    return ch_pow;
+}
+
+uhd::time_spec_t PeakDetectionClass::get_sync_time()
+{
+    return peak_times[peaks_count - sync_with_peak_from_last];
+}
+
 void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)
 {
     // only tolerate max 10% change in noise level
@@ -173,6 +291,61 @@ void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &n
             noise_counter = noise_counter + num_samps;
         else
             noise_counter = 1; // restart counter
+    }
+}
+
+bool PeakDetectionClass::check_peaks()
+{
+    // check if found peaks follow correct gaps
+    size_t gap;
+
+    for (int i = 0; i < total_num_peaks - 1; ++i)
+    {
+        gap = peak_indices[i + 1] - peak_indices[i];
+        if (gap < ref_seq_len - peak_det_tol or gap > ref_seq_len + peak_det_tol)
+        {
+            std::cerr << "Incorrect peak index : peak " << i << " at " << peak_indices[i] << " and  peak " << i + 1 << " at " << peak_indices[i + 1] << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool PeakDetectionClass::next()
+{
+    // No peak -> continue to next
+    if (peaks_count == 0)
+        return true;
+    // Not enough peaks -> continue
+    else if (peaks_count < total_num_peaks)
+    {
+        ++samples_from_first_peak;
+        return true;
+    }
+    // Required number of peaks found -> check!
+    else if (peaks_count == total_num_peaks)
+    {
+        // check if peak detection successful or not
+
+        if (check_peaks())
+        {
+            std::cout << "Check peaks -> Success! Peaks Detection Successful! Finishing..." << std::endl;
+            detection_flag = true;
+            print_peaks_data();
+            return false;
+        }
+        else
+        {
+            ++samples_from_first_peak;
+            return true;
+        }
+    }
+    else
+    {
+        std::cout << "More than " << total_num_peaks << " peaks captured. Resetting peaks." << std::endl;
+        resetPeaks();
+        return true;
     }
 }
 
@@ -239,171 +412,6 @@ void PeakDetectionClass::save_data_to_file(const std::string &file)
         outfile.close();
         std::cout << "Data saved successfully to " << file << "." << std::endl;
     }
-}
-
-bool PeakDetectionClass::check_peaks()
-{
-    // check if found peaks follow correct gaps
-    size_t gap;
-
-    for (int i = 0; i < total_num_peaks - 1; ++i)
-    {
-        gap = peak_indices[i + 1] - peak_indices[i];
-        if (gap < ref_seq_len - peak_det_tol or gap > ref_seq_len + peak_det_tol)
-        {
-            std::cerr << "Incorrect peak index : peak " << i << " at " << peak_indices[i] << " and  peak " << i + 1 << " at " << peak_indices[i + 1] << std::endl;
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool PeakDetectionClass::next()
-{
-    // No peak -> continue to next
-    if (peaks_count == 0)
-        return true;
-    // Not enough peaks -> continue
-    else if (peaks_count < total_num_peaks)
-    {
-        ++samples_from_first_peak;
-        return true;
-    }
-    // Required number of peaks found -> check!
-    else if (peaks_count == total_num_peaks)
-    {
-        // check if peak detection successful or not
-        int adjacent_spacing = samples_from_first_peak - prev_peak_index;
-
-        if (check_peaks())
-        {
-            std::cout << "Check peaks -> Success! Peaks Detection Successful! Finishing..." << std::endl;
-            detection_flag = true;
-            print_peaks_data();
-            return false;
-        }
-        else
-        {
-            // wait for till end of window
-            // if check still fails -> reset peaks and start again
-            if (adjacent_spacing > ref_seq_len - peak_det_tol)
-            {
-                std::cerr << "Detection unsuccessful. Resetting peaks." << std::endl;
-                resetPeaks();
-                return true;
-            }
-            else
-            {
-                std::cout << "\t\t -> CheckPeak unsuccessful! Waiting for another " << (ref_seq_len - peak_det_tol - adjacent_spacing) << " samples." << std::endl;
-
-                ++samples_from_first_peak;
-                return true;
-            }
-        }
-    }
-    else
-    {
-        std::cerr << "!!! ERROR: Should not reach here!!! More than " << total_num_peaks << " peaks captured. Resetting peaks." << std::endl;
-        resetPeaks();
-        return true;
-    }
-}
-
-bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
-{
-    float abs_corr_to_noise_ratio = abs_corr_val / noise_level;
-
-    if (abs_corr_to_noise_ratio > curr_pnr_threshold)
-    {
-        // First peak
-        if (peaks_count == 0)
-        {
-            insertPeak(abs_corr_val, samp_time);
-            // if (DEBUG)
-            //     std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
-        }
-        else // next peaks
-        {
-            // distance of current peak from last
-            int adjacent_spacing = samples_from_first_peak - prev_peak_index;
-
-            // next peak is too far from the last
-            // reset peaks and mark this peak as first
-            if (adjacent_spacing > ref_seq_len + peak_det_tol)
-            {
-                resetPeaks();
-                insertPeak(abs_corr_val, samp_time);
-            }
-            // a higher peak exists in close proximity to last
-            // update previous peak
-            else if (adjacent_spacing < ref_seq_len - peak_det_tol)
-            {
-                // check if this peak is higher than the previous
-                if (prev_peak_val < abs_corr_val)
-                {
-                    updatePrevPeak();
-                    insertPeak(abs_corr_val, samp_time);
-                }
-                // else -> do nothing
-            }
-            // a new peak found within a tolerance from right spot
-            // insert as a new peak
-            else
-                insertPeak(abs_corr_val, samp_time);
-
-            // if (DEBUG)
-            // {
-            //     std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::flush;
-            //     std::cout << "\t spacing " << adjacent_spacing << std::endl;
-            // }
-        }
-        // a peak is found
-        return true;
-    }
-    else
-    {
-        // No peak found
-        return false;
-    }
-}
-
-float PeakDetectionClass::get_avg_ch_pow()
-{
-    float ch_pow = 0.0;
-    float max_peak = 0.0;
-    if (total_num_peaks > 1)
-    {
-        for (int i = 0; i < peaks_count; ++i)
-        {
-            if (max_peak < peak_vals[i])
-                max_peak = peak_vals[i];
-        }
-
-        // ignore last peak for channel power estimation
-        size_t c = 0;
-        for (int i = 0; i < peaks_count; ++i)
-        {
-            if (peak_vals[i] > 0.9 * max_peak)
-            {
-                ch_pow += peak_vals[i];
-                ++c;
-            }
-        }
-
-        ch_pow = ch_pow / c;
-    }
-    else
-        ch_pow = peak_vals[0];
-
-    update_pnr_threshold_after_success(ch_pow);
-
-    return ch_pow;
-}
-
-uhd::time_spec_t PeakDetectionClass::get_sync_time()
-{
-    return peak_times[peaks_count - sync_with_peak_from_last];
 }
 
 // PeakDetectionClass::~PeakDetectionClass()
