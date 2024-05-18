@@ -12,6 +12,7 @@ PeakDetectionClass::PeakDetectionClass(
     total_num_peaks = parser.getValue_int("Ref-R-zfc");
     pnr_threshold = parser.getValue_float("pnr-threshold");
     curr_pnr_threshold = pnr_threshold;
+    max_pnr = pnr_threshold;
 
     peak_det_tol = parser.getValue_int("peak-det-tol");
     max_peak_mul = parser.getValue_float("max-peak-mul");
@@ -117,13 +118,21 @@ float PeakDetectionClass::get_max_peak_val()
 void PeakDetectionClass::update_pnr_threshold()
 {
     // float max_peak_val = get_max_peak_val();
-    curr_pnr_threshold = std::max(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), curr_pnr_threshold);
+    curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), max_pnr);
 }
 
-void PeakDetectionClass::update_pnr_threshold_via_ch_pow(const float &ch_pow)
+void PeakDetectionClass::update_pnr_threshold_after_success(const float &ch_pow)
 {
     // float max_peak_val = get_max_peak_val();
-    curr_pnr_threshold = std::max(std::max(max_peak_mul * ch_pow / noise_level, pnr_threshold), curr_pnr_threshold);
+    // curr_pnr_threshold = std::max(std::max(max_peak_mul * ch_pow / noise_level, pnr_threshold), curr_pnr_threshold);
+    float max_peak_val = 0.0;
+    for (int i = 0; i < peaks_count; ++i)
+    {
+        if (peak_vals[i] > max_peak_val)
+            max_peak_val = peak_vals[i];
+    }
+    max_peak_val = max_peak_val / noise_level;
+    max_pnr = std::max(max_pnr, max_peak_mul * max_peak_val);
 }
 
 void PeakDetectionClass::resetPeaks()
@@ -387,7 +396,7 @@ float PeakDetectionClass::get_avg_ch_pow()
     else
         ch_pow = peak_vals[0];
 
-    // update_pnr_threshold_via_ch_pow(ch_pow);
+    update_pnr_threshold_after_success(ch_pow);
 
     return ch_pow;
 }

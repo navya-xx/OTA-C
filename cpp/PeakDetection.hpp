@@ -38,7 +38,7 @@ private:
     size_t total_num_peaks;
 
     size_t ref_seq_len;
-    float pnr_threshold, curr_pnr_threshold;
+    float pnr_threshold, curr_pnr_threshold, max_pnr;
     float init_noise_level;
 
     size_t peak_det_tol;
@@ -49,7 +49,7 @@ private:
 
     void insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time);
     void update_pnr_threshold();
-    void update_pnr_threshold_via_ch_pow(const float &ch_pow);
+    void update_pnr_threshold_after_success(const float &ch_pow);
     void updatePrevPeak();
     void removeLastPeak();
     float get_max_peak_val();
