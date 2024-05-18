@@ -191,7 +191,7 @@ float CycleStartDetector::get_ch_power()
         {
             corr += (peak_det_obj_ref.save_buffer_complex[i + j] * std::conj(zfc_rep[j]));
         }
-        curr_val = std::abs(corr) / zfc_seq.size();
+        curr_val = std::abs(corr) / zfc_rep.size();
         if (max_val < curr_val)
             max_val = curr_val;
     }
