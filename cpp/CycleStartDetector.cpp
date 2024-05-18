@@ -23,12 +23,12 @@ CycleStartDetector::CycleStartDetector(
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
     min_num_produced = num_samp_corr + N_zfc;
 
-    ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
     ch_est_start = true;
     ch_est_done = false;
     ch_seq_len = parser.getValue_int("ch-seq-len");
     ch_est_samps_size = 5 * ch_seq_len;
     ch_est_samps_it = 0;
+    ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
 
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
