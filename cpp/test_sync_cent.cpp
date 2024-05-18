@@ -73,8 +73,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // pre- and post- append buff with some random signal
     auto app_buff = generateUnitCircleRandom(2 * N_zfc, 1.0);
 
-    std::vector<std::complex<float>> buff(N_zfc * R_zfc, std::complex<float>(0.0, 0.0));
-    for (int i = 0; i < N_zfc * R_zfc; ++i)
+    // transmit one extra peak
+    std::vector<std::complex<float>> buff(N_zfc * (R_zfc + 1), std::complex<float>(0.0, 0.0));
+    for (int i = 0; i < N_zfc * (R_zfc + 1); ++i)
     {
         buff[i] = zfc_seq[i % N_zfc];
     }
