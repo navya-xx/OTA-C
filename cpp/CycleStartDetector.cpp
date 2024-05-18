@@ -157,7 +157,14 @@ void CycleStartDetector::correlation_operation()
             sum_ampl += abs_val;
 
         if (not peak_det_obj_ref.next())
+        {
+            // insert last samples into buffer
+            for (int k = 1; k <= N_zfc; ++k)
+            {
+                peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i + k) % capacity]);
+            }
             break;
+        }
     }
 
     // udpate noise level
@@ -172,12 +179,6 @@ float CycleStartDetector::get_ch_power()
     for (int i = 0; i < R_zfc; ++i)
     {
         std::copy(zfc_seq.begin(), zfc_seq.end(), zfc_rep.begin() + i * N_zfc);
-    }
-
-    // insert last samples into buffer
-    for (int i = 0; i < 2 * N_zfc; ++i)
-    {
-        peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + num_samp_corr + i) % capacity]);
     }
 
     // correlation
