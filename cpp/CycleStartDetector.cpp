@@ -101,8 +101,6 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
         ch_pow = get_ch_power();
 
-        std::cout << "Estimated channel power = " << ch_pow << std::endl;
-
         // reset corr and peak det objects
         reset();
         peak_det_obj_ref.resetPeaks();
@@ -159,10 +157,10 @@ void CycleStartDetector::correlation_operation()
         if (not peak_det_obj_ref.next())
         {
             // insert last samples into buffer
-            for (int k = 1; k <= N_zfc; ++k)
-            {
-                peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i + k) % capacity]);
-            }
+            // for (int k = 1; k <= N_zfc; ++k)
+            // {
+            //     peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i + k) % capacity]);
+            // }
             break;
         }
     }
@@ -174,9 +172,9 @@ void CycleStartDetector::correlation_operation()
 
 float CycleStartDetector::get_ch_power()
 {
-    std::vector<std::complex<float>> zfc_rep(N_zfc * R_zfc);
+    std::vector<std::complex<float>> zfc_rep(N_zfc * (R_zfc - 1));
 
-    for (int i = 0; i < R_zfc; ++i)
+    for (int i = 0; i < R_zfc - 1; ++i)
     {
         std::copy(zfc_seq.begin(), zfc_seq.end(), zfc_rep.begin() + i * N_zfc);
     }
@@ -195,6 +193,9 @@ float CycleStartDetector::get_ch_power()
         if (max_val < curr_val)
             max_val = curr_val;
     }
+
+    float pch_power = peak_det_obj_ref.get_avg_ch_pow();
+    std::cout << "Estimated channel power (avg peaks, long corr) = ()" << pch_power << ", " << max_val << ")" << std::endl;
     return max_val;
 }
 
