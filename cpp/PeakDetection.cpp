@@ -28,15 +28,13 @@ PeakDetectionClass::PeakDetectionClass(
     noise_level = init_noise_level;
 
     size_t ch_N_zfc = parser.getValue_int("ch-seq-len");
-    size_t ch_seq_reps = 1;
-    size_t ref_ch_gap = 1 * ch_N_zfc;
 
     is_save_buffer_complex = true;
 
     if (save_buffer_flag)
     {
         if (is_save_buffer_complex)
-            save_buffer_complex.resize(ref_seq_len * total_num_peaks + ref_ch_gap + ch_seq_reps * ch_N_zfc, std::complex<float>(0.0, 0.0));
+            save_buffer_complex.resize(ref_seq_len * total_num_peaks + 5 * ch_N_zfc, std::complex<float>(0.0, 0.0));
         else
             save_buffer_float.resize(ref_seq_len * total_num_peaks * 10, float(0.0));
     }
