@@ -174,6 +174,12 @@ float CycleStartDetector::get_ch_power()
         std::copy(zfc_seq.begin(), zfc_seq.end(), zfc_rep.begin() + i * N_zfc);
     }
 
+    // insert last samples into buffer
+    for (int i = 0; i < 2 * N_zfc; ++i)
+    {
+        peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + num_samp_corr + i) % capacity]);
+    }
+
     // correlation
     float max_val = 0.0;
     float curr_val = 0.0;
