@@ -387,7 +387,7 @@ float PeakDetectionClass::get_avg_ch_pow()
     else
         ch_pow = peak_vals[0];
 
-    update_pnr_threshold_via_ch_pow(ch_pow);
+    // update_pnr_threshold_via_ch_pow(ch_pow);
 
     return ch_pow;
 }
