@@ -195,7 +195,8 @@ float CycleStartDetector::get_ch_power()
     }
 
     float pch_power = peak_det_obj_ref.get_avg_ch_pow();
-    std::cout << "Estimated channel power (avg peaks, long corr) = ()" << pch_power << ", " << max_val << ")" << std::endl;
+    std::cout << std::endl
+              << "\t\t -> Est. ch-pow (" << pch_power << ", " << max_val << ")" << std::endl;
     return max_val;
 }
 

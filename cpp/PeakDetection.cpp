@@ -357,17 +357,22 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
 float PeakDetectionClass::get_avg_ch_pow()
 {
     float ch_pow = 0.0;
-    if (peaks_count > 1)
+    if (total_num_peaks > 1)
     {
-        int num_peaks_detected = peaks_count - 1;
-
+        float *max_peak_it = std::max_element(peak_vals, peak_vals + peaks_count);
+        float max_peak = *max_peak_it;
         // ignore last peak for channel power estimation
-        for (int i = 0; i < peaks_count - 1; ++i)
+        size_t c = 0;
+        for (int i = 0; i < peaks_count; ++i)
         {
-            ch_pow += peak_vals[i];
+            if (peak_vals[i] > 0.9 * max_peak)
+            {
+                ch_pow += peak_vals[i];
+                ++c;
+            }
         }
 
-        ch_pow = ch_pow / num_peaks_detected;
+        ch_pow = ch_pow / c;
     }
     else
         ch_pow = peak_vals[0];
