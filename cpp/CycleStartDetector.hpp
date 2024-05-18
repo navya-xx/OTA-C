@@ -53,8 +53,6 @@ private:
 
     void correlation_operation();
     void reset();
-    void capture_ch_est_seq();
-    float get_ch_power();
 
     size_t N_zfc, m_zfc, R_zfc;
     size_t num_samp_corr;
@@ -66,11 +64,13 @@ private:
     size_t num_produced;
     std::vector<std::complex<float>> zfc_seq;
 
-    bool ch_est_done, ch_est_start;
-    std::vector<std::complex<float>> ch_est_samps;
+    bool ch_est_done;
+    std::deque<std::complex<float>> ch_est_samps;
     size_t ch_est_samps_it;
     size_t ch_seq_len;
     size_t ch_est_samps_size;
+    void capture_ch_est_seq();
+    float get_ch_power();
 
     boost::mutex mtx;
     boost::condition_variable cv_producer;

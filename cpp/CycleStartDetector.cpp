@@ -23,7 +23,6 @@ CycleStartDetector::CycleStartDetector(
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
     min_num_produced = num_samp_corr + N_zfc;
 
-    ch_est_start = true;
     ch_est_done = false;
     ch_seq_len = parser.getValue_int("ch-seq-len");
     ch_est_samps_size = 5 * ch_seq_len;
@@ -164,12 +163,13 @@ void CycleStartDetector::correlation_operation()
 
 void CycleStartDetector::capture_ch_est_seq()
 {
-    std::cout << "Entering capture_ch_est_seq, min_num_produced = " << min_num_produced << std::endl;
     size_t num_samps_capture = std::min(min_num_produced, ch_est_samps_size - ch_est_samps_it);
+    std::cout << "Entering capture_ch_est_seq, num_samps_capture = " << num_samps_capture << std::endl;
 
     for (size_t i = 0; i < num_samps_capture; ++i)
     {
-        ch_est_samps[i + ch_est_samps_it] = samples_buffer[(front + i) % capacity];
+        ch_est_samps.pop_front();
+        ch_est_samps.push_back(samples_buffer[(front + i) % capacity]);
         peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
     }
     ch_est_samps_it += num_samps_capture;
@@ -185,7 +185,7 @@ float CycleStartDetector::get_ch_power()
     auto ch_zfc_seq = generateZadoffChuSequence(N, M);
     float max_val = 0.0;
     float curr_val = 0.0;
-    for (size_t i = 0; i < ch_est_samps_size - N; ++i)
+    for (size_t i = 0; i < ch_est_samps.size() - N; ++i)
     {
         std::complex<float> corr(0.0, 0.0);
         for (size_t j = 0; j < N; ++j)
@@ -225,7 +225,6 @@ float CycleStartDetector::get_ch_power()
     ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
     ch_est_samps_it = 0;
     ch_est_done = false;
-    ch_est_start = true;
     min_num_produced = num_samp_corr + N_zfc;
     return max_val;
 }
