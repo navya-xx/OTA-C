@@ -253,9 +253,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // create PeakDetector and CycleStartDetector class objects
     PeakDetectionClass peak_det_obj(parser, usrp_classobj.init_background_noise, is_save_rx_buffer);
+    std::cout << "PeakDetectionClass object set." << std::endl;
 
     uhd::time_spec_t rx_sample_duration = usrp_classobj.rx_sample_duration;
     CycleStartDetector csd_obj(parser, rx_sample_duration, peak_det_obj);
+    std::cout << "CycleStartDetector object set." << std::endl;
 
     //----------- THREADS - producer (Rx/Tx) thread and consumer thread ---------------------
     std::atomic<bool> csd_success_signal(false);
