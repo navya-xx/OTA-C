@@ -114,7 +114,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         // wait before sending next csd ref signal
         uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
 
-        if (usrp_classobj.transmission(buff, tx_timer))
+        if (usrp_classobj.transmission(buff, tx_timer, false))
         {
             std::cout << currentDateTime() << "ZFC transmission successful" << std::endl;
         }
