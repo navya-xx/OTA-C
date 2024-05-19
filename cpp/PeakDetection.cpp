@@ -304,7 +304,7 @@ float PeakDetectionClass::get_avg_ch_pow()
         ch_pow = peak_vals[0];
 
     // update max_pnr
-    max_pnr = max_peak / noise_level * max_peak_mul;
+    max_pnr = std::max(max_peak / noise_level * max_peak_mul, pnr_threshold);
     return ch_pow;
 }
 
