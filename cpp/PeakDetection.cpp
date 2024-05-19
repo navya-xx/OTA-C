@@ -107,7 +107,8 @@ void PeakDetectionClass::reset()
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
-    std::cout << "Reset PeakDetectionClass object!" << std::endl;
+    if (DEBUG)
+        std::cout << "Reset PeakDetectionClass object!" << std::endl;
 }
 
 void PeakDetectionClass::update_pnr_threshold_after_success(const float &ch_pow)
@@ -132,7 +133,8 @@ void PeakDetectionClass::reset_peaks_counter()
     // curr_pnr_threshold = pnr_threshold;
     // noise_level = init_noise_level;
 
-    std::cout << "\t\t -> Reset peaks counter" << std::endl;
+    if (DEBUG)
+        std::cout << "\t\t -> Reset peaks counter" << std::endl;
 }
 
 void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time)
@@ -141,11 +143,13 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
     if (peaks_count > 1)
     {
         size_t reg_peaks_spacing = peak_indices[peaks_count - 1] - peak_indices[peaks_count - 2];
-        std::cout << "\t\t -> Peaks diff " << reg_peaks_spacing << std::endl;
+        if (DEBUG)
+            std::cout << "\t\t -> Peaks diff " << reg_peaks_spacing << std::endl;
         // if spacing is not as expected, cancel all previous peaks except the last registered peak
         if (reg_peaks_spacing > ref_seq_len + 1 or reg_peaks_spacing < ref_seq_len - 1)
         {
-            std::cout << "\t\t -> Insert - Remove all except last peak" << std::endl;
+            if (DEBUG)
+                std::cout << "\t\t -> Insert - Remove all except last peak" << std::endl;
             peak_indices[0] = 0;
             peak_vals[0] = peak_vals[peaks_count - 1];
             peak_times[0] = peak_times[peaks_count - 1];
@@ -155,7 +159,8 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
         }
         else
         {
-            std::cout << "\t\t -> Insert - Success" << std::endl;
+            if (DEBUG)
+                std::cout << "\t\t -> Insert - Success" << std::endl;
         }
     }
 
@@ -164,7 +169,8 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
     {
         // all total_num_peaks are clear
         detection_flag = true;
-        std::cout << "\t\t -> Last peak -- Successful detection" << std::endl;
+        if (DEBUG)
+            std::cout << "\t\t -> Last peak -- Successful detection" << std::endl;
         print_peaks_data();
         return;
     }
@@ -172,7 +178,8 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
     if (peaks_count == 0) // First peak starts with index 0
     {
         samples_from_first_peak = 0;
-        std::cout << "\t\t -> first peak" << std::endl;
+        if (DEBUG)
+            std::cout << "\t\t -> first peak" << std::endl;
     }
 
     peak_indices[peaks_count] = samples_from_first_peak;
@@ -181,7 +188,8 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
 
     update_pnr_threshold();
 
-    std::cout << currentDateTime() << "***Inserted new Peak, count = " << peaks_count << ", PNR = " << peak_val / noise_level << ", threshold = " << curr_pnr_threshold << ", samples from last peak = " << samples_from_first_peak - prev_peak_index << std::endl;
+    if (DEBUG)
+        std::cout << currentDateTime() << "***Inserted new Peak, count = " << peaks_count << ", PNR = " << peak_val / noise_level << ", threshold = " << curr_pnr_threshold << ", samples from last peak = " << samples_from_first_peak - prev_peak_index << std::endl;
 
     ++peaks_count;
     prev_peak_index = samples_from_first_peak;
@@ -202,7 +210,8 @@ void PeakDetectionClass::updatePrevPeak()
     else
     {
         removeLastPeak();
-        std::cout << "\t\t -> Update peak" << std::endl;
+        if (DEBUG)
+            std::cout << "\t\t -> Update peak" << std::endl;
     }
 }
 
@@ -230,7 +239,8 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             // reset peaks and mark this peak as first
             if (samples_from_last_peak > ref_seq_len + 5)
             {
-                std::cout << "\t\t Resetting -- samples from last peak = " << samples_from_last_peak << std::endl;
+                if (DEBUG)
+                    std::cout << "\t\t Resetting -- samples from last peak = " << samples_from_last_peak << std::endl;
                 reset_peaks_counter();
                 insertPeak(abs_corr_val, samp_time);
             }

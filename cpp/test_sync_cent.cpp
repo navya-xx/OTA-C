@@ -22,7 +22,7 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
-extern const bool DEBUG = true;
+extern const bool DEBUG = false;
 
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
