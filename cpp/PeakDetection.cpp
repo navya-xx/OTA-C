@@ -83,10 +83,10 @@ float PeakDetectionClass::get_max_peak_val()
 void PeakDetectionClass::update_pnr_threshold()
 {
     // float max_peak_val = get_max_peak_val();
-    if (max_pnr > 0.0)
-        curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), max_pnr);
-    else
-        curr_pnr_threshold = std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold);
+    // if (max_pnr > 0.0)
+    //     curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), max_pnr);
+    // else
+    curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), float(50.0));
 }
 
 void PeakDetectionClass::reset()
@@ -143,7 +143,7 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
         size_t reg_peaks_spacing = peak_indices[peaks_count - 1] - peak_indices[peaks_count - 2];
         std::cout << "\t\t -> Peaks diff " << reg_peaks_spacing << std::endl;
         // if spacing is not as expected, cancel all previous peaks except the last registered peak
-        if (reg_peaks_spacing > ref_seq_len + peak_det_tol or reg_peaks_spacing < ref_seq_len - peak_det_tol)
+        if (reg_peaks_spacing > ref_seq_len + 1 or reg_peaks_spacing < ref_seq_len - 1)
         {
             std::cout << "\t\t -> Insert - Remove all except last peak" << std::endl;
             peak_indices[0] = 0;
@@ -165,6 +165,7 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
         // all total_num_peaks are clear
         detection_flag = true;
         std::cout << "\t\t -> Last peak -- Successful detection" << std::endl;
+        print_peaks_data();
         return;
     }
 
@@ -227,7 +228,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
 
             // next peak is too far from the last
             // reset peaks and mark this peak as first
-            if (samples_from_last_peak > ref_seq_len + peak_det_tol)
+            if (samples_from_last_peak > ref_seq_len + 5)
             {
                 std::cout << "\t\t Resetting -- samples from last peak = " << samples_from_last_peak << std::endl;
                 reset_peaks_counter();
@@ -235,7 +236,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             }
             // a higher peak exists in close proximity to last
             // update previous peak
-            else if (samples_from_last_peak < ref_seq_len - peak_det_tol)
+            else if (samples_from_last_peak < ref_seq_len - 5)
             {
                 // check if this peak is higher than the previous
                 if (prev_peak_val < abs_corr_val)
@@ -293,7 +294,7 @@ float PeakDetectionClass::get_avg_ch_pow()
     else
         ch_pow = peak_vals[0];
 
-    update_pnr_threshold_after_success(ch_pow);
+    // update_pnr_threshold_after_success(ch_pow);
 
     return ch_pow;
 }
