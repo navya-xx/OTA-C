@@ -162,22 +162,22 @@ void ConfigParser::print_values()
 
     for (const auto &pair : string_data)
     {
-        std::cout << std::left << std::setw(50) << pair.first
-                  << std::left << std::setw(15) << pair.second
-                  << std::left << std::setw(100) << desc_data[pair.first] << std::endl;
+        std::cout << std::left << std::setw(30) << pair.first
+                  << std::left << std::setw(10) << pair.second
+                  << std::left << std::setw(80) << desc_data[pair.first] << std::endl;
     }
 
     for (const auto &pair : int_data)
     {
-        std::cout << std::left << std::setw(50) << pair.first
-                  << std::left << std::setw(15) << pair.second
-                  << std::left << std::setw(100) << desc_data[pair.first] << std::endl;
+        std::cout << std::left << std::setw(30) << pair.first
+                  << std::left << std::setw(10) << pair.second
+                  << std::left << std::setw(80) << desc_data[pair.first] << std::endl;
     }
 
     for (const auto &pair : float_data)
     {
-        std::cout << std::left << std::setw(50) << pair.first
-                  << std::left << std::setw(15) << pair.second
-                  << std::left << std::setw(100) << desc_data[pair.first] << std::endl;
+        std::cout << std::left << std::setw(30) << pair.first
+                  << std::left << std::setw(10) << pair.second
+                  << std::left << std::setw(80) << desc_data[pair.first] << std::endl;
     }
 }
