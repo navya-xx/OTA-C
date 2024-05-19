@@ -159,18 +159,25 @@ void ConfigParser::set_value(const std::string &varname, const std::string &varv
 void ConfigParser::print_values()
 {
     std::cout << "Config values:" << std::endl;
+
     for (const auto &pair : string_data)
     {
-        std::cout << pair.first << " = " << pair.second << "\t ->" << desc_data[pair.first] << std::endl;
+        std::cout << std::left << std::setw(50) << pair.first
+                  << std::left << std::setw(15) << pair.second
+                  << std::left << std::setw(100) << desc_data[pair.first] << std::endl;
     }
 
     for (const auto &pair : int_data)
     {
-        std::cout << pair.first << " = " << pair.second << "\t ->" << desc_data[pair.first] << std::endl;
+        std::cout << std::left << std::setw(50) << pair.first
+                  << std::left << std::setw(15) << pair.second
+                  << std::left << std::setw(100) << desc_data[pair.first] << std::endl;
     }
 
     for (const auto &pair : float_data)
     {
-        std::cout << pair.first << " = " << pair.second << "\t ->" << desc_data[pair.first] << std::endl;
+        std::cout << std::left << std::setw(50) << pair.first
+                  << std::left << std::setw(15) << pair.second
+                  << std::left << std::setw(100) << desc_data[pair.first] << std::endl;
     }
 }

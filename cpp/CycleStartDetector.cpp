@@ -90,7 +90,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         // if (ch_est_done)
         // {
         csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
-        ch_pow = get_ch_power();
+        e2e_est_ref_sig_amp = est_e2e_ref_sig_amp();
 
         // reset corr and peak det objects
         reset();
@@ -156,7 +156,7 @@ void CycleStartDetector::correlation_operation()
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
 }
 
-float CycleStartDetector::get_ch_power()
+float CycleStartDetector::est_e2e_ref_sig_amp()
 {
     // float max_val = 0.0;
     // if (peak_det_obj_ref.is_save_buffer_complex)
@@ -184,14 +184,14 @@ float CycleStartDetector::get_ch_power()
     //     }
     // }
 
-    float pch_power = peak_det_obj_ref.get_avg_ch_pow();
+    float e2e_ref_sig_amp = peak_det_obj_ref.avg_of_peak_vals();
     // std::cout << std::endl
-    //           << "\t\t -> Est. ch-pow (" << pch_power << ", " << max_val << ")" << std::endl
+    //           << "\t\t -> Est. ch-pow (" << e2e_ref_sig_amp << ", " << max_val << ")" << std::endl
     //           << std::endl;
 
-    std::cout << "Est. Ch-pow = " << pch_power << std::endl;
+    std::cout << "Est. e2e ref signal amp = " << e2e_ref_sig_amp << std::endl;
 
-    return pch_power;
+    return e2e_ref_sig_amp;
 }
 
 // void CycleStartDetector::capture_ch_est_seq()
@@ -211,7 +211,7 @@ float CycleStartDetector::get_ch_power()
 //         ch_est_done = true;
 // }
 
-// float CycleStartDetector::get_ch_power()
+// float CycleStartDetector::est_e2e_ref_sig_amp()
 // {
 //     size_t N = ch_seq_len;
 //     size_t M = parser.getValue_int("ch-seq-M");

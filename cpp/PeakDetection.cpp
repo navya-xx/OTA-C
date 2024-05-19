@@ -281,31 +281,24 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
     }
 }
 
-float PeakDetectionClass::get_avg_ch_pow()
+float PeakDetectionClass::avg_of_peak_vals()
 {
-    float ch_pow = 0.0;
+    float e2e_est_ref_sig_amp = 0.0;
     float max_peak = get_max_peak_val();
     if (total_num_peaks > 1)
     {
-        // ignore last peak for channel power estimation
-        size_t c = 0;
+        // average channel power from peak_vals
         for (int i = 0; i < total_num_peaks; ++i)
-        {
-            if (peak_vals[i] > 0.9 * max_peak)
-            {
-                ch_pow += peak_vals[i];
-                ++c;
-            }
-        }
+            e2e_est_ref_sig_amp += peak_vals[i];
 
-        ch_pow = ch_pow / c;
+        e2e_est_ref_sig_amp = e2e_est_ref_sig_amp / total_num_peaks;
     }
     else
-        ch_pow = peak_vals[0];
+        e2e_est_ref_sig_amp = peak_vals[0];
 
     // update max_pnr
     max_pnr = std::max(max_peak / noise_level * max_peak_mul, pnr_threshold);
-    return ch_pow;
+    return e2e_est_ref_sig_amp;
 }
 
 uhd::time_spec_t PeakDetectionClass::get_sync_time()

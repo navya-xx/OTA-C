@@ -33,7 +33,14 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
     // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
     float total_runtime = parser.getValue_float("duration");
-    float min_ch_pow = parser.getValue_float("min-ch-pow");
+
+    // float max_leaf_dist = parser.getValue_float("max-leaf-dist");
+    // float cent_tx_gain = parser.getValue_float("cent-tx-gain");
+    // float antenna_gain = parser.getValue_float("antenna-gain");
+    // float leaf_rx_gain = usrp_classobj.rx_gain;
+    // float min_path_loss_dB = calculatePathLoss(max_leaf_dist, usrp_classobj.carrier_freq);
+    // float min_e2e_amp = dbToAmplitude(cent_tx_gain + leaf_rx_gain + 2 * antenna_gain - min_path_loss_dB);
+    float min_e2e_amp = parser.getValue_float("min-e2e-amp");
 
     auto rx_stream = usrp_classobj.rx_streamer;
     auto tx_stream = usrp_classobj.tx_streamer;
@@ -136,10 +143,11 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         {
             std::cout << "Starting transmission after CSD..." << std::endl;
 
-            float ch_pow = csd_obj.ch_pow;
-            float tx_scaling_factor = min_ch_pow / ch_pow;
+            float e2e_est_ref_sig_amp = csd_obj.e2e_est_ref_sig_amp;
             // adjust tx/rx gains based on tx_scaling factor -> too low, decrease gain, or vice-versa
-            usrp_classobj.gain_adjustment(ch_pow);
+            // usrp_classobj.gain_adjustment(e2e_est_ref_sig_amp, min_path_loss_dB);
+            float tx_scaling_factor = min_e2e_amp / e2e_est_ref_sig_amp;
+            std::cout << "Est e2e amp = " << e2e_est_ref_sig_amp << ", Min e2e amp = " << min_e2e_amp << std::endl;
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
             float tx_duration = tx_zfc_seq.size() / usrp_classobj.tx_rate;
 

@@ -160,6 +160,7 @@ void USRP_class::initialize()
     usrp->set_tx_freq(tune_request, channel);
     std::cout << boost::format("Actual Rx Freq: %f MHz...") % (usrp->get_rx_freq(channel) / 1e6) << std::endl;
     std::cout << boost::format("Actual Tx Freq: %f MHz...") % (usrp->get_tx_freq(channel) / 1e6) << std::endl;
+    carrier_freq = usrp->get_rx_freq(channel);
 
     // set tx/rx gains
     float _rx_gain, _tx_gain;
@@ -416,7 +417,22 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
         return std::vector<std::complex<float>>{};
 };
 
-void USRP_class::gain_adjustment(const float &ch_pow)
+void USRP_class::gain_adjustment(const float &est_e2e_sig_amp, const float &min_path_loss_dB)
 {
-    return;
+    /* Adjustment of leaf Rx gain for better reception */
+    // calculate Path loss (dB) from est_ch_pow
+    float cent_tx_gain = parser.getValue_float("cent-tx-gain"); // dB
+    float leaf_rx_gain = rx_gain;                               // dB
+    float e2e_gain = amplitudeToDb(est_e2e_sig_amp);
+    float path_loss_pow = e2e_gain - cent_tx_gain - leaf_rx_gain;
+
+    // adjust tx-rx gains to enable better scaling of signals
+    float min_ch_amp = parser.getValue_float("min-ch-pow");
+    float min_ch_pow_dB = amplitudeToDb(min_ch_amp);
+    float min_est_diff = min_ch_pow_dB - path_loss_pow;
+
+    // first, estimated e2e_gain should not be
+
+    // min_est_diff should be
+    float diff = cent_tx_gain + leaf_rx_gain;
 }

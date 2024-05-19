@@ -87,7 +87,7 @@ public:
 
     void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
 
-    float get_avg_ch_pow();
+    float avg_of_peak_vals();
     uhd::time_spec_t get_sync_time();
 
     // ~PeakDetectionClass();

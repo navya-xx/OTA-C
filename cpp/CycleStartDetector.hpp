@@ -40,7 +40,7 @@ public:
     uhd::time_spec_t get_wait_time(float tx_wait_microsec);
 
     uhd::time_spec_t csd_tx_start_timer;
-    float ch_pow;
+    float e2e_est_ref_sig_amp;
 
 private:
     std::vector<std::complex<float>> samples_buffer;
@@ -53,7 +53,7 @@ private:
 
     void correlation_operation();
     void reset();
-    float get_ch_power();
+    float est_e2e_ref_sig_amp();
 
     size_t N_zfc, m_zfc, R_zfc;
     size_t num_samp_corr;

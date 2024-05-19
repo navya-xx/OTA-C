@@ -442,13 +442,13 @@ public:
 
         if (successful_detection)
         {
-            float ch_pow = 0.0;
+            float e2e_est_ref_sig_amp = 0.0;
             for (float peak_val : peak_vals)
             {
-                ch_pow += peak_val;
+                e2e_est_ref_sig_amp += peak_val;
             }
-            ch_pow /= peak_vals.size();
-            return {true, peak_times.back(), ch_pow};
+            e2e_est_ref_sig_amp /= peak_vals.size();
+            return {true, peak_times.back(), e2e_est_ref_sig_amp};
         }
         else
         {

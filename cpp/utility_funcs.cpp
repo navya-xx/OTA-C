@@ -161,3 +161,46 @@ std::string currentDateTime()
     oss << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
     return oss.str();
 }
+
+// Function to convert amplitude ratio to dB
+float amplitudeToDb(float value)
+{
+    return 20.0f * std::log10(value);
+}
+
+// Function to convert power ratio to dB
+float powerToDb(float value)
+{
+    return 10.0f * std::log10(value);
+}
+
+// Function to convert dB to amplitude ratio
+float dbToAmplitude(float dB)
+{
+    return std::pow(10.0f, dB / 20.0f);
+}
+
+// Function to convert dB to power ratio
+float dbToPower(float dB)
+{
+    return std::pow(10.0f, dB / 10.0f);
+}
+
+// Function to calculate path loss in dB
+float calculatePathLoss(const float &distance, const float &frequency)
+{
+    // Constants
+    const float speedOfLight = 3e8; // Speed of light in meters per second
+    const float constantTerm = 20 * std::log10(4 * M_PI / speedOfLight);
+
+    // Calculate the distance term
+    float distanceTerm = 20 * std::log10(distance);
+
+    // Calculate the frequency term
+    float frequencyTerm = 20 * std::log10(frequency);
+
+    // Calculate the total path loss
+    float pathLoss = distanceTerm + frequencyTerm + constantTerm;
+
+    return pathLoss;
+}

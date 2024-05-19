@@ -50,3 +50,9 @@ void save_stream_to_file(const std::string &filename, std::ofstream &outfile, st
 std::vector<std::complex<float>> generateUnitCircleRandom(size_t size, float scale);
 
 std::string currentDateTime();
+
+float amplitudeToDb(float value);
+float powerToDb(float value);
+float dbToAmplitude(float dB);
+float dbToPower(float dB);
+float calculatePathLoss(const float &distance, const float &frequency);

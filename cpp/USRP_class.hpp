@@ -40,7 +40,7 @@ public:
 
     bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time);
 
-    void gain_adjustment(const float &ch_pow);
+    void gain_adjustment(const float &est_ch_amp, const float &min_path_loss_dB);
 
     std::vector<std::complex<float>> reception(const size_t &num_rx_samps, const uhd::time_spec_t &rx_time);
 
@@ -51,7 +51,7 @@ public:
     uhd::usrp::multi_usrp::sptr usrp;
     uhd::rx_streamer::sptr rx_streamer;
     uhd::tx_streamer::sptr tx_streamer;
-    float tx_rate, rx_rate, tx_gain, rx_gain, tx_bw, rx_bw;
+    float tx_rate, rx_rate, tx_gain, rx_gain, tx_bw, rx_bw, carrier_freq;
     uhd::time_spec_t rx_sample_duration, tx_sample_duration, rx_md_time, tx_md_time;
 
 private:
