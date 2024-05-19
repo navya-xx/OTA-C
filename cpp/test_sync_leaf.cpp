@@ -138,8 +138,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             float ch_pow = csd_obj.ch_pow;
             float tx_scaling_factor = min_ch_pow / ch_pow;
-            if (tx_scaling_factor > 1)
-                std::cerr << "(min_ch_pow) " << min_ch_pow << " > " << ch_pow << " (est avg ch pow)" << std::endl;
+            // adjust tx/rx gains based on tx_scaling factor -> too low, decrease gain, or vice-versa
+            usrp_classobj.gain_adjustment(ch_pow);
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
             float tx_duration = tx_zfc_seq.size() / usrp_classobj.tx_rate;
 

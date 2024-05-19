@@ -40,6 +40,8 @@ public:
 
     bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time);
 
+    void gain_adjustment(const float &ch_pow);
+
     std::vector<std::complex<float>> reception(const size_t &num_rx_samps, const uhd::time_spec_t &rx_time);
 
     bool stop_signal_called = false;

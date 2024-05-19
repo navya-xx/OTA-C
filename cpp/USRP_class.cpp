@@ -402,3 +402,8 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     else
         return std::vector<std::complex<float>>{};
 };
+
+void USRP_class::gain_adjustment(const float &ch_pow)
+{
+    return;
+}
