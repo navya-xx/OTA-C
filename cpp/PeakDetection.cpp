@@ -83,10 +83,10 @@ float PeakDetectionClass::get_max_peak_val()
 void PeakDetectionClass::update_pnr_threshold()
 {
     // float max_peak_val = get_max_peak_val();
-    // if (max_pnr > 0.0)
-    //     curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), max_pnr);
-    // else
-    curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), float(50.0));
+    if (max_pnr > 0.0)
+        curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), max_pnr);
+    else
+        curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), float(50.0));
 }
 
 void PeakDetectionClass::reset()
@@ -109,20 +109,6 @@ void PeakDetectionClass::reset()
 
     if (DEBUG)
         std::cout << "Reset PeakDetectionClass object!" << std::endl;
-}
-
-void PeakDetectionClass::update_pnr_threshold_after_success(const float &ch_pow)
-{
-    // float max_peak_val = get_max_peak_val();
-    // curr_pnr_threshold = std::max(std::max(max_peak_mul * ch_pow / noise_level, pnr_threshold), curr_pnr_threshold);
-    float max_peak_val = 0.0;
-    for (int i = 0; i < peaks_count; ++i)
-    {
-        if (peak_vals[i] > max_peak_val)
-            max_peak_val = peak_vals[i];
-    }
-    max_peak_val = max_peak_val / noise_level;
-    max_pnr = std::max(max_pnr, max_peak_mul * max_peak_val);
 }
 
 void PeakDetectionClass::reset_peaks_counter()
@@ -298,11 +284,9 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
 float PeakDetectionClass::get_avg_ch_pow()
 {
     float ch_pow = 0.0;
-    float max_peak = 0.0;
+    float max_peak = get_max_peak_val();
     if (total_num_peaks > 1)
     {
-        float max_peak = get_max_peak_val();
-
         // ignore last peak for channel power estimation
         size_t c = 0;
         for (int i = 0; i < total_num_peaks; ++i)
@@ -319,8 +303,8 @@ float PeakDetectionClass::get_avg_ch_pow()
     else
         ch_pow = peak_vals[0];
 
-    // update_pnr_threshold_after_success(ch_pow);
-
+    // update max_pnr
+    max_pnr = max_peak / noise_level * max_peak_mul;
     return ch_pow;
 }
 

@@ -70,9 +70,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
-    // pre- and post- append buff with some random signal
-    auto app_buff = generateUnitCircleRandom(2 * N_zfc, 1.0);
-
     // transmit one extra peak
     std::vector<std::complex<float>> buff(N_zfc * (R_zfc + 1), std::complex<float>(0.0, 0.0));
     for (int i = 0; i < N_zfc * (R_zfc + 1); ++i)
@@ -80,8 +77,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         buff[i] = zfc_seq[i % N_zfc];
     }
 
-    buff.insert(buff.begin(), app_buff.begin(), app_buff.end());
-    buff.insert(buff.end(), app_buff.begin(), app_buff.end());
+    size_t acc_buff_len = 0;
+    if (acc_buff_len > 0)
+    {
+        // pre- and post- append buff with some random signal
+        auto app_buff = generateUnitCircleRandom(2 * N_zfc, 1.0);
+
+        buff.insert(buff.begin(), app_buff.begin(), app_buff.end());
+        buff.insert(buff.end(), app_buff.begin(), app_buff.end());
+    }
 
     float total_runtime = parser.getValue_float("duration");
     if (total_runtime == 0.0)
@@ -97,9 +101,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
     // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
 
-    size_t save_extra_mul = 2;
-    // save data from tx_time - save_extra_mul * test_signal_duration to end of test signal + save_extra_mul * test_signal_duration
-    size_t num_rx_samps = test_tx_reps * test_signal_len + 2 * save_extra_mul * test_signal_len;
+    size_t save_extra_seq_mul = 2;
+    // save data from tx_time - save_extra_seq_mul * test_signal_duration to end of test signal + save_extra_seq_mul * test_signal_duration
+    size_t num_rx_samps = test_tx_reps * test_signal_len + 2 * save_extra_seq_mul * test_signal_len;
 
     int iter_counter = 1;
 
@@ -118,7 +122,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return EXIT_FAILURE;
         }
 
-        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + app_buff.size())) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_mul * test_signal_len));
+        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + acc_buff_len)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_seq_mul * test_signal_len));
 
         auto rx_symbols = usrp_classobj.reception(num_rx_samps, rx_time);
 
