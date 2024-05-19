@@ -150,3 +150,14 @@ std::vector<std::complex<float>> generateUnitCircleRandom(size_t size, float sca
 
     return complexVector;
 }
+
+std::string currentDateTime()
+{
+    auto now = std::chrono::system_clock::now();
+    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    auto now_tm = *std::localtime(&time_t_now);
+
+    std::ostringstream oss;
+    oss << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}

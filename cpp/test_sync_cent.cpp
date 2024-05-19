@@ -110,7 +110,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         if (usrp_classobj.transmission(buff, tx_timer))
         {
-            std::cout << "ZFC transmission successful" << std::endl;
+            std::cout << currentDateTime() << "ZFC transmission successful" << std::endl;
         }
         else
         {

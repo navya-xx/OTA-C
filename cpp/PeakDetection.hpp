@@ -25,6 +25,7 @@
 #include <vector>
 #include <array>
 #include "ConfigParser.hpp"
+#include "utility_funcs.hpp"
 
 class PeakDetectionClass
 {
@@ -59,9 +60,9 @@ public:
     PeakDetectionClass(ConfigParser &parser, const float &init_noise_level);
 
     size_t peaks_count;
-    int prev_peak_index;
+    size_t prev_peak_index;
     float prev_peak_val;
-    int samples_from_first_peak;
+    size_t samples_from_first_peak;
     bool detection_flag;
     std::deque<float> save_buffer_float;
     std::deque<std::complex<float>> save_buffer_complex;
@@ -74,7 +75,8 @@ public:
     uhd::time_spec_t *get_peak_times();
     void print_peaks_data();
 
-    void resetPeaks();
+    void reset_peaks_counter();
+    void reset();
 
     bool process_corr(const float &abs_val, const uhd::time_spec_t &samp_time);
 

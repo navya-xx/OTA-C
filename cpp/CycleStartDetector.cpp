@@ -94,7 +94,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
         // reset corr and peak det objects
         reset();
-        peak_det_obj_ref.resetPeaks();
+        peak_det_obj_ref.reset();
 
         csd_success_signal = true;
         cv_producer.notify_one();
@@ -147,6 +147,8 @@ void CycleStartDetector::correlation_operation()
 
         if (peak_det_obj_ref.detection_flag)
             break;
+        else
+            ++peak_det_obj_ref.samples_from_first_peak;
     }
 
     // udpate noise level
