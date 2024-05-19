@@ -383,7 +383,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
 
         try
         {
-            num_acc_samps += rx_streamer->recv(&buff.front() + num_acc_samps, size_rx, md, timeout, false);
+            num_acc_samps += rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
         }
         catch (uhd::io_error e)
         {
