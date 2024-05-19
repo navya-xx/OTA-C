@@ -164,13 +164,32 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
         }
     }
 
-    // we transmit additional ref signal for this purpose
-    if (peaks_count == total_num_peaks + 1)
+    // check the last peak -> if at correct spot, return success
+    if (peaks_count == total_num_peaks)
+    {
+        size_t last_peak_spacing = samples_from_first_peak - peak_indices[peaks_count - 1];
+        if (last_peak_spacing > ref_seq_len - 1 and last_peak_spacing < ref_seq_len + 1)
+        {
+            // all total_num_peaks are clear
+            detection_flag = true;
+            if (DEBUG)
+                std::cout << "\t\t -> Successful detection" << std::endl;
+            print_peaks_data();
+            return;
+        }
+        else
+        {
+            if (DEBUG)
+                std::cout << "\t\t -> Last peak is not at right spot yet. Wait for more data." << std::endl;
+        }
+    }
+    // if we reach here, that means all total_num_peaks are at correct place.
+    else if (peaks_count == total_num_peaks + 1)
     {
         // all total_num_peaks are clear
         detection_flag = true;
         if (DEBUG)
-            std::cout << "\t\t -> Last peak -- Successful detection" << std::endl;
+            std::cout << "\t\t -> Successful detection" << std::endl;
         print_peaks_data();
         return;
     }
@@ -282,15 +301,11 @@ float PeakDetectionClass::get_avg_ch_pow()
     float max_peak = 0.0;
     if (total_num_peaks > 1)
     {
-        for (int i = 0; i < peaks_count; ++i)
-        {
-            if (max_peak < peak_vals[i])
-                max_peak = peak_vals[i];
-        }
+        float max_peak = get_max_peak_val();
 
         // ignore last peak for channel power estimation
         size_t c = 0;
-        for (int i = 0; i < peaks_count; ++i)
+        for (int i = 0; i < total_num_peaks; ++i)
         {
             if (peak_vals[i] > 0.9 * max_peak)
             {
