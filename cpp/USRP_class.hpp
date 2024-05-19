@@ -38,7 +38,7 @@ public:
 
     void initialize();
 
-    bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time);
+    bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool ask_ack = false);
 
     void gain_adjustment(const float &est_ch_amp, const float &min_path_loss_dB);
 

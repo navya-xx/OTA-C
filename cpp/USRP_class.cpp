@@ -269,7 +269,7 @@ void USRP_class::initialize()
               << std::endl;
 };
 
-bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time)
+bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool ask_ack)
 {
     bool success = false;
     size_t total_num_samps = buff.size();
@@ -316,23 +316,30 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     md.end_of_burst = true;
     tx_streamer->send("", 0, md);
 
-    // check for ASYNC message
-    if (DEBUG)
-        std::cout << std::endl
-                  << "Waiting for async burst ACK... " << std::flush;
-    uhd::async_metadata_t async_md;
-    bool got_async_burst_ack = false;
-    // loop through all messages for the ACK packet (may have underflow messages in queue)
-    while (not got_async_burst_ack and tx_streamer->recv_async_msg(async_md, timeout))
-        got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
-    if (DEBUG)
-        std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl
-                  << std::endl;
+    if (ask_ack)
+    { // check for ASYNC message
+        if (DEBUG)
+            std::cout << std::endl
+                      << "Waiting for async burst ACK... " << std::flush;
+        uhd::async_metadata_t async_md;
+        bool got_async_burst_ack = false;
+        // loop through all messages for the ACK packet (may have underflow messages in queue)
+        while (not got_async_burst_ack and tx_streamer->recv_async_msg(async_md, timeout))
+            got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
+        if (DEBUG)
+            std::cout << (got_async_burst_ack ? "success" : "fail") << std::endl
+                      << std::endl;
 
-    if (not got_async_burst_ack)
-        std::cerr << "ACK FAIL..! " << std::endl;
+        if (not got_async_burst_ack)
+            std::cerr << "ACK FAIL..! " << std::endl;
+        else
+            success = true;
+    }
     else
-        success = true;
+    {
+        if (num_acc_samps >= total_num_samps)
+            success = true;
+    }
 
     return success;
 };
