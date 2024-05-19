@@ -24,7 +24,7 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
-extern const bool DEBUG = false;
+extern const bool DEBUG = true;
 
 void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, const std::string &homeDirStr)
 {
