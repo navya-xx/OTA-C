@@ -366,7 +366,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     double rx_delay = stream_cmd.stream_now ? 0.0 : (rx_time - usrp_now).get_real_secs();
     double timeout = burst_pkt_time + rx_delay;
 
-    std::vector<std::complex<float>> buff(num_rx_samps);
+    std::vector<std::complex<float>> buff(num_rx_samps, std::complex<float>(0.0, 0.0));
 
     size_t num_acc_samps = 0;
 
