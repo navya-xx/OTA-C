@@ -373,7 +373,8 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     double rx_delay = stream_cmd.stream_now ? 0.0 : (rx_time - usrp_now).get_real_secs();
     double timeout = burst_pkt_time + rx_delay;
 
-    std::vector<std::complex<float>> buff(num_rx_samps, std::complex<float>(0.0, 0.0));
+    std::vector<std::complex<float>> rx_samples(num_rx_samps);
+    std::vector<std::complex<float>> buff;
 
     size_t num_acc_samps = 0;
 
@@ -381,9 +382,12 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     {
         size_t size_rx = std::min(num_rx_samps - num_acc_samps, max_rx_packet_size);
 
+        buff.clear();
+        buff.resize(size_rx);
+        size_t num_curr_rx_samps;
         try
         {
-            num_acc_samps += rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
+            num_curr_rx_samps = rx_streamer->recv(&buff.front(), buff.size(), md, timeout, false);
         }
         catch (uhd::io_error e)
         {
@@ -404,6 +408,10 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
             std::string error = str(boost::format("Receiver error: %s") % md.strerror());
             std::cerr << error << std::endl;
         }
+
+        std::copy(buff.begin(), buff.end(), rx_samples.begin() + num_acc_samps);
+
+        num_acc_samps += num_curr_rx_samps;
     }
 
     stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
@@ -419,7 +427,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     }
 
     if (success)
-        return buff;
+        return rx_samples;
     else
         return std::vector<std::complex<float>>{};
 };
