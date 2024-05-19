@@ -103,7 +103,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
     // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
 
-    size_t save_extra_seq_mul = 2;
+    size_t save_extra_seq_mul = 5;
     // save data from tx_time - save_extra_seq_mul * test_signal_duration to end of test signal + save_extra_seq_mul * test_signal_duration
     size_t num_rx_samps = test_tx_reps * test_signal_len + 2 * save_extra_seq_mul * test_signal_len;
 

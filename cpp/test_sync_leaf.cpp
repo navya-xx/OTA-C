@@ -146,7 +146,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             float e2e_est_ref_sig_amp = csd_obj.e2e_est_ref_sig_amp;
             // adjust tx/rx gains based on tx_scaling factor -> too low, decrease gain, or vice-versa
             // usrp_classobj.gain_adjustment(e2e_est_ref_sig_amp, min_path_loss_dB);
-            float tx_scaling_factor = min_e2e_amp / e2e_est_ref_sig_amp;
+            float tx_scaling_factor = 1.0; // min_e2e_amp / e2e_est_ref_sig_amp;
             std::cout << "Est e2e amp = " << e2e_est_ref_sig_amp << ", Min e2e amp = " << min_e2e_amp << std::endl;
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
             float tx_duration = tx_zfc_seq.size() / usrp_classobj.tx_rate;
