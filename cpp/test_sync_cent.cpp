@@ -36,6 +36,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // rx and tx streamers -- initilize
     ConfigParser parser(currentDir + "/OTA-C/cpp/leaf_config.conf");
 
+    parser.set_value("node-type", "cent", "str", "Type of node : leaf or cent");
+
     if (argc < 2)
         throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
 

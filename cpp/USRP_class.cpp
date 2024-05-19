@@ -106,6 +106,7 @@ void USRP_class::initialize()
 {
     // Entire routine to setup USRP, streamers, testing Rx/Tx capabilities, etc.
     std::string device_id = parser.getValue_str("device-id");
+    std::string node_type = parser.getValue_str("node-type");
 
     bool device_create = false;
     std::string args = "serial=" + device_id;
@@ -135,6 +136,7 @@ void USRP_class::initialize()
 
     //_____________________ SETUP STREAMERS _____________________
     usrp->set_clock_source("internal");
+
     // set the sample rate
     float rate = parser.getValue_float("rate");
     int channel = 0;
@@ -147,6 +149,7 @@ void USRP_class::initialize()
     std::cout << boost::format("Actual Rx Rate: %f Msps...") % (usrp->get_rx_rate(channel) / 1e6) << std::endl;
     tx_rate = usrp->get_tx_rate(channel);
     rx_rate = usrp->get_rx_rate(channel);
+
     // set the center frequency
     float freq = parser.getValue_float("freq");
     float lo_offset = parser.getValue_float("lo-offset");
@@ -157,8 +160,19 @@ void USRP_class::initialize()
     usrp->set_tx_freq(tune_request, channel);
     std::cout << boost::format("Actual Rx Freq: %f MHz...") % (usrp->get_rx_freq(channel) / 1e6) << std::endl;
     std::cout << boost::format("Actual Tx Freq: %f MHz...") % (usrp->get_tx_freq(channel) / 1e6) << std::endl;
+
     // set tx/rx gains
-    float _rx_gain = parser.getValue_float("rx-gain");
+    float _rx_gain, _tx_gain;
+    if (node_type == "leaf")
+    {
+        _rx_gain = parser.getValue_float("rx-gain");
+        _tx_gain = parser.getValue_float("tx-gain");
+    }
+    else
+    {
+        _rx_gain = parser.getValue_float("cent-rx-gain");
+        _tx_gain = parser.getValue_float("cent-tx-gain");
+    }
     if (_rx_gain >= 0.0)
     {
         std::cout << boost::format("Setting RX Gain: %f dB...") % _rx_gain << std::endl;
@@ -166,7 +180,6 @@ void USRP_class::initialize()
         rx_gain = usrp->get_rx_gain(channel);
         std::cout << boost::format("Actual Rx Gain: %f dB...") % rx_gain << std::endl;
     }
-    float _tx_gain = parser.getValue_float("tx-gain");
     if (_tx_gain >= 0.0)
     {
         std::cout << boost::format("Setting TX Gain: %f dB...") % _tx_gain << std::endl;
