@@ -22,7 +22,7 @@ PeakDetectionClass::PeakDetectionClass(
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
-    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
+    ref_signal.resize(ref_seq_len * (total_num_peaks + 1));
 
     prev_peak_index = 0;
     peaks_count = 0;
@@ -102,6 +102,7 @@ void PeakDetectionClass::reset()
     noise_counter = 0;
     // max_pnr = 0;
 
+    std::cout << "Reset Peak vectors ---" << std::endl;
     delete[] peak_indices;
     delete[] peak_vals;
     delete[] peak_times;
@@ -109,11 +110,11 @@ void PeakDetectionClass::reset()
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
+    std::cout << "Reset ref_signal deque ---" << std::endl;
     ref_signal.clear();
-    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
+    ref_signal.resize(ref_seq_len * (total_num_peaks + 1));
 
-    if (DEBUG)
-        std::cout << "Reset PeakDetectionClass object!" << std::endl;
+    std::cout << "Reset PeakDetectionClass object!" << std::endl;
 }
 
 void PeakDetectionClass::reset_peaks_counter()
