@@ -160,7 +160,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
 
-            usrp_classobj.transmission(tx_seq, tx_start_timer, true);
+            usrp_classobj.transmission(tx_seq, tx_start_timer, false);
 
             std::cout << "CSD Test TX complete!" << std::endl
                       << std::endl;
