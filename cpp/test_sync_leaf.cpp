@@ -61,6 +61,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     if (parser.getValue_str("is-save-stream-data") == "true")
         is_save_stream_data = true;
 
+    std::vector<std::complex<float>> buff(max_rx_packet_size);
+
     std::ofstream outfile;
     std::string save_stream_file;
     if (is_save_stream_data)
@@ -83,8 +85,6 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         stream_cmd.num_samps = max_rx_packet_size;
         stream_cmd.stream_now = true;
         rx_stream->issue_stream_cmd(stream_cmd);
-
-        std::vector<std::complex<float>> buff(max_rx_packet_size, std::complex<float>(0.0, 0.0));
 
         float recv_timeout = burst_pkt_time + 0.05;
         size_t num_rx_samps;
