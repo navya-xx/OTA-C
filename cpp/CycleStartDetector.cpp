@@ -140,7 +140,7 @@ void CycleStartDetector::correlation_operation()
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
         // peak_det_obj_ref.save_float_data_into_buffer(abs_val);
-        peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
+        // peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
 
         if (update_noise_level)
             sum_ampl += abs_val;
