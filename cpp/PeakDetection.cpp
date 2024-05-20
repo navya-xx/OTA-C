@@ -109,9 +109,6 @@ void PeakDetectionClass::reset()
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
-    ref_signal.clear();
-    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
-
     if (DEBUG)
         std::cout << "Reset PeakDetectionClass object!" << std::endl;
 }
@@ -122,8 +119,6 @@ void PeakDetectionClass::reset_peaks_counter()
     samples_from_first_peak = 0;
     prev_peak_index = 0;
 
-    ref_signal.clear();
-    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
     // curr_pnr_threshold = pnr_threshold;
     // noise_level = init_noise_level;
 
