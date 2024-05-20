@@ -227,6 +227,8 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
 {
     if ((abs_corr_val / noise_level) > curr_pnr_threshold)
     {
+
+        std::cout << "\t\t --> Entered process_corr, corr value --- " << abs_corr_val << std::endl;
         // First peak
         if (peaks_count == 0)
         {

@@ -122,22 +122,14 @@ void CycleStartDetector::correlation_operation()
         // compute correlation
         std::complex<float> corr(0.0, 0.0);
         for (size_t j = 0; j < N_zfc; ++j)
-        {
             corr += (samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
-        }
 
         abs_val = std::abs(corr) / N_zfc;
 
-        std::cout << "\t\t --> Corr operation, samples correlated, corr value --- " << abs_val << std::endl;
-
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
-
-        // std::cout << "\t\t --> Process corr -- Done ---" << std::endl;
 
         // peak_det_obj_ref.save_float_data_into_buffer(abs_val);
         peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
-
-        // std::cout << "\t\t --> Save complex sample -- Done ---" << std::endl;
 
         if (update_noise_level)
             sum_ampl += abs_val;
