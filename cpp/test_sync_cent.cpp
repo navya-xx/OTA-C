@@ -107,12 +107,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // save data from tx_time - save_extra_seq_mul * test_signal_duration to end of test signal + save_extra_seq_mul * test_signal_duration
     size_t num_rx_samps = test_tx_reps * test_signal_len + 2 * save_extra_seq_mul * test_signal_len;
 
+    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
+
     int iter_counter = 1;
 
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
-        // wait before sending next csd ref signal
-        uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
 
         if (usrp_classobj.transmission(buff, tx_timer, false))
         {
@@ -124,9 +124,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return EXIT_FAILURE;
         }
 
-        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + acc_buff_len)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_seq_mul * test_signal_len));
+        // uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + acc_buff_len)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_seq_mul * test_signal_len));
+        // uhd::time_spec_t rx_time = tx_timer;
 
-        auto rx_symbols = usrp_classobj.reception(num_rx_samps, rx_time);
+        std::cout << currentDateTime() << " -- starting reception" << std::endl;
+
+        auto rx_symbols = usrp_classobj.reception(0.0, double((csd_wait_time_millisec - 100) / 1e3));
 
         if (rx_symbols.size() < num_rx_samps)
         {
@@ -135,7 +138,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
         else
         {
-            std::cout << "Successful reception of " << rx_symbols.size() << " symbols in round " << iter_counter << std::endl
+            std::cout << currentDateTime() << "Successful reception of " << rx_symbols.size() << " symbols in round " << iter_counter << std::endl
                       << std::endl;
         }
 
@@ -149,6 +152,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             outfile.write((const char *)&rx_symbols.front(), num_rx_samps * sizeof(std::complex<float>));
             outfile.close();
         }
+
+        tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(100 / 1e3);
 
         ++iter_counter;
     }

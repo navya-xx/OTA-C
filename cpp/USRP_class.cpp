@@ -240,7 +240,7 @@ void USRP_class::initialize()
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     size_t num_pkts = 10;
-    auto rx_samples = reception(max_rx_packet_size * num_pkts, uhd::time_spec_t(0.0));
+    auto rx_samples = reception(max_rx_packet_size * num_pkts);
     if (rx_samples.size() == max_rx_packet_size * num_pkts)
         std::cout << "Reception test successful! Total " << rx_samples.size() << " samples received." << std::endl;
     else
@@ -344,15 +344,15 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
-std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samps, const uhd::time_spec_t &rx_time)
+std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time)
 {
     bool success = false;
     uhd::rx_metadata_t md;
 
     // setup streaming
-    uhd::stream_cmd_t stream_cmd(num_rx_samps > max_rx_packet_size ? uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS : uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
+    uhd::stream_cmd_t stream_cmd(num_rx_samps > max_rx_packet_size or num_rx_samps == 0 ? uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS : uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
 
-    stream_cmd.num_samps = num_rx_samps;
+    stream_cmd.num_samps = num_rx_samps == 0 ? max_rx_packet_size : num_rx_samps;
 
     auto usrp_now = usrp->get_time_now();
 
@@ -363,6 +363,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     }
     else
     {
+        std::cerr << "rx_time - current USRP time = " << (rx_time - usrp_now).get_real_secs() * 1e6 << " microsecs)." << std::endl;
         stream_cmd.stream_now = false;
         stream_cmd.time_spec = rx_time;
     }
@@ -373,21 +374,21 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     double rx_delay = stream_cmd.stream_now ? 0.0 : (rx_time - usrp_now).get_real_secs();
     double timeout = burst_pkt_time + rx_delay;
 
-    std::vector<std::complex<float>> rx_samples(num_rx_samps);
-    std::vector<std::complex<float>> buff;
+    std::vector<std::complex<float>> rx_samples;
+    std::vector<std::complex<float>> buff(max_rx_packet_size);
+    bool reception_complete = false;
 
     size_t num_acc_samps = 0;
 
-    while (num_acc_samps < num_rx_samps and not stop_signal_called)
+    while (not reception_complete and not stop_signal_called)
     {
-        size_t size_rx = std::min(num_rx_samps - num_acc_samps, max_rx_packet_size);
+        size_t size_rx = num_rx_samps == 0 ? max_rx_packet_size : std::min(num_rx_samps - num_acc_samps, max_rx_packet_size);
 
-        buff.clear();
-        buff.resize(size_rx);
         size_t num_curr_rx_samps;
+
         try
         {
-            num_curr_rx_samps = rx_streamer->recv(&buff.front(), buff.size(), md, timeout, false);
+            num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
         }
         catch (uhd::io_error e)
         {
@@ -409,19 +410,31 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
             std::cerr << error << std::endl;
         }
 
-        std::copy(buff.begin(), buff.end(), rx_samples.begin() + num_acc_samps);
+        // std::copy(buff.begin(), buff.end(), rx_samples.begin() + num_acc_samps);
+        rx_samples.insert(rx_samples.end(), buff.begin(), buff.begin() + num_curr_rx_samps);
 
         num_acc_samps += num_curr_rx_samps;
+
+        if (num_rx_samps == 0)
+        {
+            if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
+                reception_complete = true;
+        }
+        else
+        {
+            if (num_acc_samps >= num_rx_samps)
+                reception_complete = true;
+        }
     }
 
     stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
     rx_streamer->issue_stream_cmd(stream_cmd);
 
-    if (num_acc_samps < num_rx_samps)
+    if (num_rx_samps > 0 and num_acc_samps < num_rx_samps)
     {
         std::cerr << "Not all packets received!" << std::endl;
     }
-    else
+    else if (rx_samples.size() > 0)
     {
         success = true;
     }
