@@ -54,7 +54,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
     // for transmitting one ref signal before the information signal
-    auto ref_zfc_seq = generateZadoffChuSequence(parser.getValue_int("ref-N-zfc"), parser.getValue_int("ref-m-zfc"));
+    auto ref_zfc_seq = generateZadoffChuSequence(parser.getValue_int("Ref-N-zfc"), parser.getValue_int("Ref-m-zfc"));
 
     size_t round = 1;
     bool is_save_stream_data = false;
