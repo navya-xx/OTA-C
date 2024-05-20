@@ -109,8 +109,8 @@ void PeakDetectionClass::reset()
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
-    ref_signal.clear();
-    ref_signal.resize(ref_seq_len * (total_num_peaks + 1));
+    // ref_signal.clear();
+    // ref_signal.resize(ref_seq_len * (total_num_peaks + 1));
 }
 
 void PeakDetectionClass::reset_peaks_counter()
