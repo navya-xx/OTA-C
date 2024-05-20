@@ -22,6 +22,8 @@ PeakDetectionClass::PeakDetectionClass(
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
+    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
+
     prev_peak_index = 0;
     peaks_count = 0;
     noise_counter = 0;
@@ -107,6 +109,9 @@ void PeakDetectionClass::reset()
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
+    ref_signal.clear();
+    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
+
     if (DEBUG)
         std::cout << "Reset PeakDetectionClass object!" << std::endl;
 }
@@ -116,6 +121,9 @@ void PeakDetectionClass::reset_peaks_counter()
     peaks_count = 0;
     samples_from_first_peak = 0;
     prev_peak_index = 0;
+
+    ref_signal.clear();
+    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
     // curr_pnr_threshold = pnr_threshold;
     // noise_level = init_noise_level;
 
@@ -301,6 +309,24 @@ float PeakDetectionClass::avg_of_peak_vals()
     return e2e_est_ref_sig_amp;
 }
 
+float PeakDetectionClass::est_ch_pow_from_capture_ref_sig()
+{
+    float sig_ampl = 0.0;
+    size_t counter = 0;
+
+    for (auto &ref_symb : ref_signal)
+    {
+        float elem = std::abs(ref_symb);
+        if (elem > 0)
+        {
+            sig_ampl += elem;
+            ++counter;
+        }
+    }
+
+    return sig_ampl / counter;
+}
+
 uhd::time_spec_t PeakDetectionClass::get_sync_time()
 {
     return peak_times[peaks_count - sync_with_peak_from_last];
@@ -402,6 +428,9 @@ void PeakDetectionClass::save_complex_data_into_buffer(const std::complex<float>
         save_buffer_complex.pop_front();
         save_buffer_complex.push_back(sample);
     }
+
+    ref_signal.pop_front();
+    ref_signal.push_back(sample);
 }
 
 void PeakDetectionClass::save_data_to_file(const std::string &file)

@@ -35,6 +35,7 @@ private:
     size_t *peak_indices;
     float *peak_vals;
     uhd::time_spec_t *peak_times;
+    std::deque<std::complex<float>> ref_signal;
 
     size_t total_num_peaks;
 
@@ -63,6 +64,7 @@ public:
     float prev_peak_val;
     size_t samples_from_first_peak;
     bool detection_flag;
+
     std::deque<float> save_buffer_float;
     std::deque<std::complex<float>> save_buffer_complex;
     bool is_save_buffer_complex;
@@ -88,6 +90,7 @@ public:
     void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
 
     float avg_of_peak_vals();
+    float est_ch_pow_from_capture_ref_sig();
     uhd::time_spec_t get_sync_time();
 
     // ~PeakDetectionClass();

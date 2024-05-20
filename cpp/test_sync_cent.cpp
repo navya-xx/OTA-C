@@ -109,11 +109,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // save data from tx_time - save_extra_seq_mul * test_signal_duration to end of test signal + save_extra_seq_mul * test_signal_duration
     size_t num_rx_samps = test_tx_reps * test_signal_len + 2 * save_extra_seq_mul * test_signal_len;
 
-    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
+    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now(); // start first transmission immediately
 
     int iter_counter = 1;
 
-    while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time and iter_counter == 1))
+    while ((not stop_signal_called) and (not(std::chrono::steady_clock::now() > stop_time)))
     {
 
         if (usrp_classobj.transmission(buff, tx_timer, false))
@@ -127,13 +127,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
 
         // uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + acc_buff_len)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_seq_mul * test_signal_len));
-        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(buff.size() * sample_duration) + uhd::time_spec_t(10 / 1e3);
+        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(buff.size() * sample_duration) + uhd::time_spec_t(1 / 1e3);
 
         std::cout << currentDateTime() << " -- starting reception" << std::endl;
 
         num_rx_samps = 0.0;
 
-        auto rx_symbols = usrp_classobj.reception(num_rx_samps, double((csd_wait_time_millisec - 90) / 1e3), rx_time);
+        auto rx_symbols = usrp_classobj.reception(num_rx_samps, double((csd_wait_time_millisec - 100) / 1e3), rx_time);
 
         if (num_rx_samps > 0 and rx_symbols.size() < num_rx_samps)
         {
@@ -151,7 +151,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         save_complex_data_to_file(filename_it, rx_symbols);
 
-        tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(90 / 1e3);
+        tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(100 / 1e3);
 
         ++iter_counter;
     }

@@ -184,14 +184,14 @@ float CycleStartDetector::est_e2e_ref_sig_amp()
     //     }
     // }
 
-    float e2e_ref_sig_amp = peak_det_obj_ref.avg_of_peak_vals();
-    // std::cout << std::endl
-    //           << "\t\t -> Est. ch-pow (" << e2e_ref_sig_amp << ", " << max_val << ")" << std::endl
-    //           << std::endl;
+    float e2e_ref_sig_ampl_1 = peak_det_obj_ref.avg_of_peak_vals();
+    float e2e_ref_sig_ampl_2 = peak_det_obj_ref.est_ch_pow_from_capture_ref_sig();
+    std::cout << std::endl
+              << "\t\t -> Est. ch-pow 1 = " << e2e_ref_sig_ampl_1 << std::endl
+              << "\t\t -> Est. ch-pow 2 = " << e2e_ref_sig_ampl_2 << std::endl
+              << std::endl;
 
-    std::cout << "Est. e2e ref signal amp = " << e2e_ref_sig_amp << std::endl;
-
-    return e2e_ref_sig_amp;
+    return e2e_ref_sig_ampl_2;
 }
 
 // void CycleStartDetector::capture_ch_est_seq()
