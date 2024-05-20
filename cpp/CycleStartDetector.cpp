@@ -58,7 +58,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     // insert first timer
     uhd::time_spec_t next_time = time; // USRP time of first packet
 
-    std::cout << "\t\t --> Produce ---" << std::endl;
+    // std::cout << "\t\t --> Produce ---" << std::endl;
     // insert samples into the buffer
     for (const auto &sample : samples)
     {
@@ -69,7 +69,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
         next_time += rx_sample_duration;
     }
 
-    std::cout << "\t\t --> Produce -- Done ---" << std::endl;
+    // std::cout << "\t\t --> Produce -- Done ---" << std::endl;
 
     num_produced += samples_size;
 
@@ -130,12 +130,12 @@ void CycleStartDetector::correlation_operation()
 
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
-        std::cout << "\t\t --> Process corr -- Done ---" << std::endl;
+        // std::cout << "\t\t --> Process corr -- Done ---" << std::endl;
 
         // peak_det_obj_ref.save_float_data_into_buffer(abs_val);
         peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
 
-        std::cout << "\t\t --> Save complex sample -- Done ---" << std::endl;
+        // std::cout << "\t\t --> Save complex sample -- Done ---" << std::endl;
 
         if (update_noise_level)
             sum_ampl += abs_val;
