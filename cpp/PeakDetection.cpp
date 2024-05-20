@@ -408,46 +408,16 @@ void PeakDetectionClass::save_data_to_file(const std::string &file)
 {
     if (save_buffer_flag)
     {
-        if (DEBUG)
-            std::cout << "Saving data to file " << file << std::endl;
-
-        std::ofstream outfile(file, std::ios::out | std::ios::binary);
-
-        // Check if the file was opened successfully
-        if (!outfile.is_open())
-        {
-            std::cerr << "Error: Could not open file for writing." << std::endl;
-            return;
-        }
-
         if (is_save_buffer_complex)
-        { // Write the size of the deque to the file
-            size_t size = save_buffer_complex.size();
-            outfile.write(reinterpret_cast<char *>(&size), sizeof(size));
-
-            // Write each complex number (real and imaginary parts)
-            for (const auto &complex_value : save_buffer_complex)
-            {
-                float real_val = complex_value.real();
-                float complex_val = complex_value.imag();
-                outfile.write(reinterpret_cast<char *>(&real_val), sizeof(complex_value.real()));
-                outfile.write(reinterpret_cast<char *>(&complex_val), sizeof(complex_value.imag()));
-            }
+        {
+            std::vector<std::complex<float>> vector_buffer_complex(save_buffer_complex.begin(), save_buffer_complex.end());
+            save_complex_data_to_file(file, vector_buffer_complex);
         }
         else
         {
-            size_t size = save_buffer_float.size();
-            outfile.write(reinterpret_cast<char *>(&size), sizeof(size));
-
-            // Write each complex number (real and imaginary parts)
-            for (float &float_value : save_buffer_float)
-            {
-                outfile.write(reinterpret_cast<char *>(&float_value), sizeof(float_value));
-            }
+            std::vector<float> vector_buffer_float(save_buffer_float.begin(), save_buffer_float.end());
+            save_float_data_to_file(file, vector_buffer_float);
         }
-
-        outfile.close();
-        std::cout << "Data saved successfully to " << file << "." << std::endl;
     }
 }
 

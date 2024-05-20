@@ -145,13 +145,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         // save received data into file
         std::string filename_it = filename + "_" + std::to_string(iter_counter) + ".dat";
 
-        std::ofstream outfile;
-        outfile.open(filename_it.c_str(), std::ofstream::binary);
-        if (outfile.is_open())
-        {
-            outfile.write((const char *)&rx_symbols.front(), num_rx_samps * sizeof(std::complex<float>));
-            outfile.close();
-        }
+        save_complex_data_to_file(filename_it, rx_symbols);
 
         tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(100 / 1e3);
 

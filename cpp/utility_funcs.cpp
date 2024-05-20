@@ -204,3 +204,60 @@ float calculatePathLoss(const float &distance, const float &frequency)
 
     return pathLoss;
 }
+
+void save_complex_data_to_file(const std::string &file, const std::vector<std::complex<float>> &save_buffer_complex)
+{
+    if (DEBUG)
+        std::cout << "Saving complex data to file " << file << std::endl;
+
+    std::ofstream outfile(file, std::ios::out | std::ios::binary);
+
+    // Check if the file was opened successfully
+    if (!outfile.is_open())
+    {
+        std::cerr << "Error: Could not open file for writing." << std::endl;
+        return;
+    }
+
+    size_t size = save_buffer_complex.size();
+    outfile.write(reinterpret_cast<char *>(&size), sizeof(size));
+
+    // Write each complex number (real and imaginary parts)
+    for (const auto &complex_value : save_buffer_complex)
+    {
+        float real_val = complex_value.real();
+        float complex_val = complex_value.imag();
+        outfile.write(reinterpret_cast<char *>(&real_val), sizeof(complex_value.real()));
+        outfile.write(reinterpret_cast<char *>(&complex_val), sizeof(complex_value.imag()));
+    }
+
+    outfile.close();
+    std::cout << size << " complex samples saved successfully to " << file << "." << std::endl;
+}
+
+void save_float_data_to_file(const std::string &file, const std::vector<float> &save_buffer_float)
+{
+    if (DEBUG)
+        std::cout << "Saving float data to file " << file << std::endl;
+
+    std::ofstream outfile(file, std::ios::out | std::ios::binary);
+
+    // Check if the file was opened successfully
+    if (!outfile.is_open())
+    {
+        std::cerr << "Error: Could not open file for writing." << std::endl;
+        return;
+    }
+
+    size_t size = save_buffer_float.size();
+    outfile.write(reinterpret_cast<char *>(&size), sizeof(size));
+
+    // Write each complex number (real and imaginary parts)
+    for (const float &float_value : save_buffer_float)
+    {
+        float _float_value = float_value;
+        outfile.write(reinterpret_cast<char *>(&_float_value), sizeof(float_value));
+    }
+    outfile.close();
+    std::cout << size << " float samples saved successfully to " << file << "." << std::endl;
+}
