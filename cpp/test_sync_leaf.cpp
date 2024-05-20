@@ -146,52 +146,21 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             float e2e_est_ref_sig_amp = csd_obj.e2e_est_ref_sig_amp;
             // adjust tx/rx gains based on tx_scaling factor -> too low, decrease gain, or vice-versa
             // usrp_classobj.gain_adjustment(e2e_est_ref_sig_amp, min_path_loss_dB);
+
             float tx_scaling_factor = 1.0; // min_e2e_amp / e2e_est_ref_sig_amp;
             std::cout << "Est e2e amp = " << e2e_est_ref_sig_amp << ", Min e2e amp = " << min_e2e_amp << std::endl;
+
+            std::vector<std::complex<float>> tx_seq;
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
-            float tx_duration = tx_zfc_seq.size() / usrp_classobj.tx_rate;
 
-            // start tx process
-            uhd::tx_metadata_t txmd;
-            txmd.start_of_burst = true;
-            txmd.end_of_burst = false;
-            float timeout;
+            for (int k = 0; k < csd_test_tx_reps; ++k)
+            {
+                tx_seq.insert(tx_seq.end(), tx_zfc_seq.begin(), tx_zfc_seq.end());
+            }
 
-            // match time at both leaf and cent
             uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
-            if (tx_start_timer < usrp_classobj.usrp->get_time_now())
-            {
-                std::cerr << "tx-wait-microsec is not enough. Consider increasing tx-wait-microsec!" << std::endl;
-                txmd.has_time_spec = true;
-                timeout = tx_duration + 0.05;
-            }
-            else
-            {
-                txmd.has_time_spec = true;
-                txmd.time_spec = tx_start_timer;
-                timeout = (tx_start_timer - usrp_classobj.usrp->get_time_now()).get_real_secs() + tx_duration;
-            }
 
-            for (size_t i = 0; i < csd_test_tx_reps; ++i)
-            {
-                if (stop_signal_called)
-                    return;
-
-                size_t num_tx_samps = tx_stream->send(&tx_zfc_seq.front(), tx_zfc_seq.size(), txmd, timeout);
-                timeout = tx_duration;
-                txmd.start_of_burst = false;
-                txmd.has_time_spec = false;
-
-                if (num_tx_samps < tx_zfc_seq.size())
-                    std::cerr << "Transmission " << i << " timed-out!!" << std::endl;
-                else
-                    std::cout << "Transmission number " << i << " over." << std::endl;
-
-                // tx_start_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(tx_reps_gap);
-            }
-
-            txmd.end_of_burst = true;
-            tx_stream->send("", 0, txmd);
+            usrp_classobj.transmission(tx_seq, tx_start_timer, true);
 
             std::cout << "CSD Test TX complete!" << std::endl
                       << std::endl;
