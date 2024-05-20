@@ -128,6 +128,8 @@ void CycleStartDetector::correlation_operation()
 
         abs_val = std::abs(corr) / N_zfc;
 
+        std::cout << "\t\t --> Corr operation, samples correlated, corr value --- " << abs_val << std::endl;
+
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
         // std::cout << "\t\t --> Process corr -- Done ---" << std::endl;
