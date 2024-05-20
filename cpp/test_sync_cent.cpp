@@ -127,11 +127,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
 
         // uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + acc_buff_len)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_seq_mul * test_signal_len));
-        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(buff.size() * sample_duration) + uhd::time_spec_t(1000 / 1e6);
+        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(buff.size() * sample_duration) + uhd::time_spec_t(10 / 1e3);
 
         std::cout << currentDateTime() << " -- starting reception" << std::endl;
 
-        auto rx_symbols = usrp_classobj.reception(0.0, double((csd_wait_time_millisec - 100) / 1e3), rx_time);
+        auto rx_symbols = usrp_classobj.reception(0.0, double((csd_wait_time_millisec - 90) / 1e3), rx_time);
 
         if (rx_symbols.size() < num_rx_samps)
         {
@@ -149,7 +149,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         save_complex_data_to_file(filename_it, rx_symbols);
 
-        tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(100 / 1e3);
+        tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(90 / 1e3);
 
         ++iter_counter;
     }
