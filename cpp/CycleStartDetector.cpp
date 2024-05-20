@@ -55,7 +55,6 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     cv_producer.wait(lock, [this, &samples_size]
                      { return (capacity - num_produced >= samples_size); }); // Wait for enough space to produce
 
-    std::cout << "Produce---" << std::endl;
     // insert first timer
     uhd::time_spec_t next_time = time; // USRP time of first packet
 
@@ -83,7 +82,6 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     cv_consumer.wait(lock, [this, &csd_success_signal]
                      { return (num_produced >= min_num_produced) and (not csd_success_signal); });
 
-    std::cout << "Consume---" << std::endl;
     if (not peak_det_obj_ref.detection_flag)
         correlation_operation();
 
@@ -144,7 +142,7 @@ void CycleStartDetector::correlation_operation()
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
         // peak_det_obj_ref.save_float_data_into_buffer(abs_val);
-        peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
+        // peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
 
         if (update_noise_level)
             sum_ampl += abs_val;
