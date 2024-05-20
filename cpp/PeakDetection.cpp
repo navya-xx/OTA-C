@@ -109,6 +109,9 @@ void PeakDetectionClass::reset()
     peak_vals = new float[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
+    ref_signal.clear();
+    ref_signal.resize(ref_seq_len * (total_num_peaks + 1), std::complex<float>(0.0, 0.0));
+
     if (DEBUG)
         std::cout << "Reset PeakDetectionClass object!" << std::endl;
 }
@@ -418,14 +421,14 @@ void PeakDetectionClass::save_float_data_into_buffer(const float &sample)
 
 void PeakDetectionClass::save_complex_data_into_buffer(const std::complex<float> &sample)
 {
+    ref_signal.pop_front();
+    ref_signal.push_back(sample);
+
     if (save_buffer_flag)
     {
         save_buffer_complex.pop_front();
         save_buffer_complex.push_back(sample);
     }
-
-    ref_signal.pop_front();
-    ref_signal.push_back(sample);
 }
 
 void PeakDetectionClass::save_data_to_file(const std::string &file)
