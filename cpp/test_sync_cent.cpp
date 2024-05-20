@@ -65,6 +65,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     USRP_class usrp_classobj(parser);
     usrp_classobj.initialize();
 
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     // prepare to transmit ZFC seq
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t m_zfc = parser.getValue_int("Ref-m-zfc");
