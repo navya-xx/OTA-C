@@ -53,6 +53,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     const auto start_time = std::chrono::steady_clock::now();
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
+    // for transmitting one ref signal before the information signal
+    auto ref_zfc_seq = generateZadoffChuSequence(parser.getValue_int("ref-N-zfc"), parser.getValue_int("ref-m-zfc"));
+
     size_t round = 1;
     bool is_save_stream_data = false;
     if (parser.getValue_str("is-save-stream-data") == "true")
@@ -151,6 +154,8 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             std::cout << "Est e2e amp = " << e2e_est_ref_sig_amp << ", Min e2e amp = " << min_e2e_amp << std::endl;
 
             std::vector<std::complex<float>> tx_seq;
+            tx_seq.insert(tx_seq.end(), ref_zfc_seq.begin(), ref_zfc_seq.end());
+
             auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
 
             for (int k = 0; k < csd_test_tx_reps; ++k)
