@@ -97,7 +97,6 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
         {
             try
             {
-                std::cout << "Receiving---" << std::endl;
                 num_rx_samps = rx_stream->recv(&buff.front(), buff.size(), md, recv_timeout, false);
                 recv_timeout = burst_pkt_time;
             }
@@ -130,7 +129,6 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             if (is_save_stream_data)
                 save_stream_to_file(save_stream_file, outfile, buff);
 
-            std::cout << "Producing---" << std::endl;
             csd_obj.produce(buff, num_rx_samps, md.time_spec);
         }
 
