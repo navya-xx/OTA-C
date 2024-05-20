@@ -113,7 +113,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     int iter_counter = 1;
 
-    while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
+    while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time and iter_counter == 1))
     {
 
         if (usrp_classobj.transmission(buff, tx_timer, false))
