@@ -58,6 +58,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     // insert first timer
     uhd::time_spec_t next_time = time; // USRP time of first packet
 
+    std::cout << "\t\t --> Produce ---" << std::endl;
     // insert samples into the buffer
     for (const auto &sample : samples)
     {
@@ -67,6 +68,8 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
         rear = (rear + 1) % capacity;
         next_time += rx_sample_duration;
     }
+
+    std::cout << "\t\t --> Produce -- Done ---" << std::endl;
 
     num_produced += samples_size;
 
@@ -87,8 +90,6 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
     if (peak_det_obj_ref.detection_flag)
     {
-        // if (ch_est_done)
-        // {
         csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
         e2e_est_ref_sig_amp = est_e2e_ref_sig_amp();
 
@@ -99,16 +100,6 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         csd_success_signal = true;
         cv_producer.notify_one();
         return true;
-        // }
-        // else
-        // {
-        //     capture_ch_est_seq();
-        //     front = (front + min_num_produced) % capacity;
-        //     num_produced = std::max((num_produced - min_num_produced), size_t(0));
-        //     min_num_produced = std::min(ch_seq_len, parser.getValue_int("max-rx-packet-size"));
-        //     cv_producer.notify_one();
-        //     return false;
-        // }
     }
     else
     {
@@ -139,8 +130,12 @@ void CycleStartDetector::correlation_operation()
 
         found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
 
+        std::cout << "\t\t --> Process corr -- Done ---" << std::endl;
+
         // peak_det_obj_ref.save_float_data_into_buffer(abs_val);
         peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
+
+        std::cout << "\t\t --> Save complex sample -- Done ---" << std::endl;
 
         if (update_noise_level)
             sum_ampl += abs_val;

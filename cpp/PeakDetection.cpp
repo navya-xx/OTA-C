@@ -100,6 +100,7 @@ void PeakDetectionClass::reset()
     detection_flag = false;
     noise_level = init_noise_level;
     noise_counter = 0;
+
     // max_pnr = 0;
 
     delete[] peak_indices;
@@ -122,8 +123,7 @@ void PeakDetectionClass::reset_peaks_counter()
     // curr_pnr_threshold = pnr_threshold;
     // noise_level = init_noise_level;
 
-    if (DEBUG)
-        std::cout << "\t\t -> Reset peaks counter" << std::endl;
+    std::cout << "\t\t -> Reset peaks counter" << std::endl;
 }
 
 void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time)
@@ -225,7 +225,7 @@ void PeakDetectionClass::updatePrevPeak()
 
 bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
 {
-
+    std::cout << "\t\t --> Process corr ---" << std::endl;
     if ((abs_corr_val / noise_level) > curr_pnr_threshold)
     {
         // First peak

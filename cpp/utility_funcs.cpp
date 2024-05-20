@@ -124,11 +124,6 @@ void save_stream_to_file(const std::string &filename, std::ofstream &outfile, st
         outfile.write(reinterpret_cast<char *>(&real_val), sizeof(complex_value.real()));
         outfile.write(reinterpret_cast<char *>(&complex_val), sizeof(complex_value.imag()));
     }
-
-    if (outfile.is_open())
-    {
-        outfile.close();
-    }
 }
 // Function to generate a vector of complex random variables on the unit circle
 std::vector<std::complex<float>> generateUnitCircleRandom(size_t size, float scale)
