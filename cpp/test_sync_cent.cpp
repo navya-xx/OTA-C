@@ -131,9 +131,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         std::cout << currentDateTime() << " -- starting reception" << std::endl;
 
-        auto rx_symbols = usrp_classobj.reception(0.0, double((csd_wait_time_millisec - 90) / 1e3), rx_time);
+        num_rx_samps = 0.0;
 
-        if (rx_symbols.size() < num_rx_samps)
+        auto rx_symbols = usrp_classobj.reception(num_rx_samps, double((csd_wait_time_millisec - 90) / 1e3), rx_time);
+
+        if (num_rx_samps > 0 and rx_symbols.size() < num_rx_samps)
         {
             std::cerr << "Reception failure!" << std::endl;
             return EXIT_FAILURE;

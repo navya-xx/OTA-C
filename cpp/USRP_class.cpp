@@ -363,7 +363,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     }
     else
     {
-        std::cerr << "rx_time - current USRP time = " << (rx_time - usrp_now).get_real_secs() * 1e6 << " microsecs)." << std::endl;
+        std::cerr << "rx_time - current USRP time = " << (rx_time - usrp_now).get_real_secs() * 1e6 << " microsecs." << std::endl;
         stream_cmd.stream_now = false;
         stream_cmd.time_spec = rx_time;
     }
