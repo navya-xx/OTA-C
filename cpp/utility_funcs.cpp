@@ -126,12 +126,12 @@ void save_stream_to_file(const std::string &filename, std::ofstream &outfile, st
     }
 }
 // Function to generate a vector of complex random variables on the unit circle
-std::vector<std::complex<float>> generateUnitCircleRandom(size_t size, float scale)
+std::vector<std::complex<float>> generateUnitCircleRandom(size_t rand_seed, size_t size, float scale)
 {
     // Seed for random number generation
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.0, 2 * M_PI); // Uniform distribution for phase
+    // std::random_device rd;
+    std::mt19937 generator(rand_seed);
+    std::uniform_real_distribution<> distribution(0.0, 2 * M_PI); // Uniform distribution for phase
 
     // Vector to store complex numbers
     std::vector<std::complex<float>> complexVector;
@@ -139,7 +139,7 @@ std::vector<std::complex<float>> generateUnitCircleRandom(size_t size, float sca
     // Generate random phases and construct complex numbers
     for (int i = 0; i < size; ++i)
     {
-        float phase = dis(gen);
+        float phase = distribution(generator);
         complexVector.emplace_back(std::polar(scale, phase)); // Construct complex number with unit magnitude and phase
     }
 

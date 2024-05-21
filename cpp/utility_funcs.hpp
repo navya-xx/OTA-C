@@ -47,7 +47,7 @@ void print_duration(std::chrono::steady_clock::duration &time_duration);
 
 void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream);
 
-std::vector<std::complex<float>> generateUnitCircleRandom(size_t size, float scale);
+std::vector<std::complex<float>> generateUnitCircleRandom(size_t rand_seed, size_t size, float scale);
 
 std::string currentDateTime();
 

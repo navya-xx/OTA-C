@@ -33,6 +33,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
     // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
     float total_runtime = parser.getValue_float("duration");
+    size_t rand_seed = parser.getValue_int("rand-seed");
 
     // float max_leaf_dist = parser.getValue_float("max-leaf-dist");
     // float cent_tx_gain = parser.getValue_float("cent-tx-gain");
@@ -55,6 +56,9 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
     // for transmitting one ref signal before the information signal
     auto ref_zfc_seq = generateZadoffChuSequence(parser.getValue_int("Ref-N-zfc"), parser.getValue_int("Ref-m-zfc"));
+    auto tx_zfc_seq = generateUnitCircleRandom(rand_seed, tx_N_zfc, 1.0);
+
+    save_complex_data_to_file(homeDirStr + "/OTA-C/cpp/storage/tx_UnitCircleRandom_seq.dat", tx_zfc_seq);
 
     size_t round = 1;
     bool is_save_stream_data = false;
@@ -162,7 +166,13 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
             std::vector<std::complex<float>> tx_seq;
             tx_seq.insert(tx_seq.end(), ref_zfc_seq.begin(), ref_zfc_seq.end());
 
-            auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
+            std::vector<std::complex<float>> empty_seq(200);
+            tx_seq.insert(tx_seq.end(), empty_seq.begin(), empty_seq.end());
+
+            // auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
+            if (tx_scaling_factor != 1.0)
+                for (auto &elem : tx_zfc_seq)
+                    elem *= tx_scaling_factor;
 
             for (int k = 0; k < csd_test_tx_reps; ++k)
             {

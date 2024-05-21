@@ -71,6 +71,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t m_zfc = parser.getValue_int("Ref-m-zfc");
     size_t R_zfc = parser.getValue_int("Ref-R-zfc");
+    size_t rand_seed = parser.getValue_int("rand-seed");
 
     auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
 
@@ -85,7 +86,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (acc_buff_len > 0)
     {
         // pre- and post- append buff with some random signal
-        auto app_buff = generateUnitCircleRandom(2 * N_zfc, 1.0);
+        auto app_buff = generateUnitCircleRandom(rand_seed, 2 * N_zfc, 1.0);
 
         buff.insert(buff.begin(), app_buff.begin(), app_buff.end());
         buff.insert(buff.end(), app_buff.begin(), app_buff.end());
