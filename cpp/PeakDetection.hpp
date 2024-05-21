@@ -49,6 +49,8 @@ private:
 
     bool save_buffer_flag;
 
+    bool is_update_pnr_threshold;
+
     void insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time);
     void update_pnr_threshold();
     void updatePrevPeak();

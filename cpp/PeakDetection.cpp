@@ -14,6 +14,11 @@ PeakDetectionClass::PeakDetectionClass(
     curr_pnr_threshold = pnr_threshold;
     max_pnr = 0.0;
 
+    if (parser.getValue_str("update-pnr-threshold") == "true")
+        is_update_pnr_threshold = true;
+    else
+        is_update_pnr_threshold = false;
+
     peak_det_tol = parser.getValue_int("peak-det-tol");
     max_peak_mul = parser.getValue_float("max-peak-mul");
     sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
@@ -194,7 +199,8 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
     peak_vals[peaks_count] = peak_val;
     peak_times[peaks_count] = peak_time;
 
-    update_pnr_threshold();
+    if (is_update_pnr_threshold)
+        update_pnr_threshold();
 
     if (DEBUG)
         std::cout << currentDateTime() << "***Inserted new Peak, count = " << peaks_count << ", PNR = " << peak_val / noise_level << ", threshold = " << curr_pnr_threshold << ", samples from last peak = " << samples_from_first_peak - prev_peak_index << std::endl;
