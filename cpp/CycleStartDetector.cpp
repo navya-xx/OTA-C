@@ -29,7 +29,7 @@ CycleStartDetector::CycleStartDetector(
         update_noise_level = false;
 
     if (capacity < num_samp_corr + N_zfc)
-        throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2). Consider increasing Ref-N-zfc value!");
+        throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2)!");
 
     samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
     timer.resize(capacity, uhd::time_spec_t(0.0));
@@ -42,8 +42,8 @@ void CycleStartDetector::reset()
     rear = 0;
     min_num_produced = num_samp_corr + N_zfc;
     samples_buffer.clear();
-    timer.clear();
     samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
+    timer.clear();
     timer.resize(capacity, uhd::time_spec_t(0.0));
     prev_timer = uhd::time_spec_t(0.0);
 }
@@ -174,13 +174,13 @@ float CycleStartDetector::est_e2e_ref_sig_amp()
     // }
 
     float e2e_ref_sig_ampl_1 = peak_det_obj_ref.avg_of_peak_vals();
-    float e2e_ref_sig_ampl_2 = peak_det_obj_ref.est_ch_pow_from_capture_ref_sig();
+    // float e2e_ref_sig_ampl_2 = peak_det_obj_ref.est_ch_pow_from_capture_ref_sig();
     std::cout << std::endl
               << "\t\t -> Est. ch-pow 1 = " << e2e_ref_sig_ampl_1 << std::endl
-              << "\t\t -> Est. ch-pow 2 = " << e2e_ref_sig_ampl_2 << std::endl
+              //   << "\t\t -> Est. ch-pow 2 = " << e2e_ref_sig_ampl_2 << std::endl
               << std::endl;
 
-    return e2e_ref_sig_ampl_2;
+    return e2e_ref_sig_ampl_1;
 }
 
 // void CycleStartDetector::capture_ch_est_seq()
