@@ -1,20 +1,5 @@
 #include "utility_funcs.hpp"
 
-// Function to generate Zadoff-Chu sequence
-std::vector<std::complex<float>> generateZadoffChuSequence(size_t N, int m, float scale)
-{
-    std::vector<std::complex<float>> sequence(N);
-
-    // Calculate sequence
-    for (size_t n = 0; n < N; ++n)
-    {
-        float phase = -M_PI * m * n * (n + 1) / N;
-        sequence[n] = scale * std::exp(std::complex<float>(0, phase));
-    }
-
-    return sequence;
-}
-
 inline auto time_delta(const start_time_type &ref_time)
 {
     return std::chrono::steady_clock::now() - ref_time;
@@ -125,26 +110,6 @@ void save_stream_to_file(const std::string &filename, std::ofstream &outfile, st
         outfile.write(reinterpret_cast<char *>(&complex_val), sizeof(complex_value.imag()));
     }
 }
-// Function to generate a vector of complex random variables on the unit circle
-std::vector<std::complex<float>> generateUnitCircleRandom(size_t rand_seed, size_t size, float scale)
-{
-    // Seed for random number generation
-    // std::random_device rd;
-    std::mt19937 generator(rand_seed);
-    std::uniform_real_distribution<> distribution(0.0, 2 * M_PI); // Uniform distribution for phase
-
-    // Vector to store complex numbers
-    std::vector<std::complex<float>> complexVector;
-
-    // Generate random phases and construct complex numbers
-    for (int i = 0; i < size; ++i)
-    {
-        float phase = distribution(generator);
-        complexVector.emplace_back(std::polar(scale, phase)); // Construct complex number with unit magnitude and phase
-    }
-
-    return complexVector;
-}
 
 std::string currentDateTime()
 {
@@ -200,12 +165,17 @@ float calculatePathLoss(const float &distance, const float &frequency)
     return pathLoss;
 }
 
-void save_complex_data_to_file(const std::string &file, const std::vector<std::complex<float>> &save_buffer_complex)
+void save_complex_data_to_file(const std::string &file, const std::vector<std::complex<float>> &save_buffer_complex, bool is_append)
 {
     if (DEBUG)
         std::cout << "Saving complex data to file " << file << std::endl;
 
-    std::ofstream outfile(file, std::ios::out | std::ios::binary);
+    std::ofstream outfile;
+
+    if (is_append)
+        outfile.open(file, std::ios::binary | std::ios::app);
+    else
+        outfile.open(file, std::ios::out | std::ios::binary);
 
     // Check if the file was opened successfully
     if (!outfile.is_open())

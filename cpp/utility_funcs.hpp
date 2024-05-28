@@ -57,6 +57,6 @@ float dbToAmplitude(float dB);
 float dbToPower(float dB);
 float calculatePathLoss(const float &distance, const float &frequency);
 
-void save_complex_data_to_file(const std::string &file, const std::vector<std::complex<float>> &save_buffer_complex);
+void save_complex_data_to_file(const std::string &file, const std::vector<std::complex<float>> &save_buffer_complex, bool is_append = false);
 
 void save_float_data_to_file(const std::string &file, const std::vector<float> &save_buffer_float);

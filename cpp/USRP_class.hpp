@@ -42,7 +42,12 @@ public:
 
     // void gain_adjustment(const float &est_ch_amp, const float &min_path_loss_dB);
 
-    std::vector<std::complex<float>> reception(const size_t &num_rx_samps = 0, const float &duration = 0.0, const uhd::time_spec_t &rx_time = uhd::time_spec_t(0.0));
+    std::vector<std::complex<float>> reception(
+        const size_t &num_rx_samps = 0,
+        const float &duration = 0.0,
+        const uhd::time_spec_t &rx_time = uhd::time_spec_t(0.0),
+        std::string filename = "",
+        bool is_save_to_file = false);
 
     bool stop_signal_called = false;
     float init_background_noise;

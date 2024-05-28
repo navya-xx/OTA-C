@@ -145,10 +145,6 @@ void USRP_class::initialize()
     std::cout << boost::format("Setting Tx/Rx Rate: %f Msps...") % (rate / 1e6) << std::endl;
     usrp->set_tx_rate(rate);
     usrp->set_rx_rate(rate, channel);
-    std::cout << boost::format("Actual Tx Rate: %f Msps...") % (usrp->get_tx_rate(channel) / 1e6) << std::endl;
-    std::cout << boost::format("Actual Rx Rate: %f Msps...") % (usrp->get_rx_rate(channel) / 1e6) << std::endl;
-    tx_rate = usrp->get_tx_rate(channel);
-    rx_rate = usrp->get_rx_rate(channel);
 
     // set the center frequency
     float freq = parser.getValue_float("freq");
@@ -158,9 +154,6 @@ void USRP_class::initialize()
     uhd::tune_request_t tune_request(freq, lo_offset);
     usrp->set_rx_freq(tune_request, channel);
     usrp->set_tx_freq(tune_request, channel);
-    std::cout << boost::format("Actual Rx Freq: %f MHz...") % (usrp->get_rx_freq(channel) / 1e6) << std::endl;
-    std::cout << boost::format("Actual Tx Freq: %f MHz...") % (usrp->get_tx_freq(channel) / 1e6) << std::endl;
-    carrier_freq = usrp->get_rx_freq(channel);
 
     // set tx/rx gains
     float _rx_gain, _tx_gain;
@@ -178,15 +171,11 @@ void USRP_class::initialize()
     {
         std::cout << boost::format("Setting RX Gain: %f dB...") % _rx_gain << std::endl;
         usrp->set_rx_gain(_rx_gain, channel);
-        rx_gain = usrp->get_rx_gain(channel);
-        std::cout << boost::format("Actual Rx Gain: %f dB...") % rx_gain << std::endl;
     }
     if (_tx_gain >= 0.0)
     {
         std::cout << boost::format("Setting TX Gain: %f dB...") % _tx_gain << std::endl;
         usrp->set_tx_gain(_tx_gain, channel);
-        tx_gain = usrp->get_tx_gain(channel);
-        std::cout << boost::format("Actual Tx Gain: %f dB...") % tx_gain << std::endl;
     }
     // set the IF filter bandwidth
     float _rx_bw = parser.getValue_float("rx-bw");
@@ -194,30 +183,47 @@ void USRP_class::initialize()
     {
         std::cout << boost::format("Setting RX Bandwidth: %f MHz...") % (_rx_bw / 1e6) << std::endl;
         usrp->set_rx_bandwidth(_rx_bw, channel);
-        rx_bw = usrp->get_rx_bandwidth(channel);
-        std::cout << boost::format("Actual Rx Bandwidth: %f MHz...") % (rx_bw / 1e6) << std::endl;
     }
     float _tx_bw = parser.getValue_float("tx-bw");
     if (_tx_bw >= 0.0)
     {
         std::cout << boost::format("Setting TX Bandwidth: %f MHz...") % (_tx_bw / 1e6) << std::endl;
         usrp->set_tx_bandwidth(_tx_bw, channel);
-        tx_bw = usrp->get_tx_bandwidth(channel);
-        std::cout << boost::format("Actual Tx Bandwidth: %f MHz...") % (tx_bw / 1e6) << std::endl;
     }
     // sleep a bit to allow setup
     std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+    // check Ref and LO Lock detect
+    check_locked_sensor_rx();
+    check_locked_sensor_tx();
+
+    // Actual parameters set by USRP
+    std::cout << boost::format("Actual Tx Sampling Rate | Master Clock Rate: %f | %f Msps...") % (usrp->get_tx_rate(channel) / 1e6) % (usrp->get_master_clock_rate() / 1e6) << std::endl;
+    std::cout << boost::format("Actual Rx Sampling Rate | Master Clock Rate: %f | %f Msps...") % (usrp->get_rx_rate(channel) / 1e6) % (usrp->get_master_clock_rate() / 1e6) << std::endl;
+    tx_rate = usrp->get_tx_rate(channel);
+    rx_rate = usrp->get_rx_rate(channel);
+    std::cout << boost::format("Actual Rx Freq: %f MHz...") % (usrp->get_rx_freq(channel) / 1e6) << std::endl;
+    std::cout << boost::format("Actual Tx Freq: %f MHz...") % (usrp->get_tx_freq(channel) / 1e6) << std::endl;
+    carrier_freq = usrp->get_rx_freq(channel);
+    std::cout << boost::format("Actual Rx Gain: %f dB...") % rx_gain << std::endl;
+    rx_gain = usrp->get_rx_gain(channel);
+    std::cout << boost::format("Actual Tx Gain: %f dB...") % tx_gain << std::endl;
+    tx_gain = usrp->get_tx_gain(channel);
+    std::cout << boost::format("Actual Rx Bandwidth: %f MHz...") % (rx_bw / 1e6) << std::endl;
+    rx_bw = usrp->get_rx_bandwidth(channel);
+    std::cout << boost::format("Actual Tx Bandwidth: %f MHz...") % (tx_bw / 1e6) << std::endl;
+    tx_bw = usrp->get_tx_bandwidth(channel);
+
+    // -----------------------------------------------------------------------
+
     // create streamers
-    uhd::stream_args_t stream_args("fc32", "sc16");
+    std::string cpu_format = parser.getValue_str("cpu-format");
+    uhd::stream_args_t stream_args(cpu_format, "sc16");
     std::vector<size_t> channel_nums;
     channel_nums.push_back(channel);
     stream_args.channels = channel_nums;
     rx_streamer = usrp->get_rx_stream(stream_args);
     tx_streamer = usrp->get_tx_stream(stream_args);
-
-    // check Ref and LO Lock detect
-    check_locked_sensor_rx();
-    check_locked_sensor_tx();
 
     // set max packet size values
     max_rx_packet_size = rx_streamer->get_max_num_samps();
@@ -344,8 +350,16 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
-std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time)
+std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, std::string filename, bool is_save_to_file)
 {
+
+    if ((is_save_to_file) and (filename == ""))
+    {
+        const char *homeDir = std::getenv("HOME");
+        std::string homeDirStr(homeDir);
+        filename = homeDirStr + "/OTA-C/cpp/storage/rx_saved_file_" + parser.getValue_str("device-id") + ".dat";
+    }
+
     bool success = false;
     uhd::rx_metadata_t md;
 
@@ -410,8 +424,10 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
             std::cerr << error << std::endl;
         }
 
-        // std::copy(buff.begin(), buff.end(), rx_samples.begin() + num_acc_samps);
-        rx_samples.insert(rx_samples.end(), buff.begin(), buff.begin() + num_curr_rx_samps);
+        if (is_save_to_file)
+            save_complex_data_to_file(filename, buff, true);
+        else
+            rx_samples.insert(rx_samples.end(), buff.begin(), buff.begin() + num_curr_rx_samps);
 
         num_acc_samps += num_curr_rx_samps;
 
@@ -434,7 +450,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
     {
         std::cerr << "Not all packets received!" << std::endl;
     }
-    else if (rx_samples.size() > 0)
+    else if (rx_samples.size() > 0 and not is_save_to_file)
     {
         success = true;
     }

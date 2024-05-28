@@ -49,7 +49,7 @@ private:
 
     ConfigParser parser;
     uhd::time_spec_t rx_sample_duration;
-    PeakDetectionClass &peak_det_obj_ref;
+    PeakDetectionClass peak_det_obj_ref;
 
     void correlation_operation();
     void reset();
@@ -58,21 +58,13 @@ private:
     size_t N_zfc, m_zfc, R_zfc;
     size_t num_samp_corr;
     size_t capacity;
-    size_t min_num_produced;
 
     size_t front;
     size_t rear;
     size_t num_produced;
     std::vector<std::complex<float>> zfc_seq;
 
-    bool update_noise_level;
-
-    // bool ch_est_done;
-    // std::deque<std::complex<float>> ch_est_samps;
-    // size_t ch_est_samps_it;
-    // size_t ch_seq_len;
-    // size_t ch_est_samps_size;
-    // void capture_ch_est_seq();
+    bool update_noise_level = false;
 
     boost::mutex mtx;
     boost::condition_variable cv_producer;

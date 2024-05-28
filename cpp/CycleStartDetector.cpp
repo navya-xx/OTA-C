@@ -7,12 +7,13 @@ CycleStartDetector::CycleStartDetector(
     const uhd::time_spec_t &rx_sample_duration,
     PeakDetectionClass &peak_det_obj) : parser(parser),
                                         rx_sample_duration(rx_sample_duration),
-                                        peak_det_obj_ref(peak_det_obj),
-                                        prev_timer(uhd::time_spec_t(0.0)),
-                                        front(0),
-                                        rear(0),
-                                        num_produced(0)
+                                        peak_det_obj_ref(peak_det_obj)
 {
+    prev_timer = uhd::time_spec_t(0.0);
+    front = 0;
+    rear = 0;
+    num_produced = 0;
+
     N_zfc = parser.getValue_int("Ref-N-zfc");
     m_zfc = parser.getValue_int("Ref-m-zfc");
     R_zfc = parser.getValue_int("Ref-R-zfc");
@@ -21,12 +22,9 @@ CycleStartDetector::CycleStartDetector(
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
     num_samp_corr = N_zfc * parser.getValue_int("num-corr-size-mul");
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
-    min_num_produced = num_samp_corr + N_zfc;
 
     if (parser.getValue_str("update-noise-level") == "true")
         update_noise_level = true;
-    else
-        update_noise_level = false;
 
     if (capacity < num_samp_corr + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2)!");
@@ -40,11 +38,11 @@ void CycleStartDetector::reset()
     num_produced = 0;
     front = 0;
     rear = 0;
-    min_num_produced = num_samp_corr + N_zfc;
+
     samples_buffer.clear();
-    samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
+    samples_buffer.resize(capacity);
     timer.clear();
-    timer.resize(capacity, uhd::time_spec_t(0.0));
+    timer.resize(capacity);
     prev_timer = uhd::time_spec_t(0.0);
 }
 
@@ -83,7 +81,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
     // Wait until min_num_produced samples are produced by producer
     cv_consumer.wait(lock, [this, &csd_success_signal]
-                     { return (num_produced >= min_num_produced) and (not csd_success_signal); });
+                     { return (num_produced >= num_samp_corr + N_zfc) and (not csd_success_signal); });
 
     if (not peak_det_obj_ref.detection_flag)
         correlation_operation();

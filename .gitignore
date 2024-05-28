@@ -10,3 +10,5 @@ OTA-C.code-workspace
 **/*.ipynb
 .ipynb_checkpoints
 cpp/*.ipynb
+notebooks
+backup
