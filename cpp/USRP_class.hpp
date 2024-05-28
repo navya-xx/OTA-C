@@ -47,9 +47,9 @@ public:
         const size_t &num_rx_samps = 0,
         const float &duration = 0.0,
         const uhd::time_spec_t &rx_time = uhd::time_spec_t(0.0),
-        std::string filename = "",
         bool is_save_to_file = false);
 
+    std::ofstream rx_save_stream;
     bool stop_signal_called = false;
     float init_background_noise;
     size_t max_rx_packet_size, max_tx_packet_size;

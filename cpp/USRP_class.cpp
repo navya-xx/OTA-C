@@ -359,14 +359,18 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
-std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, std::string filename, bool is_save_to_file)
+std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file)
 {
+    std::string filename;
 
-    if ((is_save_to_file) and (filename == ""))
+    if ((is_save_to_file))
     {
-        const char *homeDir = std::getenv("HOME");
-        std::string homeDirStr(homeDir);
-        filename = homeDirStr + "/OTA-C/cpp/storage/rx_saved_file_" + parser.getValue_str("device-id") + ".dat";
+        if (not rx_save_stream.is_open())
+        {
+            const char *homeDir = std::getenv("HOME");
+            std::string homeDirStr(homeDir);
+            filename = homeDirStr + "/OTA-C/cpp/storage/rx_saved_file_" + parser.getValue_str("device-id") + ".dat";
+        }
     }
 
     bool success = false;
@@ -434,7 +438,7 @@ std::vector<std::complex<float>> USRP_class::reception(const size_t &num_rx_samp
         }
 
         if (is_save_to_file)
-            save_complex_data_to_file(filename, buff, true);
+            save_stream_to_file(filename, rx_save_stream, buff);
         else
             rx_samples.insert(rx_samples.end(), buff.begin(), buff.begin() + num_curr_rx_samps);
 
