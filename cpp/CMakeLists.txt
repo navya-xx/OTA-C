@@ -26,6 +26,7 @@ option(UHD_USE_STATIC_LIBS OFF)
 
 # To add UHD as a dependency to this project, add a line such as this:
 find_package(UHD 4.1.0 REQUIRED)
+find_package(Curses REQUIRED)
 # The version in  ^^^^^  here is a minimum version.
 # To specify an exact version:
 #find_package(UHD 4.0.0 EXACT REQUIRED)
@@ -44,15 +45,16 @@ include(UHDBoost)
 include_directories(
     ${Boost_INCLUDE_DIRS}
     ${UHD_INCLUDE_DIRS}
+    ${CURSES_INCLUDE_DIR}
 )
 link_directories(${Boost_LIBRARY_DIRS})
 
 ### Make the executable #######################################################
-add_executable(test_sync_leaf test_sync_leaf.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp PeakDetection.cpp CycleStartDetector.cpp)
-add_executable(test_sync_cent test_sync_cent.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp)
-# add_executable(test_USRP_init test_USRP_init.cpp utility_funcs.cpp USRP_class.cpp ConfigParser.cpp utility_funcs.hpp USRP_class.hpp ConfigParser.hpp)
-# add_executable(test_cyclestartdetector test_cyclestartdetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
-# add_executable(tx_rx_zfc tx_rx_zfc.cpp CycleStartDetector.cpp CycleStartDetector.cpp usrp_routines.cpp utility_funcs.cpp PeakDetection.cpp CycleStartDetector.hpp usrp_routines.hpp utility_funcs.hpp PeakDetection.hpp)
+# add_executable(test_sync_leaf test_sync_leaf.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp PeakDetection.cpp CycleStartDetector.cpp)
+# add_executable(test_sync_cent test_sync_cent.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp)
+
+add_executable(tx_waveform channel_sounding/tx_waveform.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
+add_executable(rx_to_file channel_sounding/rx_to_file.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
 
 set(CMAKE_BUILD_TYPE "Release")
 message(STATUS "******************************************************************************")
@@ -66,20 +68,18 @@ message(STATUS "****************************************************************
 # anything else we need (in this case, some Boost libraries):
 if(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against shared UHD library.")
-    target_link_libraries(test_sync_leaf ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    target_link_libraries(test_sync_cent ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    # target_link_libraries(test_USRP_init ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    # target_link_libraries(test_cyclestartdetector ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    # target_link_libraries(tx_rx_zfc ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-# Shared library case: All we need to do is link against the library, and
+    # target_link_libraries(test_sync_leaf ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    # target_link_libraries(test_sync_cent ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(tx_waveform ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(rx_to_file ${UHD_LIBRARIES} ${Boost_LIBRARIES} ${CURSES_LIBRARIES})
+    # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
 else(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against static UHD library.")
-    target_link_libraries(test_sync_leaf ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
-    target_link_libraries(test_sync_cent ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
-    # target_link_libraries(test_USRP_init ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
-    # target_link_libraries(test_cyclestartdetector ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
-    # target_link_libraries(tx_rx_zfc ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    # target_link_libraries(test_sync_leaf ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    # target_link_libraries(test_sync_cent ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    target_link_libraries(tx_waveform ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    target_link_libraries(rx_to_file ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
 endif(NOT UHD_USE_STATIC_LIBS)
 
 ### Once it's built... ########################################################

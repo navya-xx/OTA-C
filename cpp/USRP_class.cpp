@@ -255,7 +255,16 @@ void USRP_class::initialize()
     }
 
     // compute backgroud noise
-    auto zfc_seq = generateZadoffChuSequence(parser.getValue_int("Ref-N-zfc"), parser.getValue_int("Ref-m-zfc"), 1.0);
+    auto zfc_seq = wf_gen.generate_waveform(
+        WaveformGenerator::WAVEFORM_TYPE::ZFC,
+        parser.getValue_int("Ref-N-zfc"),
+        1,
+        0,
+        parser.getValue_int("Ref-m-zfc"),
+        1.0,
+        0,
+        false);
+
     for (int i = 0; i < rx_samples.size() - zfc_seq.size(); ++i)
     {
         auto corr = std::complex<float>(0.0, 0.0);
