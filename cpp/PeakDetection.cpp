@@ -232,6 +232,9 @@ void PeakDetectionClass::updatePrevPeak()
 
 bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
 {
+
+    size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
+
     if ((abs_corr_val / noise_level) > curr_pnr_threshold)
     {
         // First peak
@@ -246,8 +249,6 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             // distance of current peak from last
             if (prev_peak_index > samples_from_first_peak)
                 std::cerr << "Prev peak index > samples from first peak, i.e., " << prev_peak_index << " >" << samples_from_first_peak << ", at peaks count = " << peaks_count << std::endl;
-
-            size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
 
             // next peak is too far from the last
             // reset peaks and mark this peak as first
@@ -285,6 +286,25 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
     }
     else
     {
+        if (peaks_count >= total_num_peaks - 1 and samples_from_last_peak > ref_seq_len + 3)
+        {
+            // it happens sometimes that the first peak is not detected properly
+            // insert first peak as dummy by interpolation
+            for (size_t i = total_num_peaks - 1; i > 0; --i)
+            {
+                // shift peak data
+                peak_indices[i] = peak_indices[i - 1] + ref_seq_len;
+                peak_times[i] = peak_times[i - 1];
+                peak_vals[i] = peak_vals[i - 1];
+            }
+            ++peaks_count;
+            peak_indices[0] = 0;
+            peak_times[0] = peak_times[1] - (peak_times[2] - peak_times[1]);
+            peak_vals[0] = peak_vals[1];
+
+            detection_flag = true;
+            return true;
+        }
         // No peak found
         return false;
     }
