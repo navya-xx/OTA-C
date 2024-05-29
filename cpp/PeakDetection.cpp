@@ -139,11 +139,12 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
         size_t reg_peaks_spacing = peak_indices[peaks_count - 1] - peak_indices[peaks_count - 2];
         if (DEBUG)
             std::cout << "\t\t -> Peaks diff " << reg_peaks_spacing << std::endl;
-        // if spacing is not as expected, cancel all previous peaks except the last registered peak
+
+        // if spacing is not as expected, remove all previous peaks except the last registered peak
         if (reg_peaks_spacing > ref_seq_len + 1 or reg_peaks_spacing < ref_seq_len - 1)
         {
             if (DEBUG)
-                std::cout << "\t\t -> Insert - Remove all except last peak" << std::endl;
+                std::cout << "\t\t -> peaks spacing incorrect -> Remove all except last peak" << std::endl;
             peak_indices[0] = 0;
             peak_vals[0] = peak_vals[peaks_count - 1];
             peak_times[0] = peak_times[peaks_count - 1];
@@ -154,7 +155,7 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
         else
         {
             if (DEBUG)
-                std::cout << "\t\t -> Insert - Success" << std::endl;
+                std::cout << "\t\t -> Peak spacing between peaks " << peaks_count - 2 << " and " << peaks_count - 1 << " is correct!" << std::endl;
         }
     }
 
@@ -244,13 +245,13 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
         {
             // distance of current peak from last
             if (prev_peak_index > samples_from_first_peak)
-                std::cerr << "Prev peak index > samples from first peak = " << prev_peak_index << " >" << samples_from_first_peak << ", at peaks count = " << peaks_count << std::endl;
+                std::cerr << "Prev peak index > samples from first peak, i.e., " << prev_peak_index << " >" << samples_from_first_peak << ", at peaks count = " << peaks_count << std::endl;
 
             size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
 
             // next peak is too far from the last
             // reset peaks and mark this peak as first
-            if (samples_from_last_peak > ref_seq_len + 5)
+            if (samples_from_last_peak > ref_seq_len + 3)
             {
                 if (DEBUG)
                     std::cout << "\t\t Resetting -- samples from last peak = " << samples_from_last_peak << std::endl;

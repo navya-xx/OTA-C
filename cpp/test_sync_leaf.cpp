@@ -3,6 +3,7 @@
 #include "ConfigParser.hpp"
 #include "PeakDetection.hpp"
 #include "CycleStartDetector.hpp"
+#include "waveforms.hpp"
 #include <stdexcept>
 
 /***************************************************************
@@ -29,7 +30,6 @@ extern const bool DEBUG = true;
 void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, const std::string &homeDirStr)
 {
     size_t tx_N_zfc = parser.getValue_int("test-signal-len");
-    size_t tx_m_zfc = parser.getValue_int("tx-m-zfc");
     size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
     // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
     float total_runtime = parser.getValue_float("duration");
@@ -55,10 +55,15 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
     // for transmitting one ref signal before the information signal
-    auto ref_zfc_seq = generateZadoffChuSequence(parser.getValue_int("Ref-N-zfc"), parser.getValue_int("Ref-m-zfc"));
-    auto tx_zfc_seq = generateUnitCircleRandom(rand_seed, tx_N_zfc, 1.0);
+    WaveformGenerator wf_gen;
+    auto ref_zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, parser.getValue_int("Ref-N-zfc"), 1, 0, parser.getValue_int("Ref-m-zfc"), 1.0, 0, true);
+    auto tx_zfc_seq = wf_gen.generate_waveform(wf_gen.UNIT_RAND, tx_N_zfc, csd_test_tx_reps, 0, 1, 1.0, rand_seed, false);
 
-    save_complex_data_to_file(homeDirStr + "/OTA-C/cpp/storage/tx_UnitCircleRandom_seq.dat", tx_zfc_seq);
+    std::vector<std::complex<float>> tx_seq;
+    tx_seq.insert(tx_seq.end(), ref_zfc_seq.begin(), ref_zfc_seq.end());
+    tx_seq.insert(tx_seq.end(), tx_zfc_seq.begin(), tx_zfc_seq.end());
+
+    // save_complex_data_to_file(homeDirStr + "/OTA-C/cpp/storage/tx_UnitCircleRandom_seq.dat", tx_zfc_seq);
 
     size_t round = 1;
     bool is_save_stream_data = false;
@@ -162,22 +167,6 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
 
             float tx_scaling_factor = 1.0; // min_e2e_amp / e2e_est_ref_sig_amp;
             std::cout << "Est e2e amp = " << e2e_est_ref_sig_amp << ", Min e2e amp = " << min_e2e_amp << std::endl;
-
-            std::vector<std::complex<float>> tx_seq;
-            tx_seq.insert(tx_seq.end(), ref_zfc_seq.begin(), ref_zfc_seq.end());
-
-            std::vector<std::complex<float>> empty_seq(200);
-            tx_seq.insert(tx_seq.end(), empty_seq.begin(), empty_seq.end());
-
-            // auto tx_zfc_seq = generateZadoffChuSequence(tx_N_zfc, tx_m_zfc, tx_scaling_factor);
-            if (tx_scaling_factor != 1.0)
-                for (auto &elem : tx_zfc_seq)
-                    elem *= tx_scaling_factor;
-
-            for (int k = 0; k < csd_test_tx_reps; ++k)
-            {
-                tx_seq.insert(tx_seq.end(), tx_zfc_seq.begin(), tx_zfc_seq.end());
-            }
 
             uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
 

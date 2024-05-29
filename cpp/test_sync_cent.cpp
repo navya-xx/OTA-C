@@ -1,6 +1,7 @@
 #include "USRP_class.hpp"
 #include "utility_funcs.hpp"
 #include "ConfigParser.hpp"
+#include "waveforms.hpp"
 #include <stdexcept>
 
 /***************************************************************
@@ -73,24 +74,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t R_zfc = parser.getValue_int("Ref-R-zfc");
     size_t rand_seed = parser.getValue_int("rand-seed");
 
-    auto zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
-
-    // transmit one extra peak
-    std::vector<std::complex<float>> buff(N_zfc * (R_zfc + 1), std::complex<float>(0.0, 0.0));
-    for (int i = 0; i < N_zfc * (R_zfc + 1); ++i)
-    {
-        buff[i] = zfc_seq[i % N_zfc];
-    }
-
-    size_t acc_buff_len = 0;
-    if (acc_buff_len > 0)
-    {
-        // pre- and post- append buff with some random signal
-        auto app_buff = generateUnitCircleRandom(rand_seed, 2 * N_zfc, 1.0);
-
-        buff.insert(buff.begin(), app_buff.begin(), app_buff.end());
-        buff.insert(buff.end(), app_buff.begin(), app_buff.end());
-    }
+    WaveformGenerator wf_gen;
+    auto buff = wf_gen.generate_waveform(wf_gen.ZFC, N_zfc, R_zfc, 0, m_zfc, 1.0, rand_seed, true);
 
     float total_runtime = parser.getValue_float("duration");
     if (total_runtime == 0.0)
@@ -110,7 +95,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // save data from tx_time - save_extra_seq_mul * test_signal_duration to end of test signal + save_extra_seq_mul * test_signal_duration
     size_t num_rx_samps = test_tx_reps * test_signal_len + 2 * save_extra_seq_mul * test_signal_len;
 
-    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now(); // start first transmission immediately
+    uhd::time_spec_t tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(0.5); // start first transmission with 0.5 sec delay
 
     int iter_counter = 1;
 
@@ -118,23 +103,18 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     {
 
         if (usrp_classobj.transmission(buff, tx_timer, false))
-        {
             std::cout << currentDateTime() << "ZFC transmission successful" << std::endl;
-        }
         else
         {
             std::cerr << "ZFC ref signal transmission FAILED!" << std::endl;
             return EXIT_FAILURE;
         }
 
-        // uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last) + acc_buff_len)) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_seq_mul * test_signal_len));
-        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(buff.size() * sample_duration) + uhd::time_spec_t(1 / 1e3);
+        uhd::time_spec_t rx_time = tx_timer + uhd::time_spec_t(sample_duration * (N_zfc * (R_zfc - sync_with_peak_from_last))) + uhd::time_spec_t(tx_wait_time - (sample_duration * save_extra_seq_mul * test_signal_len));
 
         std::cout << currentDateTime() << " -- starting reception" << std::endl;
 
-        num_rx_samps = 0.0;
-
-        auto rx_symbols = usrp_classobj.reception(num_rx_samps, double((csd_wait_time_millisec - 100) / 1e3), rx_time);
+        auto rx_symbols = usrp_classobj.reception(num_rx_samps, 0.0, rx_time);
 
         if (num_rx_samps > 0 and rx_symbols.size() < num_rx_samps)
         {
@@ -143,7 +123,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
         else
         {
-            std::cout << currentDateTime() << "Successful reception of " << rx_symbols.size() << " symbols in round " << iter_counter << std::endl
+            std::cout << currentDateTime() << " \t -> Successful reception of " << rx_symbols.size() << " symbols in round " << iter_counter << std::endl
                       << std::endl;
         }
 
@@ -152,7 +132,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         save_complex_data_to_file(filename_it, rx_symbols);
 
-        tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(100 / 1e3);
+        tx_timer = usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(csd_wait_time_millisec / 1e3);
 
         ++iter_counter;
     }

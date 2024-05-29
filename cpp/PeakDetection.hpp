@@ -57,6 +57,7 @@ private:
     void removeLastPeak();
     float get_max_peak_val();
     bool check_peaks();
+    bool check_current_peaks();
 
 public:
     PeakDetectionClass(ConfigParser &parser, const float &init_noise_level);
