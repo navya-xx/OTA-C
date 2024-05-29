@@ -27,6 +27,7 @@
 #include "PeakDetection.hpp"
 #include "ConfigParser.hpp"
 #include "utility_funcs.hpp"
+#include "waveforms.hpp"
 
 class CycleStartDetector
 {

@@ -17,7 +17,9 @@ CycleStartDetector::CycleStartDetector(
     N_zfc = parser.getValue_int("Ref-N-zfc");
     m_zfc = parser.getValue_int("Ref-m-zfc");
     R_zfc = parser.getValue_int("Ref-R-zfc");
-    zfc_seq = generateZadoffChuSequence(N_zfc, m_zfc);
+
+    WaveformGenerator wf_gen;
+    zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, N_zfc, 1, 0, m_zfc, 1.0, 0, false);
 
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
     num_samp_corr = N_zfc * parser.getValue_int("num-corr-size-mul");
