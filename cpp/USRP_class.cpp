@@ -318,7 +318,8 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     while (num_acc_samps < total_num_samps and not stop_signal_called)
     {
         size_t samps_to_send = std::min(total_num_samps - num_acc_samps, max_tx_packet_size);
-        const size_t num_tx_samps_sent_now = tx_streamer->send(&buff.front(), samps_to_send, md, timeout);
+        const size_t num_tx_samps_sent_now = tx_streamer->send(&buff.front() + num_acc_samps, samps_to_send, md, timeout);
+
         if (num_tx_samps_sent_now < samps_to_send)
             std::cerr << "TX-TIMEOUT: Transmission timeout!!" << std::endl;
 
