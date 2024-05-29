@@ -43,7 +43,7 @@ std::vector<std::complex<float>> WaveformGenerator::generateImpulse(size_t wf_le
 {
     std::vector<std::complex<float>> sequence(wf_len);
 
-    float phase = 0.0;
+    float phase = 0.71; // almost 45°
     size_t impulse_loc = wf_len / 2;
 
     // middle element is set to amplitude=scale for impulse
@@ -76,7 +76,7 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
         break;
     }
 
-    // add cyclic_padding and reps
+    // add reps
     for (size_t i = 0; i < wf_reps; ++i)
     {
         final_sequence.insert(final_sequence.end(), sequence.begin(), sequence.end());
@@ -84,10 +84,11 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
             final_sequence.insert(final_sequence.end(), wf_gap, std::complex<float>(0.0, 0.0));
     }
 
+    // add cyclic_padding
     if (is_cyclic_padding)
     {
-        final_sequence.insert(final_sequence.begin(), sequence.begin() + 1, sequence.end());
-        final_sequence.insert(final_sequence.end(), sequence.begin() + 1, sequence.end());
+        final_sequence.insert(final_sequence.begin(), sequence.begin() + 2, sequence.end());
+        final_sequence.insert(final_sequence.end(), sequence.begin(), sequence.end() - 2);
     }
 
     return final_sequence;
