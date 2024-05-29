@@ -59,11 +59,11 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     auto ref_zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, parser.getValue_int("Ref-N-zfc"), 1, 0, parser.getValue_int("Ref-m-zfc"), 1.0, 0, true);
     auto tx_zfc_seq = wf_gen.generate_waveform(wf_gen.UNIT_RAND, tx_N_zfc, csd_test_tx_reps, 0, 1, 1.0, rand_seed, false);
 
+    save_complex_data_to_file(homeDirStr + "/OTA-C/cpp/storage/tx_UnitCircleRandom_seq_" + std::to_string(rand_seed) + "_" + parser.getValue_str("device-id") + ".dat", tx_zfc_seq);
+
     std::vector<std::complex<float>> tx_seq;
     tx_seq.insert(tx_seq.end(), ref_zfc_seq.begin(), ref_zfc_seq.end());
     tx_seq.insert(tx_seq.end(), tx_zfc_seq.begin(), tx_zfc_seq.end());
-
-    // save_complex_data_to_file(homeDirStr + "/OTA-C/cpp/storage/tx_UnitCircleRandom_seq.dat", tx_zfc_seq);
 
     size_t round = 1;
     bool is_save_stream_data = false;
@@ -217,8 +217,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     std::string device_id = argv[1];
     parser.set_value("device-id", device_id, "str", "USRP device number");
-    size_t tx_m_zfc = std::stoi(argv[2]);
-    parser.set_value("tx-m-zfc", std::to_string(tx_m_zfc), "int", "Test signal ZFC seq param m");
+
+    if (argc > 2)
+    {
+        size_t rand_seed = std::stoi(argv[2]);
+        parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
+    }
 
     // Logger
     // Logger logger(homeDirStr + "/OTA-C/cpp/logs/log_" + device_id + ".log", Logger::Level::DEBUG, true);

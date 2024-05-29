@@ -252,7 +252,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
 
             // next peak is too far from the last
             // reset peaks and mark this peak as first
-            if (samples_from_last_peak > ref_seq_len + 3)
+            if (samples_from_last_peak > ref_seq_len + 5)
             {
                 if (DEBUG)
                     std::cout << "\t\t Resetting -- samples from last peak = " << samples_from_last_peak << std::endl;
@@ -286,7 +286,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
     }
     else
     {
-        if (peaks_count >= total_num_peaks - 1 and samples_from_last_peak > ref_seq_len + 3)
+        if (peaks_count >= total_num_peaks - 1 and samples_from_last_peak > ref_seq_len + 5)
         {
             // it happens sometimes that the first peak is not detected properly
             // insert first peak as dummy by interpolation
