@@ -92,7 +92,7 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
     {
         size_t cyclic_shift = 2;
         std::vector<std::complex<float>> scaled_seq;
-        float scaleFactor = 0.1;
+        float scaleFactor = 0.3;
         for (auto &element : sequence)
         {
             scaled_seq.insert(scaled_seq.end(), element * scaleFactor);
