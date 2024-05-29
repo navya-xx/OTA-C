@@ -108,12 +108,12 @@ void PeakDetectionClass::reset()
 
     // max_pnr = 0;
 
-    delete[] peak_indices;
-    delete[] peak_vals;
-    delete[] peak_times;
-    peak_indices = new size_t[total_num_peaks];
-    peak_vals = new float[total_num_peaks];
-    peak_times = new uhd::time_spec_t[total_num_peaks];
+    // delete[] peak_indices;
+    // delete[] peak_vals;
+    // delete[] peak_times;
+    // peak_indices = new size_t[total_num_peaks];
+    // peak_vals = new float[total_num_peaks];
+    // peak_times = new uhd::time_spec_t[total_num_peaks];
 
     // ref_signal.clear();
     // ref_signal.resize(ref_seq_len * (total_num_peaks + 1));

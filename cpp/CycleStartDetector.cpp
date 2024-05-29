@@ -41,10 +41,9 @@ void CycleStartDetector::reset()
     front = 0;
     rear = 0;
 
-    samples_buffer.clear();
-    samples_buffer.resize(capacity);
-    timer.clear();
-    timer.resize(capacity);
+    // samples_buffer.clear();
+    samples_buffer.insert(samples_buffer.begin(), capacity, std::complex<float>(0.0, 0.0));
+    timer.insert(timer.begin(), capacity, uhd::time_spec_t(0.0));
     prev_timer = uhd::time_spec_t(0.0);
 }
 
