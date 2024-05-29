@@ -12,3 +12,4 @@ OTA-C.code-workspace
 cpp/*.ipynb
 notebooks
 backup
+plots
