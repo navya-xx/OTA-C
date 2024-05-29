@@ -62,17 +62,17 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
     {
     case WAVEFORM_TYPE::ZFC:
         sequence = generateZadoffChuSequence(wf_len, zfc_q, scale);
-        std::cout << "\t\t generating ZFC seq" << std::endl;
+        // std::cout << "\t\t generating ZFC seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::UNIT_RAND:
         sequence = generateUnitCircleRandom(rand_seed, wf_len, scale);
-        std::cout << "\t\t generating RANDOM seq" << std::endl;
+        // std::cout << "\t\t generating RANDOM seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::IMPULSE:
         sequence = generateImpulse(wf_len, scale);
-        std::cout << "\t\t generating IMPULSE seq" << std::endl;
+        // std::cout << "\t\t generating IMPULSE seq" << std::endl;
         break;
 
     default:
@@ -90,8 +90,15 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
     // add cyclic_padding
     if (is_cyclic_padding)
     {
-        final_sequence.insert(final_sequence.begin(), sequence.begin() + 2, sequence.end());
-        final_sequence.insert(final_sequence.end(), sequence.begin(), sequence.end() - 2);
+        size_t cyclic_shift = 2;
+        std::vector<std::complex<float>> scaled_seq;
+        float scaleFactor = 0.1;
+        for (auto &element : sequence)
+        {
+            scaled_seq.insert(scaled_seq.end(), element * scaleFactor);
+        }
+        final_sequence.insert(final_sequence.begin(), scaled_seq.begin() + cyclic_shift, scaled_seq.end());
+        final_sequence.insert(final_sequence.end(), scaled_seq.begin(), scaled_seq.end() - cyclic_shift);
     }
 
     return final_sequence;

@@ -61,28 +61,28 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_classobj.initialize();
 
     // waveform selection
+    std::vector<std::complex<float>> tx_waveform, tmp_wf;
     size_t wf_len = parser.getValue_int("Ref-N-zfc");
     size_t zfc_q = parser.getValue_int("Ref-m-zfc");
+
     WaveformGenerator wf_gen;
-    auto tx_waveform_zfc = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, 10, 0, zfc_q, 1.0, 123, true);
 
-    std::cout << "ZFC seq len = " << tx_waveform_zfc.size() << std::endl;
+    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, 10, 0, zfc_q, 1.0, 123, true);
+    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
+    std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
 
-    auto tx_waveform_imp = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
+    tx_waveform.insert(tx_waveform.end(), 5 * wf_len, std::complex<float>(0.0, 0.0));
 
-    std::cout << "IMPULSE seq len = " << tx_waveform_imp.size() << std::endl;
+    tmp_wf = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
+    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
+    std::cout << "IMPULSE seq len = " << tmp_wf.size() << std::endl;
 
-    // std::vector<std::complex<float>> tx_waveform;
-
-    // tx_waveform.insert(tx_waveform.end(), tx_waveform_zfc.begin(), tx_waveform_zfc.end());
-    // tx_waveform.insert(tx_waveform.end(), 5 * wf_len, std::complex<float>(0.0, 0.0));
-    // tx_waveform.insert(tx_waveform.end(), tx_waveform_imp.begin(), tx_waveform_imp.end());
-
-    // std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
+    std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
 
     // transmit waveform
-    usrp_classobj.transmission(tx_waveform_zfc, uhd::time_spec_t(0.0), true);
-    usrp_classobj.transmission(tx_waveform_imp, uhd::time_spec_t(0.0), true);
+    usrp_classobj.transmission(tx_waveform, uhd::time_spec_t(0.0), true);
+    // usrp_classobj.transmission(tx_waveform_zfc, uhd::time_spec_t(0.0), true);
+    // usrp_classobj.transmission(tx_waveform_imp, uhd::time_spec_t(0.0), true);
 
     return EXIT_SUCCESS;
 }
