@@ -76,10 +76,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     waitForKeyPress();
 
     // receive continuously and save to file
-    auto rx_data = usrp_classobj.reception(0, 5.0, uhd::time_spec_t(0.0), false);
-
-    std::string filename = homeDirStr + "/OTA-C/cpp/storage/rx_" + device_id + ".dat";
-    save_complex_data_to_file(filename, rx_data);
+    auto rx_data = usrp_classobj.reception(0, 5.0, uhd::time_spec_t(0.0), true);
 
     return EXIT_SUCCESS;
 }
