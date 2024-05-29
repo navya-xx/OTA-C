@@ -61,20 +61,44 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_classobj.initialize();
 
     // waveform selection
-    std::vector<std::complex<float>> tx_waveform, tmp_wf;
     size_t wf_len = parser.getValue_int("Ref-N-zfc");
     size_t zfc_q = parser.getValue_int("Ref-m-zfc");
+    size_t wf_gap = 5 * wf_len;
+    size_t counter = 0;
 
     WaveformGenerator wf_gen;
 
+    std::vector<std::complex<float>> tx_waveform(wf_len * 40);
+    std::vector<std::complex<float>> tmp_wf;
+
     tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, 10, 0, zfc_q, 1.0, 123, true);
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
+
+    for (auto &elem : tmp_wf)
+    {
+        tx_waveform[counter] = elem;
+        ++counter;
+    }
+
+    tmp_wf.clear();
+
+    // tx_waveform.insert(tx_waveform.begin(), tmp_wf.begin(), tmp_wf.end());
     std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
 
-    tx_waveform.insert(tx_waveform.end(), 5 * wf_len, std::complex<float>(0.0, 0.0));
+    // tx_waveform.insert(tx_waveform.end(), wf_gap, std::complex<float>(0.0, 0.0));
+
+    for (size_t i = 0; i < wf_gap; ++i)
+    {
+        tx_waveform[counter] = std::complex<float>(0.1, 0.1);
+        ++counter;
+    }
 
     tmp_wf = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
+    // tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
+    for (auto &elem : tmp_wf)
+    {
+        tx_waveform[counter] = elem;
+        ++counter;
+    }
     std::cout << "IMPULSE seq len = " << tmp_wf.size() << std::endl;
 
     std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
