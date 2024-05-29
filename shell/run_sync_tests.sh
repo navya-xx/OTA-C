@@ -11,14 +11,14 @@ do
     node_name=${remote_nodes[$i]}
     node_serial=${leaf_node_serials[$i]}
     node_id=${leaf_node_ids[$i]}
-    
+
     if [ "$node_name" == "" ]
     then
         cmd="screen -L \$HOME/OTA-C/shell/LogFolder/leaf_output.log -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id}'"
-        screen -L \$HOME/OTA-C/shell/LogFolder/leaf_output.log -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id}'
+        screen -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'
     else
-        cmd="ssh ${node_name} screen -L \$HOME/OTA-C/shell/LogFolder/leaf_output.log -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id}'"
-        ssh ${node_name} screen -L \$HOME/OTA-C/shell/LogFolder/leaf_output.log -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id}'
+        cmd="ssh ${node_name} screen -L \"\$HOME/OTA-C/shell/LogFolder/leaf_output.log\" -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id}'"
+        ssh "${node_name}" "screen -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'"
     fi
 
     echo $cmd
@@ -27,5 +27,5 @@ done
 sleep 5
 
 cmd="screen -dmS cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest'"
-screen -dmS cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest'
+screen -dmS cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest | tee \$HOME/OTA-C/shell/LogFolder/cent_output.log'
 echo $cmd
