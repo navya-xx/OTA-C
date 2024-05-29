@@ -62,8 +62,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // waveform selection
     size_t wf_len = parser.getValue_int("Ref-N-zfc");
+    size_t zfc_q = parser.getValue_int("Ref-m-zfc");
     WaveformGenerator wf_gen;
-    auto tx_waveform = wf_gen.generate_waveform(WaveformGenerator::WAVEFORM_TYPE::IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
+    auto tx_waveform = wf_gen.generate_waveform(WaveformGenerator::WAVEFORM_TYPE::ZFC, wf_len, 10, 0, zfc_q, 1.0, 123, true);
 
     // transmit waveform
     usrp_classobj.transmission(tx_waveform, uhd::time_spec_t(0.0), true);
