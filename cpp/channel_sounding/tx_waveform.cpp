@@ -64,18 +64,18 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t wf_len = parser.getValue_int("Ref-N-zfc");
     size_t zfc_q = parser.getValue_int("Ref-m-zfc");
     WaveformGenerator wf_gen;
-    auto tx_waveform_1 = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, 10, 0, zfc_q, 1.0, 123, true);
+    auto tx_waveform_zfc = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, 10, 0, zfc_q, 1.0, 123, true);
 
-    std::cout << "ZFC seq len = " << tx_waveform_1.size() << std::endl;
+    std::cout << "ZFC seq len = " << tx_waveform_zfc.size() << std::endl;
 
-    auto tx_waveform_2 = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
+    auto tx_waveform_imp = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
 
-    std::cout << "IMPULSE seq len = " << tx_waveform_2.size() << std::endl;
+    std::cout << "IMPULSE seq len = " << tx_waveform_imp.size() << std::endl;
 
     std::vector<std::complex<float>> tx_waveform;
-    tx_waveform.insert(tx_waveform.begin(), tx_waveform_1.begin(), tx_waveform_1.end());
+    tx_waveform.insert(tx_waveform.begin(), tx_waveform_zfc.begin(), tx_waveform_zfc.end());
     tx_waveform.insert(tx_waveform.end(), 5 * wf_len, std::complex<float>(0.0, 0.0));
-    tx_waveform.insert(tx_waveform.end(), tx_waveform_2.begin(), tx_waveform_2.end());
+    tx_waveform.insert(tx_waveform.end(), tx_waveform_imp.begin(), tx_waveform_imp.end());
 
     std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
 

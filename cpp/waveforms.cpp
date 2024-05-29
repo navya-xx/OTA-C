@@ -62,14 +62,17 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
     {
     case WAVEFORM_TYPE::ZFC:
         sequence = generateZadoffChuSequence(wf_len, zfc_q, scale);
+        std::cout << "\t\t generating ZFC seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::UNIT_RAND:
         sequence = generateUnitCircleRandom(rand_seed, wf_len, scale);
+        std::cout << "\t\t generating RANDOM seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::IMPULSE:
         sequence = generateImpulse(wf_len, scale);
+        std::cout << "\t\t generating IMPULSE seq" << std::endl;
         break;
 
     default:
