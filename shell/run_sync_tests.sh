@@ -8,24 +8,27 @@ cent_node_serial="32C79C6"
 
 for (( i=0; i<${#remote_nodes[@]}; i++ ))
 do
-    node_name=${remote_nodes[$i]}
-    node_serial=${leaf_node_serials[$i]}
-    node_id=${leaf_node_ids[$i]}
+    node_name="${remote_nodes[$i]}"
+    node_serial="${leaf_node_serials[$i]}"
+    node_id="${leaf_node_ids[$i]}"
 
     if [ "$node_name" == "" ]
     then
-        cmd="screen -L \$HOME/OTA-C/shell/LogFolder/leaf_output.log -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id}'"
-        screen -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'
+        cmd="screen -dm -S leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'"
+        # screen -dm -S leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'
+        eval $cmd
     else
-        cmd="ssh ${node_name} screen -L \"\$HOME/OTA-C/shell/LogFolder/leaf_output.log\" -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id}'"
-        ssh "${node_name}" "screen -dmS leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'"
+        cmd="ssh ${node_name} \"screen -dm -S leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'\""
+        ssh ${node_name} "screen -dm -S leaf_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/shell/LogFolder/leaf_output.log'"
+        # eval $cmd
     fi
 
     echo $cmd
 done
 
-sleep 5
+sleep 3
 
-cmd="screen -dmS cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest'"
-screen -dmS cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest | tee \$HOME/OTA-C/shell/LogFolder/cent_output.log'
+cmd="screen -dm -S cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest | tee \$HOME/OTA-C/shell/LogFolder/cent_output.log'"
+# screen -dm -S cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest | tee \$HOME/OTA-C/shell/LogFolder/cent_output.log'
+eval $cmd
 echo $cmd
