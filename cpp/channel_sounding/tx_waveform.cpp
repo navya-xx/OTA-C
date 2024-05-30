@@ -64,18 +64,19 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t wf_len = 63;
     size_t zfc_q = 29;
     size_t wf_reps = 10;
+    size_t wf_gap = 0;
 
     WaveformGenerator wf_gen;
 
     std::vector<std::complex<float>> tx_waveform;
     std::vector<std::complex<float>> tmp_wf;
 
-    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, 2 * wf_len, zfc_q, 1.0, 123, false);
+    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, wf_gap, zfc_q, 1.0, 123, false);
     tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
     std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
 
-    size_t wf_gap = 5 * wf_len;
-    tx_waveform.insert(tx_waveform.end(), wf_gap, std::complex<float>(0.0, 0.0));
+    size_t signal_gap = 5 * wf_len;
+    tx_waveform.insert(tx_waveform.end(), signal_gap, std::complex<float>(0.0, 0.0));
 
     tmp_wf = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
     tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
