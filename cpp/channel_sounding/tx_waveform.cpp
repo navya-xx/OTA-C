@@ -61,16 +61,16 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_classobj.initialize();
 
     // waveform selection
-    size_t wf_len = parser.getValue_int("Ref-N-zfc");
-    size_t zfc_q = parser.getValue_int("Ref-m-zfc");
-    size_t wf_reps = parser.getValue_int("Ref-R-zfc");
+    size_t wf_len = 63;
+    size_t zfc_q = 29;
+    size_t wf_reps = 10;
 
     WaveformGenerator wf_gen;
 
     std::vector<std::complex<float>> tx_waveform;
     std::vector<std::complex<float>> tmp_wf;
 
-    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, 0, zfc_q, 1.0, 123, false);
+    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, 2 * wf_len, zfc_q, 1.0, 123, false);
     tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
     std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
 
