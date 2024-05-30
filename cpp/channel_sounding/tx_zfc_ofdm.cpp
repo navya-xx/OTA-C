@@ -2,6 +2,7 @@
 #include "../utility_funcs.hpp"
 #include "../ConfigParser.hpp"
 #include "../waveforms.hpp"
+#include "../OFDM.hpp"
 #include <uhd/exception.hpp>
 #include <uhd/types/tune_request.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
@@ -60,34 +61,23 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     USRP_class usrp_classobj(parser);
     usrp_classobj.initialize();
 
-    // waveform selection
-    size_t wf_len = parser.getValue_int("Ref-N-zfc");
-    size_t zfc_q = parser.getValue_int("Ref-m-zfc");
-    size_t wf_reps = parser.getValue_int("Ref-R-zfc");
-
+    // ZFC seq
+    // waveform creation
     WaveformGenerator wf_gen;
+    std::vector<std::complex<float>> tx_waveform = wf_gen.generate_waveform(wf_gen.ZFC, 63, 1, 0, 29, 1.0, 123, false);
 
-    std::vector<std::complex<float>> tx_waveform;
-    std::vector<std::complex<float>> tmp_wf;
-
-    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, 0, zfc_q, 1.0, 123, false);
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
-    std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
-
-    size_t wf_gap = 5 * wf_len;
-    tx_waveform.insert(tx_waveform.end(), wf_gap, std::complex<float>(0.0, 0.0));
-
-    tmp_wf = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
-    std::cout << "IMPULSE seq len = " << tmp_wf.size() << std::endl;
-
-    std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
-
-    std::string filename = homeDirStr + "/OTA-C/cpp/storage/tx_" + device_id + ".dat";
-    save_complex_data_to_file(filename, tx_waveform);
+    // create OFDM class
+    size_t N_fft = 64, cp_fft = 10;
+    OFDM ofdm(N_fft, cp_fft);
+    // map to subcarriers
+    auto freq_domain_signal = ofdm.mapToSubcarriers(tx_waveform);
+    // iFFT - convert to time domain
+    auto time_domain_symbols = ofdm.ifft(freq_domain_signal);
+    // add CP
+    auto symbols_with_cp = ofdm.addCP(time_domain_symbols);
 
     // transmit waveform
-    usrp_classobj.transmission(tx_waveform, uhd::time_spec_t(0.0), true);
+    usrp_classobj.transmission(symbols_with_cp, uhd::time_spec_t(0.0), true);
     // usrp_classobj.transmission(tx_waveform_zfc, uhd::time_spec_t(0.0), true);
     // usrp_classobj.transmission(tx_waveform_imp, uhd::time_spec_t(0.0), true);
 

@@ -47,9 +47,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     if (argc < 2)
         throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
+    if (argc < 3)
+        throw std::invalid_argument("ERROR : filename with stream data missing.");
 
     std::string device_id = argv[1];
     parser.set_value("device-id", device_id, "str", "USRP device number");
+    std::string filename = argv[2];
+    filename = homeDirStr + "/OTA-C/cpp/storage/" + filename;
 
     // Logger
     // Logger logger(homeDirStr + "/OTA-C/cpp/logs/log_" + device_id + ".log", Logger::Level::DEBUG, true);
@@ -60,31 +64,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     USRP_class usrp_classobj(parser);
     usrp_classobj.initialize();
 
-    // waveform selection
-    size_t wf_len = parser.getValue_int("Ref-N-zfc");
-    size_t zfc_q = parser.getValue_int("Ref-m-zfc");
-    size_t wf_reps = parser.getValue_int("Ref-R-zfc");
-
-    WaveformGenerator wf_gen;
-
-    std::vector<std::complex<float>> tx_waveform;
-    std::vector<std::complex<float>> tmp_wf;
-
-    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, 0, zfc_q, 1.0, 123, false);
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
-    std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
-
-    size_t wf_gap = 5 * wf_len;
-    tx_waveform.insert(tx_waveform.end(), wf_gap, std::complex<float>(0.0, 0.0));
-
-    tmp_wf = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
-    std::cout << "IMPULSE seq len = " << tmp_wf.size() << std::endl;
-
-    std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
-
-    std::string filename = homeDirStr + "/OTA-C/cpp/storage/tx_" + device_id + ".dat";
-    save_complex_data_to_file(filename, tx_waveform);
+    // get symbols from file
+    auto tx_waveform = read_complex_data_from_file(filename);
 
     // transmit waveform
     usrp_classobj.transmission(tx_waveform, uhd::time_spec_t(0.0), true);

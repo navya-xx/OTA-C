@@ -28,7 +28,7 @@ done
 
 sleep 3
 
-cmd="screen -dm -S cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest | tee \$HOME/OTA-C/shell/LogFolder/cent_output.log'"
+cmd="screen -dm -S cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest2 | tee \$HOME/OTA-C/shell/LogFolder/cent_output.log'"
 # screen -dm -S cent_test bash -c 'cd \$HOME/OTA-C/cpp/build/ && ./test_sync_cent ${cent_node_serial} JointTest | tee \$HOME/OTA-C/shell/LogFolder/cent_output.log'
 eval $cmd
 echo $cmd

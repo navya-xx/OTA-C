@@ -50,9 +50,10 @@ include_directories(
 link_directories(${Boost_LIBRARY_DIRS})
 
 ### Make the executable #######################################################
-add_executable(test_sync_leaf test_sync_leaf.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp PeakDetection.cpp CycleStartDetector.cpp waveforms.cpp)
-add_executable(test_sync_cent test_sync_cent.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
+# add_executable(test_sync_leaf test_sync_leaf.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp PeakDetection.cpp CycleStartDetector.cpp waveforms.cpp)
+# add_executable(test_sync_cent test_sync_cent.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
 
+add_executable(tx_zfc_ofdm channel_sounding/tx_zfc_ofdm.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp OFDM.cpp)
 # add_executable(tx_waveform channel_sounding/tx_waveform.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
 # add_executable(rx_to_file channel_sounding/rx_to_file.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
 
@@ -68,16 +69,18 @@ message(STATUS "****************************************************************
 # anything else we need (in this case, some Boost libraries):
 if(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against shared UHD library.")
-    target_link_libraries(test_sync_leaf ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    target_link_libraries(test_sync_cent ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    # target_link_libraries(test_sync_leaf ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    # target_link_libraries(test_sync_cent ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(tx_zfc_ofdm ${UHD_LIBRARIES} ${Boost_LIBRARIES})
     # target_link_libraries(tx_waveform ${UHD_LIBRARIES} ${Boost_LIBRARIES})
     # target_link_libraries(rx_to_file ${UHD_LIBRARIES} ${Boost_LIBRARIES} ${CURSES_LIBRARIES})
     # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
 else(NOT UHD_USE_STATIC_LIBS)
     message(STATUS "Linking against static UHD library.")
-    target_link_libraries(test_sync_leaf ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
-    target_link_libraries(test_sync_cent ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    # target_link_libraries(test_sync_leaf ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    # target_link_libraries(test_sync_cent ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    target_link_libraries(tx_zfc_ofdm ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
     # target_link_libraries(tx_waveform ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
     # target_link_libraries(rx_to_file ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
 endif(NOT UHD_USE_STATIC_LIBS)

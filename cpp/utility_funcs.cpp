@@ -200,6 +200,45 @@ void save_complex_data_to_file(const std::string &file, const std::vector<std::c
     std::cout << size << " complex samples saved successfully to " << file << "." << std::endl;
 }
 
+std::vector<std::complex<float>> read_complex_data_from_file(const std::string &filename)
+{
+    // Open the file in binary mode
+    std::ifstream file(filename, std::ios::binary);
+    if (!file)
+    {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return {};
+    }
+
+    // Read the first byte to get the number of symbols
+    size_t numSymbols;
+    file.read(reinterpret_cast<char *>(&numSymbols), sizeof(numSymbols));
+    if (!file)
+    {
+        std::cerr << "Failed to read number of symbols from file: " << filename << std::endl;
+        return {};
+    }
+
+    // Prepare a vector to hold the symbols
+    std::vector<std::complex<float>> symbols(numSymbols);
+
+    // Read the complex float symbols from the file
+    for (size_t i = 0; i < numSymbols; ++i)
+    {
+        float real, imag;
+        file.read(reinterpret_cast<char *>(&real), sizeof(real));
+        file.read(reinterpret_cast<char *>(&imag), sizeof(imag));
+        if (!file)
+        {
+            std::cerr << "Failed to read symbol data from file: " << filename << std::endl;
+            return {};
+        }
+        symbols[i] = std::complex<float>(real, imag);
+    }
+
+    return symbols;
+}
+
 void save_float_data_to_file(const std::string &file, const std::vector<float> &save_buffer_float)
 {
     if (DEBUG)

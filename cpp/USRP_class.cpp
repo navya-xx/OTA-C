@@ -312,6 +312,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
 
     // transmission
     size_t num_acc_samps = 0;
+
     if (DEBUG)
         std::cout << "Starting transmission of " << total_num_samps << " samples." << std::endl;
 
@@ -333,7 +334,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     tx_streamer->send("", 0, md);
 
     if (ask_ack)
-    { // check for ASYNC message
+    {
         if (DEBUG)
             std::cout << std::endl
                       << "Waiting for async burst ACK... " << std::flush;
