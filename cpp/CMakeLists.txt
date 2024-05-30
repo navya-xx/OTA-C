@@ -26,7 +26,7 @@ option(UHD_USE_STATIC_LIBS OFF)
 
 # To add UHD as a dependency to this project, add a line such as this:
 find_package(UHD 4.1.0 REQUIRED)
-# find_package(Curses REQUIRED)
+find_package(Curses REQUIRED)
 # The version in  ^^^^^  here is a minimum version.
 # To specify an exact version:
 #find_package(UHD 4.0.0 EXACT REQUIRED)
@@ -45,7 +45,7 @@ include(UHDBoost)
 include_directories(
     ${Boost_INCLUDE_DIRS}
     ${UHD_INCLUDE_DIRS}
-    # ${CURSES_INCLUDE_DIR}
+    ${CURSES_INCLUDE_DIR}
 )
 link_directories(${Boost_LIBRARY_DIRS})
 
@@ -72,8 +72,8 @@ if(NOT UHD_USE_STATIC_LIBS)
     # target_link_libraries(test_sync_leaf ${UHD_LIBRARIES} ${Boost_LIBRARIES})
     # target_link_libraries(test_sync_cent ${UHD_LIBRARIES} ${Boost_LIBRARIES})
     target_link_libraries(tx_zfc_ofdm ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    # target_link_libraries(tx_waveform ${UHD_LIBRARIES} ${Boost_LIBRARIES})
-    # target_link_libraries(rx_to_file ${UHD_LIBRARIES} ${Boost_LIBRARIES} ${CURSES_LIBRARIES})
+    target_link_libraries(tx_waveform ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    target_link_libraries(rx_to_file ${UHD_LIBRARIES} ${Boost_LIBRARIES} ${CURSES_LIBRARIES})
     # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
 else(NOT UHD_USE_STATIC_LIBS)
@@ -81,8 +81,8 @@ else(NOT UHD_USE_STATIC_LIBS)
     # target_link_libraries(test_sync_leaf ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
     # target_link_libraries(test_sync_cent ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
     target_link_libraries(tx_zfc_ofdm ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
-    # target_link_libraries(tx_waveform ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
-    # target_link_libraries(rx_to_file ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    target_link_libraries(tx_waveform ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
+    target_link_libraries(rx_to_file ${UHD_STATIC_LIB_LINK_FLAG} ${UHD_STATIC_LIB_DEPS})
 endif(NOT UHD_USE_STATIC_LIBS)
 
 ### Once it's built... ########################################################
