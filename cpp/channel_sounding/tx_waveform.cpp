@@ -61,8 +61,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_classobj.initialize();
 
     // waveform selection
-    size_t wf_len = 63;
-    size_t zfc_q = 29;
+    size_t wf_len = 101;
+    size_t zfc_q = 31;
     size_t wf_reps = 10;
     size_t wf_gap = 0;
 
