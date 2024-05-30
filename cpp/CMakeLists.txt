@@ -54,8 +54,8 @@ link_directories(${Boost_LIBRARY_DIRS})
 # add_executable(test_sync_cent test_sync_cent.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
 
 add_executable(tx_zfc_ofdm channel_sounding/tx_zfc_ofdm.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp OFDM.cpp)
-# add_executable(tx_waveform channel_sounding/tx_waveform.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
-# add_executable(rx_to_file channel_sounding/rx_to_file.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
+add_executable(tx_waveform channel_sounding/tx_waveform.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
+add_executable(rx_to_file channel_sounding/rx_to_file.cpp USRP_class.cpp utility_funcs.cpp ConfigParser.cpp waveforms.cpp)
 
 set(CMAKE_BUILD_TYPE "Release")
 message(STATUS "******************************************************************************")
