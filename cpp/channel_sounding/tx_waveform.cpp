@@ -63,7 +63,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // waveform selection
     size_t wf_len = 101;
     size_t zfc_q = 31;
-    size_t wf_reps = 10;
+    size_t wf_reps = 50;
     size_t wf_gap = 0;
 
     WaveformGenerator wf_gen;
