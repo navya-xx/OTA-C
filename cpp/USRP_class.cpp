@@ -307,11 +307,12 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     }
 
     const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_tx_packet_size / tx_rate));
-    double tx_delay = md.has_time_spec ? (tx_time - usrp_now).get_real_secs() : 0.0;
-    double timeout = burst_pkt_time + tx_delay;
+    double tx_delay, timeout;
 
     // transmission
     size_t num_acc_samps = 0;
+    size_t num_tx_samps_sent_now = 0;
+    size_t retry_tx_counter = 0;
 
     if (DEBUG)
         std::cout << "Starting transmission of " << total_num_samps << " samples." << std::endl;
@@ -319,10 +320,18 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     while (num_acc_samps < total_num_samps and not stop_signal_called)
     {
         size_t samps_to_send = std::min(total_num_samps - num_acc_samps, max_tx_packet_size);
-        const size_t num_tx_samps_sent_now = tx_streamer->send(&buff.front() + num_acc_samps, samps_to_send, md, timeout);
+        tx_delay = md.has_time_spec ? (tx_time - usrp_now).get_real_secs() : 0.5;
+        timeout = burst_pkt_time + tx_delay;
+
+        num_tx_samps_sent_now = tx_streamer->send(&buff.front() + num_acc_samps, samps_to_send, md, timeout);
 
         if (num_tx_samps_sent_now < samps_to_send)
-            std::cerr << "TX-TIMEOUT: Transmission timeout!!" << std::endl;
+        {
+            std::cerr << "TX-TIMEOUT: Transmission timeout!! Num samples sent = " << num_tx_samps_sent_now << ", asked for = " << samps_to_send << std::endl;
+            ++retry_tx_counter;
+            if (retry_tx_counter > 5)
+                break;
+        }
 
         md.start_of_burst = false;
         md.has_time_spec = false;

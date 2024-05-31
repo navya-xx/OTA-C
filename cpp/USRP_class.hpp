@@ -24,6 +24,7 @@
 #include <deque>
 #include <numeric>
 #include <algorithm>
+#include <stdexcept>
 #include "utility_funcs.hpp"
 #include "ConfigParser.hpp"
 #include "waveforms.hpp"
