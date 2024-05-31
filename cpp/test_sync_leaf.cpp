@@ -58,7 +58,7 @@ void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetect
     WaveformGenerator wf_gen;
 
     // auto ref_zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, parser.getValue_int("Ref-N-zfc"), parser.getValue_int("Ref-R-zfc"), 0, parser.getValue_int("Ref-m-zfc"), 1.0, 0, false);
-    auto tx_zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, tx_N_zfc, csd_test_tx_reps, 0, rand_seed, 1.0, 0, false);
+    auto tx_zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, tx_N_zfc, csd_test_tx_reps, 0, rand_seed, 1.0, 0, true);
     // auto tx_zfc_seq = wf_gen.generate_waveform(wf_gen.UNIT_RAND, tx_N_zfc, csd_test_tx_reps, 0, 1, 1.0, rand_seed, false);
 
     std::vector<std::complex<float>> tx_seq;

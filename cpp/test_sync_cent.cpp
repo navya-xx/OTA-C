@@ -75,7 +75,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t rand_seed = parser.getValue_int("rand-seed");
 
     WaveformGenerator wf_gen;
-    auto buff = wf_gen.generate_waveform(wf_gen.ZFC, N_zfc, R_zfc, 0, m_zfc, 1.0, rand_seed, false);
+    auto buff = wf_gen.generate_waveform(wf_gen.ZFC, N_zfc, R_zfc, 0, m_zfc, 1.0, rand_seed, true);
 
     float total_runtime = parser.getValue_float("duration");
     if (total_runtime == 0.0)
