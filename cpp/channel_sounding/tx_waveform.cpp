@@ -61,9 +61,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_classobj.initialize();
 
     // waveform selection
-    size_t wf_len = 63;
-    size_t zfc_q = 29;
-    size_t wf_reps = 100;
+    size_t wf_len = 101;
+    size_t zfc_q = 31;
+    size_t wf_reps = 10;
     size_t wf_gap = 0;
 
     WaveformGenerator wf_gen;
@@ -75,7 +75,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
     std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
 
-    size_t signal_gap = 50 * wf_len;
+    size_t signal_gap = 100 * wf_len;
     tx_waveform.insert(tx_waveform.end(), signal_gap, std::complex<float>(0.0, 0.0));
 
     // tmp_wf = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
