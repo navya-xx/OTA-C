@@ -84,7 +84,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
 
-    size_t signal_gap = 10 * wf_len;
+    signal_gap = 10 * wf_len;
     tx_waveform.insert(tx_waveform.end(), signal_gap, std::complex<float>(0.0, 0.0));
 
     std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
