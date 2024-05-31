@@ -91,9 +91,9 @@ void PeakDetectionClass::update_pnr_threshold()
 {
     // float max_peak_val = get_max_peak_val();
     if (max_pnr > 0.0)
-        curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), max_pnr);
-    else
-        curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), float(50.0));
+        curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), max_pnr * max_peak_mul);
+    // else
+    //     curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val / noise_level, pnr_threshold), float(50.0));
 }
 
 void PeakDetectionClass::reset()
