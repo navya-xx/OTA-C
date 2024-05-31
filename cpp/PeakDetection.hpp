@@ -82,7 +82,7 @@ public:
     void reset_peaks_counter();
     void reset();
 
-    bool process_corr(const std::complex<float> corr_val, const uhd::time_spec_t &samp_time);
+    bool process_corr(const std::complex<float> &corr_val, const uhd::time_spec_t &samp_time);
 
     bool next();
 

@@ -230,7 +230,7 @@ void PeakDetectionClass::updatePrevPeak()
     }
 }
 
-bool PeakDetectionClass::process_corr(const std::complex<float> corr_val, const uhd::time_spec_t &samp_time)
+bool PeakDetectionClass::process_corr(const std::complex<float> &corr_val, const uhd::time_spec_t &samp_time)
 {
 
     size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
