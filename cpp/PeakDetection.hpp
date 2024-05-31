@@ -33,7 +33,7 @@ private:
     ConfigParser parser;
 
     size_t *peak_indices;
-    float *peak_vals;
+    std::complex<float> *peak_vals;
     uhd::time_spec_t *peak_times;
     std::deque<std::complex<float>> ref_signal;
 
@@ -51,7 +51,7 @@ private:
 
     bool is_update_pnr_threshold;
 
-    void insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time);
+    void insertPeak(const std::complex<float> &peak_val, const uhd::time_spec_t &peak_time);
     void update_pnr_threshold();
     void updatePrevPeak();
     void removeLastPeak();
@@ -75,14 +75,14 @@ public:
     float noise_level;
     long int noise_counter;
 
-    float *get_peak_vals();
+    std::complex<float> *get_peak_vals();
     uhd::time_spec_t *get_peak_times();
     void print_peaks_data();
 
     void reset_peaks_counter();
     void reset();
 
-    bool process_corr(const float &abs_val, const uhd::time_spec_t &samp_time);
+    bool process_corr(const std::complex<float> corr_val, const uhd::time_spec_t &samp_time);
 
     bool next();
 
@@ -95,6 +95,8 @@ public:
     float avg_of_peak_vals();
     float est_ch_pow_from_capture_ref_sig();
     uhd::time_spec_t get_sync_time();
+
+    float estimate_freq_offset();
 
     // ~PeakDetectionClass();
 };

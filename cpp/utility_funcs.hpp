@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <random>
 #include <cmath>
+#include <numeric>
 
 extern const bool DEBUG;
 
@@ -62,3 +63,5 @@ void save_complex_data_to_file(const std::string &file, const std::vector<std::c
 std::vector<std::complex<float>> read_complex_data_from_file(const std::string &filename);
 
 void save_float_data_to_file(const std::string &file, const std::vector<float> &save_buffer_float);
+
+std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector);

@@ -123,10 +123,9 @@ void CycleStartDetector::correlation_operation()
         for (size_t j = 0; j < N_zfc; ++j)
             corr += (samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
 
+        found_peak = peak_det_obj_ref.process_corr(corr, timer[(front + i) % capacity]);
+
         abs_val = std::abs(corr) / N_zfc;
-
-        found_peak = peak_det_obj_ref.process_corr(abs_val, timer[(front + i) % capacity]);
-
         // peak_det_obj_ref.save_float_data_into_buffer(abs_val);
         peak_det_obj_ref.save_complex_data_into_buffer(samples_buffer[(front + i) % capacity]);
 

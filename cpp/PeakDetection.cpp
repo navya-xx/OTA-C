@@ -24,7 +24,7 @@ PeakDetectionClass::PeakDetectionClass(
     sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
 
     peak_indices = new size_t[total_num_peaks];
-    peak_vals = new float[total_num_peaks];
+    peak_vals = new std::complex<float>[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
     // ref_signal.resize(ref_seq_len * (total_num_peaks + 1));
@@ -48,7 +48,7 @@ PeakDetectionClass::PeakDetectionClass(
     }
 };
 
-float *PeakDetectionClass::get_peak_vals()
+std::complex<float> *PeakDetectionClass::get_peak_vals()
 {
     return peak_vals;
 }
@@ -81,8 +81,8 @@ float PeakDetectionClass::get_max_peak_val()
     float max_val = 0;
     for (int i = 0; i < peaks_count; ++i)
     {
-        if (peak_vals[i] > max_val)
-            max_val = peak_vals[i];
+        if (std::abs(peak_vals[i]) > max_val)
+            max_val = std::abs(peak_vals[i]);
     }
     return max_val;
 }
@@ -131,7 +131,7 @@ void PeakDetectionClass::reset_peaks_counter()
     std::cout << "\t\t -> Reset peaks counter" << std::endl;
 }
 
-void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_t &peak_time)
+void PeakDetectionClass::insertPeak(const std::complex<float> &peak_val, const uhd::time_spec_t &peak_time)
 {
     // when more than 2 peaks, check previous registered peaks for correctness
     if (peaks_count > 1)
@@ -149,8 +149,8 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
             peak_vals[0] = peak_vals[peaks_count - 1];
             peak_times[0] = peak_times[peaks_count - 1];
             samples_from_first_peak = samples_from_first_peak - peak_indices[peaks_count - 1];
-            prev_peak_index = 0;
             peaks_count = 1;
+            // continue to insert the current peak
         }
         else
         {
@@ -208,7 +208,7 @@ void PeakDetectionClass::insertPeak(const float &peak_val, const uhd::time_spec_
 
     ++peaks_count;
     prev_peak_index = samples_from_first_peak;
-    prev_peak_val = peak_val;
+    prev_peak_val = std::abs(peak_val);
 }
 
 void PeakDetectionClass::removeLastPeak()
@@ -230,20 +230,18 @@ void PeakDetectionClass::updatePrevPeak()
     }
 }
 
-bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time_spec_t &samp_time)
+bool PeakDetectionClass::process_corr(const std::complex<float> corr_val, const uhd::time_spec_t &samp_time)
 {
 
     size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
+
+    float abs_corr_val = std::abs(corr_val) / ref_seq_len;
 
     if ((abs_corr_val / noise_level) > curr_pnr_threshold)
     {
         // First peak
         if (peaks_count == 0)
-        {
             insertPeak(abs_corr_val, samp_time);
-            // if (DEBUG)
-            //     std::cout << "\t\t -> PNR = " << abs_corr_val << "/" << noise_level << " = " << abs_corr_to_noise_ratio << " > " << curr_pnr_threshold << std::endl;
-        }
         else
         {
             // distance of current peak from last
@@ -252,7 +250,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
 
             // next peak is too far from the last
             // reset peaks and mark this peak as first
-            if (samples_from_last_peak > ref_seq_len + 5)
+            if (samples_from_last_peak > ref_seq_len + peak_det_tol)
             {
                 if (DEBUG)
                     std::cout << "\t\t Resetting -- samples from last peak = " << samples_from_last_peak << std::endl;
@@ -261,7 +259,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
             }
             // a higher peak exists in close proximity to last
             // update previous peak
-            else if (samples_from_last_peak < ref_seq_len - 5)
+            else if (samples_from_last_peak < ref_seq_len - peak_det_tol)
             {
                 // check if this peak is higher than the previous
                 if (prev_peak_val < abs_corr_val)
@@ -290,6 +288,7 @@ bool PeakDetectionClass::process_corr(const float &abs_corr_val, const uhd::time
         {
             // it happens sometimes that the first peak is not detected properly
             // insert first peak as dummy by interpolation
+            std::cout << "One peak not detected properly!" << std::endl;
             for (size_t i = total_num_peaks - 1; i > 0; --i)
             {
                 // shift peak data
@@ -318,12 +317,12 @@ float PeakDetectionClass::avg_of_peak_vals()
     {
         // average channel power from peak_vals
         for (int i = 0; i < total_num_peaks; ++i)
-            e2e_est_ref_sig_amp += peak_vals[i];
+            e2e_est_ref_sig_amp += std::abs(peak_vals[i]);
 
         e2e_est_ref_sig_amp = e2e_est_ref_sig_amp / total_num_peaks;
     }
     else
-        e2e_est_ref_sig_amp = peak_vals[0];
+        e2e_est_ref_sig_amp = std::abs(peak_vals[0]);
 
     // update max_pnr
     max_pnr = std::max(max_peak / noise_level * max_peak_mul, pnr_threshold);
@@ -351,6 +350,23 @@ float PeakDetectionClass::est_ch_pow_from_capture_ref_sig()
 uhd::time_spec_t PeakDetectionClass::get_sync_time()
 {
     return peak_times[peaks_count - sync_with_peak_from_last];
+}
+
+float PeakDetectionClass::estimate_freq_offset()
+{
+    std::vector<std::complex<float>> peak_corr_vals(peak_vals, peak_vals + peaks_count);
+    std::vector<double> phases = unwrap(peak_corr_vals);
+    uhd::time_spec_t init_timer = peak_times[0];
+    double init_phase_shift = phases[0];
+    double phase_time_prod = 0, time_sqr = 0;
+    for (size_t i = 1; i < peaks_count; ++i)
+    {
+        double timer_diff = (peak_times[i] - init_timer).get_real_secs();
+        phase_time_prod += (phases[i] - init_phase_shift) * timer_diff;
+        time_sqr += timer_diff * timer_diff;
+    }
+    double cfo = phase_time_prod / time_sqr;
+    return cfo;
 }
 
 void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)
