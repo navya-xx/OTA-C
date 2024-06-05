@@ -214,8 +214,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     if (argc < 2)
         throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
-    if (argc < 3)
-        throw std::invalid_argument("ERROR : TX ZFC device identifier `m´ missing !");
 
     std::string device_id = argv[1];
     parser.set_value("device-id", device_id, "str", "USRP device number");

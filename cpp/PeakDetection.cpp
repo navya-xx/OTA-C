@@ -150,6 +150,7 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &peak_val, const u
             peak_times[0] = peak_times[peaks_count - 1];
             samples_from_first_peak = samples_from_first_peak - peak_indices[peaks_count - 1];
             peaks_count = 1;
+            prev_peak_index = 0;
             // continue to insert the current peak
         }
         else

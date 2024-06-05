@@ -64,6 +64,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::string device_id = argv[1];
     parser.set_value("device-id", device_id, "str", "USRP device number");
 
+    float duration = 5.0;
+    if (argc > 2)
+        duration = std::stof(argv[2]);
+
     // Logger
     // Logger logger(homeDirStr + "/OTA-C/cpp/logs/log_" + device_id + ".log", Logger::Level::DEBUG, true);
 
@@ -76,7 +80,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     waitForKeyPress();
 
     // receive continuously and save to file
-    auto rx_data = usrp_classobj.reception(0, 5.0, uhd::time_spec_t(0.0), true);
+    auto rx_data = usrp_classobj.reception(0, duration, uhd::time_spec_t(0.0), true);
 
     return EXIT_SUCCESS;
 }

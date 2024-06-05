@@ -63,37 +63,29 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // waveform selection
     size_t wf_len = 101;
     size_t zfc_q = 31;
-    size_t wf_reps = 50;
+    size_t wf_reps = 10;
     size_t wf_gap = 0;
+    double tick_rate = 1e6;
+    size_t wait_ticks = 100000; // 100 millisec duration -> one tick correspond to 1 microsec
 
     WaveformGenerator wf_gen;
 
-    std::vector<std::complex<float>> tx_waveform;
-    std::vector<std::complex<float>> tmp_wf;
+    std::vector<std::complex<float>> tx_waveform = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, wf_gap, zfc_q, 1.0, 123, true);
 
-    tmp_wf = wf_gen.generate_waveform(wf_gen.ZFC, wf_len, wf_reps, wf_gap, zfc_q, 1.0, 123, false);
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
-    std::cout << "ZFC seq len = " << tmp_wf.size() << std::endl;
+    // transmit the waveform by waiting in current clock ticks
+    uhd::time_spec_t curr_timer = usrp_classobj.usrp->get_time_now();
 
-    size_t signal_gap = 100 * wf_len;
-    tx_waveform.insert(tx_waveform.end(), signal_gap, std::complex<float>(0.0, 0.0));
+    // std::string filename = homeDirStr + "/OTA-C/cpp/storage/tx_" + device_id + ".dat";
+    // save_complex_data_to_file(filename, tx_waveform);
 
-    // tmp_wf = wf_gen.generate_waveform(wf_gen.IMPULSE, wf_len, 10, wf_len, 1, 1.0, 123, false);
-    // tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
-    // std::cout << "IMPULSE seq len = " << tmp_wf.size() << std::endl;
-
-    tx_waveform.insert(tx_waveform.end(), tmp_wf.begin(), tmp_wf.end());
-
-    signal_gap = 10 * wf_len;
-    tx_waveform.insert(tx_waveform.end(), signal_gap, std::complex<float>(0.0, 0.0));
-
-    std::cout << "Total seq len = " << tx_waveform.size() << std::endl;
-
-    std::string filename = homeDirStr + "/OTA-C/cpp/storage/tx_" + device_id + ".dat";
-    save_complex_data_to_file(filename, tx_waveform);
+    for (int i = 0; i < 10; ++i)
+    {
+        uhd::time_spec_t tx_timer = curr_timer + uhd::time_spec_t::from_ticks(wait_ticks * (i + 1), tick_rate);
+        usrp_classobj.transmission(tx_waveform, tx_timer, false);
+    }
 
     // transmit waveform
-    usrp_classobj.transmission(tx_waveform, uhd::time_spec_t(0.0), true);
+
     // usrp_classobj.transmission(tx_waveform_zfc, uhd::time_spec_t(0.0), true);
     // usrp_classobj.transmission(tx_waveform_imp, uhd::time_spec_t(0.0), true);
 
