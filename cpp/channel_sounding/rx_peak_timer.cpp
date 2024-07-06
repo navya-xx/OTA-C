@@ -1,10 +1,10 @@
-#include "USRP_class.hpp"
-#include "utility_funcs.hpp"
-#include "ConfigParser.hpp"
-#include "PeakDetection.hpp"
-#include "CycleStartDetector.hpp"
-#include "waveforms.hpp"
+#include "../USRP_class.hpp"
+#include "../utility_funcs.hpp"
+#include "../ConfigParser.hpp"
+#include "../PeakDetection.hpp"
+#include "../CycleStartDetector.hpp"
 #include <stdexcept>
+#include <ncurses.h>
 
 /***************************************************************
  * Copyright (c) 2023 Navneet Agrawal
@@ -27,62 +27,37 @@ void sig_int_handler(int)
 
 extern const bool DEBUG = true;
 
-void csd_test_producer_thread(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, const std::string &homeDirStr)
+void waitForKeyPress()
 {
-    size_t tx_N_zfc = parser.getValue_int("test-signal-len");
-    size_t csd_test_tx_reps = parser.getValue_int("test-tx-reps");
-    // float tx_reps_gap = parser.getValue_int("tx-gap-millisec") / 1e3;
-    float total_runtime = parser.getValue_float("duration");
-    size_t rand_seed = parser.getValue_int("rand-seed");
+    initscr(); // Initialize the window
+    cbreak();  // Disable line buffering
+    noecho();  // Do not echo while we do getch
 
-    // float max_leaf_dist = parser.getValue_float("max-leaf-dist");
-    // float cent_tx_gain = parser.getValue_float("cent-tx-gain");
-    // float antenna_gain = parser.getValue_float("antenna-gain");
-    // float leaf_rx_gain = usrp_classobj.rx_gain;
-    // float min_path_loss_dB = calculatePathLoss(max_leaf_dist, usrp_classobj.carrier_freq);
-    // float min_e2e_amp = dbToAmplitude(cent_tx_gain + leaf_rx_gain + 2 * antenna_gain - min_path_loss_dB);
-    float min_e2e_amp = parser.getValue_float("min-e2e-amp");
+    printw("Press any key to continue...");
+    refresh(); // Print it on the real screen
+    getch();   // Wait for user input
+
+    endwin(); // End curses mode
+}
+
+void producer_thread_func(PeakDetectionClass &peak_det_obj, CycleStartDetector &csd_obj, USRP_class &usrp_classobj, ConfigParser &parser, const std::string &homeDirStr, const float total_runtime)
+{
+    size_t wf_len = parser.getValue_int("Ref-N-zfc");
+    size_t zfc_q = parser.getValue_int("Ref-m-zfc");
+    size_t wf_reps = parser.getValue_int("Ref-R-zfc");
+    size_t wf_gap = 0;
+    double tick_rate = parser.getValue_int("rate");
 
     auto rx_stream = usrp_classobj.rx_streamer;
-    auto tx_stream = usrp_classobj.tx_streamer;
     size_t max_rx_packet_size = usrp_classobj.max_rx_packet_size;
     float rate = usrp_classobj.rx_rate;
     const float burst_pkt_time = std::max<float>(0.100f, (2 * max_rx_packet_size / rate));
 
-    if (total_runtime == 0.0)
-        total_runtime = 5 * 60; // run for 5 minutes at most
     const auto start_time = std::chrono::steady_clock::now();
     const auto stop_time = start_time + std::chrono::milliseconds(int64_t(1000 * total_runtime));
 
-    // for transmitting one ref signal before the information signal
-    WaveformGenerator wf_gen;
-
-    // auto ref_zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, parser.getValue_int("Ref-N-zfc"), parser.getValue_int("Ref-R-zfc"), 0, parser.getValue_int("Ref-m-zfc"), 1.0, 0, false);
-    auto tx_zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, tx_N_zfc, csd_test_tx_reps, 0, rand_seed, 1.0, 0, true);
-    // auto tx_zfc_seq = wf_gen.generate_waveform(wf_gen.UNIT_RAND, tx_N_zfc, csd_test_tx_reps, 0, 1, 1.0, rand_seed, false);
-
-    // std::vector<std::complex<float>> tx_seq;
-    // tx_seq.insert(tx_seq.end(), ref_zfc_seq.begin(), ref_zfc_seq.end());
-    // tx_seq.insert(tx_seq.end(), tx_zfc_seq.begin(), tx_zfc_seq.end());
-
-    // save_complex_data_to_file(homeDirStr + "/OTA-C/cpp/storage/tx_seq_" + std::to_string(rand_seed) + "_" + parser.getValue_str("device-id") + ".dat", tx_seq);
-
-    size_t round = 1;
-    bool is_save_stream_data = false;
-    if (parser.getValue_str("is-save-stream-data") == "true")
-        is_save_stream_data = true;
-
     std::vector<std::complex<float>> buff(max_rx_packet_size);
-
-    std::ofstream outfile;
-    std::string save_stream_file;
-    if (is_save_stream_data)
-    {
-        save_stream_file = homeDirStr + "/OTA-C/cpp/storage/stream_data.dat";
-        // remove existing file
-        std::remove(save_stream_file.c_str());
-        outfile.open(save_stream_file, std::ios::out | std::ios::binary | std::ios::app);
-    }
+    size_t round = 1;
 
     while (not stop_signal_called and not(std::chrono::steady_clock::now() > stop_time))
     {
@@ -218,11 +193,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::string device_id = argv[1];
     parser.set_value("device-id", device_id, "str", "USRP device number");
 
+    float duration = 5.0;
     if (argc > 2)
-    {
-        size_t rand_seed = std::stoi(argv[2]);
-        parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
-    }
+        duration = std::stof(argv[2]);
 
     // Logger
     // Logger logger(homeDirStr + "/OTA-C/cpp/logs/log_" + device_id + ".log", Logger::Level::DEBUG, true);
@@ -230,19 +203,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     parser.print_values();
 
     // USRP init
+    USRP_class usrp_classobj(parser);
     usrp_classobj.initialize();
-    parser.set_value("max-rx-packet-size", std::to_string(usrp_classobj.max_rx_packet_size), "int");
-    parser.set_value("max-tx-packet-size", std::to_string(usrp_classobj.max_tx_packet_size), "int");
     uhd::time_spec_t rx_sample_duration = usrp_classobj.rx_sample_duration;
 
-    //----------- CycleStartDetector and PeakDetector classes ---------------------
-
-    // create PeakDetector and CycleStartDetector class objects
+    // CycleStartDetector and PeakDetector class object init
     PeakDetectionClass peak_det_obj(parser, usrp_classobj.init_background_noise);
     CycleStartDetector csd_obj(parser, rx_sample_duration, peak_det_obj);
 
-    //----------- THREADS - producer (Rx/Tx) thread and consumer thread ---------------------
-    std::atomic<bool> csd_success_signal(false);
+    waitForKeyPress();
 
     std::signal(SIGINT, &sig_int_handler);
     std::cout << "Press Ctrl + C to stop streaming..." << std::endl;
@@ -250,19 +219,22 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // setup thread_group
     boost::thread_group thread_group;
 
-    auto producer_thread = thread_group.create_thread([=, &csd_obj, &peak_det_obj, &parser, &usrp_classobj, &csd_success_signal]()
-                                                      { csd_test_producer_thread(peak_det_obj, csd_obj, usrp_classobj, parser, csd_success_signal, homeDirStr); });
+    auto producer_thread = thread_group.create_thread([=, &csd_obj, &peak_det_obj, &parser, &usrp_classobj]()
+                                                      { producer_thread_func(peak_det_obj, csd_obj, usrp_classobj, parser, homeDirStr); });
 
     uhd::set_thread_name(producer_thread, "producer_thread");
 
     // consumer thread
-    auto consumer_thread = thread_group.create_thread([=, &csd_obj, &parser, &csd_success_signal]()
-                                                      { csd_test_consumer_thread(csd_obj, parser, csd_success_signal); });
+    auto consumer_thread = thread_group.create_thread([=, &csd_obj, &parser]()
+                                                      { consumer_thread_func(csd_obj, parser); });
 
     uhd::set_thread_name(consumer_thread, "consumer_thread");
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     thread_group.join_all();
+
+    // receive continuously and save to file
+    auto rx_data = usrp_classobj.reception(0, duration, uhd::time_spec_t(0.0), true);
 
     return EXIT_SUCCESS;
 }

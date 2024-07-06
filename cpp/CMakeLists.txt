@@ -25,7 +25,7 @@ endif()
 option(UHD_USE_STATIC_LIBS OFF)
 
 # To add UHD as a dependency to this project, add a line such as this:
-find_package(UHD 4.1.0 REQUIRED)
+find_package(UHD 4.2.0 REQUIRED)
 find_package(Curses REQUIRED)
 # The version in  ^^^^^  here is a minimum version.
 # To specify an exact version:

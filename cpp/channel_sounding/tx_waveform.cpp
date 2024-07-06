@@ -61,12 +61,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_classobj.initialize();
 
     // waveform selection
-    size_t wf_len = 101;
-    size_t zfc_q = 31;
-    size_t wf_reps = 10;
+    size_t wf_len = parser.getValue_int("Ref-N-zfc");
+    size_t zfc_q = parser.getValue_int("Ref-m-zfc");
+    size_t wf_reps = parser.getValue_int("Ref-R-zfc");
     size_t wf_gap = 0;
-    double tick_rate = 1e6;
-    size_t wait_ticks = 100000; // 100 millisec duration -> one tick correspond to 1 microsec
+    double tick_rate = parser.getValue_int("rate");
+    uhd::time_spec_t wait_duration = uhd::time_spec_t(float(parser.getValue_int("tx-gap-millisec")));
+    size_t wait_ticks = wait_duration.to_ticks(tick_rate);
 
     WaveformGenerator wf_gen;
 
@@ -81,6 +82,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     for (int i = 0; i < 10; ++i)
     {
         uhd::time_spec_t tx_timer = curr_timer + uhd::time_spec_t::from_ticks(wait_ticks * (i + 1), tick_rate);
+        std::cout << "Tx timer tick count = " << tx_timer.to_ticks(tick_rate) << std::endl;
         usrp_classobj.transmission(tx_waveform, tx_timer, false);
     }
 
