@@ -329,6 +329,8 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
 
         LOG_INTO_BUFFER(got_async_burst_ack ? "success" : "fail");
 
+        LOG_FLUSH_INFO();
+
         if (not got_async_burst_ack)
             LOG_WARN("ACK FAIL..!");
         else
