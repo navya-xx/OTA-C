@@ -73,7 +73,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     for (int i = 0; i < 20; i++)
     {
         int delay = random_delay();
-        size_t num_samps = std::min(int(delay / tx_samp_rate), 100);
+        size_t num_samps = int(delay * tx_samp_rate / 1e6);
         LOG_INFO_FMT("Num samps added in the gap = %1%.", num_samps);
         complete_tx_seq.insert(complete_tx_seq.end(), tx_waveform.begin(), tx_waveform.end());
         complete_tx_seq.insert(complete_tx_seq.end(), num_samps, std::complex<float>(0.0, 0.0));
