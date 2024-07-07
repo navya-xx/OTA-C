@@ -23,8 +23,8 @@ public:
         const size_t &num_rx_samps = 0,
         const float &duration = 0.0,
         const uhd::time_spec_t &rx_time = uhd::time_spec_t(0.0),
-        const std::function<void(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &) {},
-        bool is_save_to_file = false);
+        bool is_save_to_file = false,
+        const std::function<void(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &) {});
 
     std::ofstream rx_save_stream;
     float init_background_noise;

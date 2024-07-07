@@ -351,7 +351,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
-std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called, const size_t &num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, const std::function<void(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback, bool is_save_to_file)
+std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<void(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
 {
     std::string filename;
 
@@ -362,7 +362,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
             const char *homeDir = std::getenv("HOME");
             std::string homeDirStr(homeDir);
             std::string curr_datetime = currentDateTimeFilename();
-            filename = homeDirStr + "/OTA-C/cpp/storage/rx_saved_file_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
+            filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
         }
     }
 
@@ -370,9 +370,9 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     uhd::rx_metadata_t md;
 
     // setup streaming
-    uhd::stream_cmd_t stream_cmd(num_rx_samps > max_rx_packet_size or num_rx_samps == 0 ? uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS : uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
+    uhd::stream_cmd_t stream_cmd(req_num_rx_samps > max_rx_packet_size or req_num_rx_samps == 0 ? uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS : uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
 
-    stream_cmd.num_samps = num_rx_samps == 0 ? max_rx_packet_size : num_rx_samps;
+    stream_cmd.num_samps = req_num_rx_samps == 0 ? max_rx_packet_size : req_num_rx_samps;
 
     auto usrp_now = usrp->get_time_now();
     float time_diff = (rx_time - usrp_now).get_real_secs();
@@ -405,7 +405,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
 
     while (not reception_complete and not stop_signal_called)
     {
-        size_t size_rx = (num_rx_samps == 0) ? max_rx_packet_size : std::min(num_rx_samps - num_acc_samps, max_rx_packet_size);
+        size_t size_rx = (req_num_rx_samps == 0) ? max_rx_packet_size : std::min(req_num_rx_samps - num_acc_samps, max_rx_packet_size);
 
         size_t num_curr_rx_samps;
 
@@ -450,21 +450,21 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         callback(forward, num_curr_rx_samps, md.time_spec);
 
         // process (save, update counters, etc...) received samples and continue
-        if (is_save_to_file and num_rx_samps == 0) // continuous saving
+        if (is_save_to_file and req_num_rx_samps == 0) // continuous saving
             save_stream_to_file(filename, rx_save_stream, forward);
-        else if (num_rx_samps > 0) // fixed number of samples -- save in a separate vector to return
+        else if (req_num_rx_samps > 0) // fixed number of samples -- save in a separate vector to return
             rx_samples.insert(rx_samples.end(), forward.begin(), forward.end());
 
         num_acc_samps += num_curr_rx_samps;
 
-        if (num_rx_samps == 0 and duration > 0) // check if rx duration expired
+        if (req_num_rx_samps == 0 and duration > 0) // check if rx duration expired
         {
             if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
                 reception_complete = true;
         }
-        else if (num_rx_samps > 0) // check if all rx samples received
+        else if (req_num_rx_samps > 0) // check if all rx samples received
         {
-            if (num_acc_samps >= num_rx_samps)
+            if (num_acc_samps >= req_num_rx_samps)
                 reception_complete = true;
         }
     }
@@ -475,13 +475,13 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         rx_streamer->issue_stream_cmd(stream_cmd);
     }
 
-    if (num_rx_samps > 0 and num_acc_samps < num_rx_samps)
+    if (req_num_rx_samps > 0 and num_acc_samps < req_num_rx_samps)
         LOG_WARN("Not all packets received!");
 
-    if (num_rx_samps > 0 and is_save_to_file) // save all received samples if a total number of desired rx samples given
+    if (req_num_rx_samps > 0 and is_save_to_file) // save all received samples if a total number of desired rx samples given
         save_stream_to_file(filename, rx_save_stream, rx_samples);
 
-    if (success and num_rx_samps > 0)
+    if (success and req_num_rx_samps > 0)
         return rx_samples;
     else // do not return anything if total num rx samps not given
         return std::vector<std::complex<float>>{};

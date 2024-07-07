@@ -73,8 +73,8 @@ endfunction()
 # add_library(lib_usrp STATIC src/lib_usrp/USRPclass.cpp)
 # enable_precompiled_headers(lib_usrp)
 
-SET(executables_list centralized_arch_leaf )
-SET(files_list main/centralized_arch/leaf.cpp )
+SET(executables_list centralized_arch_leaf exp_tx_zfc exp_rx_to_file)
+SET(files_list main/centralized_arch/leaf.cpp main/experiments/tx_zfc.cpp main/experiments/rx_to_file.cpp)
 SET(counter 0)
 
 ### Make the executable #######################################################
