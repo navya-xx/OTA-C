@@ -57,7 +57,7 @@ private:
     float est_e2e_ref_sig_amp();
 
     size_t N_zfc, m_zfc, R_zfc;
-    size_t num_samp_corr;
+    size_t corr_seq_len;
     size_t capacity;
 
     size_t front;

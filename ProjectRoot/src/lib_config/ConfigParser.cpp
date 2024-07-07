@@ -143,27 +143,4 @@ void ConfigParser::print_values()
 
     for (const auto &pair : float_data)
         LOG_INFO(boost::str(boost::format("%1% %2% %3%") % boost::io::group(std::left, std::setw(30), pair.first) % boost::io::group(std::left, std::setw(10), pair.second) % boost::io::group(std::left, std::setw(80), desc_data[pair.first])));
-
-    // std::cout << "Config values:" << std::endl;
-
-    // for (const auto &pair : string_data)
-    // {
-    //     std::cout << std::left << std::setw(30) << pair.first
-    //               << std::left << std::setw(10) << pair.second
-    //               << std::left << std::setw(80) << desc_data[pair.first] << std::endl;
-    // }
-
-    // for (const auto &pair : int_data)
-    // {
-    //     std::cout << std::left << std::setw(30) << pair.first
-    //               << std::left << std::setw(10) << pair.second
-    //               << std::left << std::setw(80) << desc_data[pair.first] << std::endl;
-    // }
-
-    // for (const auto &pair : float_data)
-    // {
-    //     std::cout << std::left << std::setw(30) << pair.first
-    //               << std::left << std::setw(10) << pair.second
-    //               << std::left << std::setw(80) << desc_data[pair.first] << std::endl;
-    // }
 }

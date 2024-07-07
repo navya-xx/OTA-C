@@ -58,3 +58,30 @@ float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const fl
     }
     return vec.empty() ? 0.0 : sum / vec.size();
 }
+
+std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector)
+{
+    const double pi = M_PI;
+    const double two_pi = 2 * M_PI;
+
+    // Calculate the initial phase (angles) of the complex numbers
+    std::vector<double> phase(complexVector.size());
+    std::transform(complexVector.begin(), complexVector.end(), phase.begin(), [](const std::complex<float> &c)
+                   { return std::arg(c); });
+
+    // Unwrap the phase
+    for (size_t i = 1; i < phase.size(); ++i)
+    {
+        double delta = phase[i] - phase[i - 1];
+        if (delta > pi)
+        {
+            phase[i] -= two_pi;
+        }
+        else if (delta < -pi)
+        {
+            phase[i] += two_pi;
+        }
+    }
+
+    return phase;
+}

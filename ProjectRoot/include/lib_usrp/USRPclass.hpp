@@ -6,7 +6,6 @@
 #include "log_macros.hpp"
 #include "Utility.hpp"
 #include "ConfigParser.hpp"
-#include "Waveforms.hpp"
 
 extern const bool DEBUG;
 
@@ -39,8 +38,6 @@ public:
 
 private:
     ConfigParser parser;
-
-    WaveformGenerator wf_gen;
 
     uhd::sensor_value_t get_sensor_fn_rx(const std::string &sensor_name, const size_t &channel);
     uhd::sensor_value_t get_sensor_fn_tx(const std::string &sensor_name, const size_t &channel);

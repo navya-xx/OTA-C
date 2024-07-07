@@ -2,8 +2,23 @@
 
 /* Class object for generating different waveforms */
 
+// initialize
+WaveformGenerator::WaveformGenerator() {};
+
+void WaveformGenerator::initialize(WAVEFORM_TYPE init_wf_type, size_t init_wf_len, size_t init_wf_reps, size_t init_wf_gap, size_t init_zfc_q, float init_scale, size_t init_rand_seed, bool init_is_pad_ends)
+{
+    wf_type = init_wf_type;
+    wf_len = init_wf_len;
+    wf_reps = init_wf_reps;
+    wf_gap = init_wf_gap;
+    zfc_q = init_zfc_q;
+    scale = init_scale;
+    rand_seed = init_rand_seed;
+    is_pad_ends = init_is_pad_ends;
+};
+
 // Function to generate Zadoff-Chu sequence
-std::vector<std::complex<float>> WaveformGenerator::generateZadoffChuSequence(size_t wf_len, size_t zfc_q, float scale)
+std::vector<std::complex<float>> WaveformGenerator::generateZadoffChuSequence()
 {
     std::vector<std::complex<float>> sequence(wf_len);
 
@@ -18,7 +33,7 @@ std::vector<std::complex<float>> WaveformGenerator::generateZadoffChuSequence(si
 }
 
 // Function to generate a vector of complex random variables on the unit circle
-std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom(size_t rand_seed, size_t wf_len, float scale)
+std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom()
 {
     // Seed for random number generation
     std::mt19937 generator(rand_seed);
@@ -39,7 +54,7 @@ std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom(siz
     return sequence;
 }
 
-std::vector<std::complex<float>> WaveformGenerator::generateImpulseSignal(size_t wf_len, float scale)
+std::vector<std::complex<float>> WaveformGenerator::generateImpulseSignal()
 {
     std::vector<std::complex<float>> sequence(wf_len);
 
@@ -52,7 +67,7 @@ std::vector<std::complex<float>> WaveformGenerator::generateImpulseSignal(size_t
     return sequence;
 }
 
-std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_TYPE wf_type, size_t wf_len, size_t wf_reps, size_t wf_gap, size_t zfc_q, float scale, size_t rand_seed, bool is_pad_ends)
+std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
 {
 
     std::vector<std::complex<float>> final_sequence;
@@ -61,17 +76,17 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
     switch (wf_type)
     {
     case WAVEFORM_TYPE::ZFC:
-        sequence = generateZadoffChuSequence(wf_len, zfc_q, scale);
+        sequence = generateZadoffChuSequence();
         // std::cout << "\t\t generating ZFC seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::UNIT_RAND:
-        sequence = generateUnitCircleRandom(rand_seed, wf_len, scale);
+        sequence = generateUnitCircleRandom();
         // std::cout << "\t\t generating RANDOM seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::IMPULSE:
-        sequence = generateImpulseSignal(wf_len, scale);
+        sequence = generateImpulseSignal();
         // std::cout << "\t\t generating IMPULSE seq" << std::endl;
         break;
 

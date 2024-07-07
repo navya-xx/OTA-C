@@ -22,13 +22,13 @@ CycleStartDetector::CycleStartDetector(
     zfc_seq = wf_gen.generate_waveform(wf_gen.ZFC, N_zfc, 1, 0, m_zfc, 1.0, 0, false);
 
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
-    num_samp_corr = N_zfc * parser.getValue_int("num-corr-size-mul");
+    corr_seq_len = N_zfc * parser.getValue_int("num-corr-size-mul");
     capacity = max_rx_packet_size * parser.getValue_int("capacity-mul");
 
     if (parser.getValue_str("update-noise-level") == "true")
         update_noise_level = true;
 
-    if (capacity < num_samp_corr + N_zfc)
+    if (capacity < corr_seq_len + N_zfc)
         throw std::range_error("Capacity < consumed data length (= Ref-N-zfc * 2)!");
 
     samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
@@ -82,7 +82,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
     // Wait until min_num_produced samples are produced by producer
     cv_consumer.wait(lock, [this, &csd_success_signal]
-                     { return (num_produced >= num_samp_corr + N_zfc) and (not csd_success_signal); });
+                     { return (num_produced >= corr_seq_len + N_zfc) and (not csd_success_signal); });
 
     if (not peak_det_obj_ref.detection_flag)
         correlation_operation();
@@ -102,8 +102,8 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     }
     else
     {
-        front = (front + num_samp_corr) % capacity;
-        num_produced = std::max((num_produced - num_samp_corr), size_t(0));
+        front = (front + corr_seq_len) % capacity;
+        num_produced = std::max((num_produced - corr_seq_len), size_t(0));
         cv_producer.notify_one();
         return false;
     }
@@ -116,7 +116,7 @@ void CycleStartDetector::correlation_operation()
     float sum_ampl = 0.0;
     float abs_val = 0.0;
 
-    for (size_t i = 0; i < num_samp_corr; ++i)
+    for (size_t i = 0; i < corr_seq_len; ++i)
     {
         // compute correlation
         std::complex<float> corr(0.0, 0.0);
@@ -140,7 +140,7 @@ void CycleStartDetector::correlation_operation()
 
     // udpate noise level
     if ((not found_peak) and update_noise_level and (not peak_det_obj_ref.detection_flag))
-        peak_det_obj_ref.updateNoiseLevel(sum_ampl / num_samp_corr, num_samp_corr);
+        peak_det_obj_ref.updateNoiseLevel(sum_ampl / corr_seq_len, corr_seq_len);
 }
 
 float CycleStartDetector::est_e2e_ref_sig_amp()
@@ -245,7 +245,7 @@ float CycleStartDetector::est_e2e_ref_sig_amp()
 //     ch_est_samps.resize(ch_est_samps_size, std::complex<float>(0.0, 0.0));
 //     ch_est_samps_it = 0;
 //     ch_est_done = false;
-//     min_num_produced = num_samp_corr + N_zfc;
+//     min_num_produced = corr_seq_len + N_zfc;
 //     return max_val;
 // }
 

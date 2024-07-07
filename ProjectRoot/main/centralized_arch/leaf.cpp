@@ -1,6 +1,5 @@
 #include "pch.hpp"
 
-#include "logger.hpp"
 #include "log_macros.hpp"
 #include "Utility.hpp"
 #include "ConfigParser.hpp"

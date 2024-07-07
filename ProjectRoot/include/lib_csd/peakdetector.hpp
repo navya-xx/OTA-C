@@ -1,0 +1,66 @@
+#ifndef PEAK_CLASS
+#define PEAK_CLASS
+
+#include "pch.hpp"
+#include "log_macros.hpp"
+#include "ConfigParser.hpp"
+#include "Utility.hpp"
+
+class PeakDetectionClass
+{
+private:
+    ConfigParser parser;
+
+    size_t *peak_indices;
+    std::complex<float> *peak_vals;
+    uhd::time_spec_t *peak_times;
+
+    size_t total_num_peaks;
+
+    size_t ref_seq_len;
+    float pnr_threshold, curr_pnr_threshold, max_pnr;
+    float init_noise_level;
+
+    size_t peak_det_tol;
+    float max_peak_mul;
+    size_t sync_with_peak_from_last;
+
+    bool is_update_pnr_threshold;
+
+    void insertPeak(const std::complex<float> &peak_val, const uhd::time_spec_t &peak_time);
+    void update_pnr_threshold();
+    void updatePrevPeak();
+    void removeLastPeak();
+    float get_max_peak_val();
+    bool check_peaks();
+
+public:
+    PeakDetectionClass(ConfigParser &parser, const float &init_noise_level);
+
+    size_t peaks_count;
+    size_t prev_peak_index;
+    float prev_peak_val;
+    size_t samples_from_first_peak;
+    bool detection_flag;
+
+    float noise_level;
+    long int noise_counter;
+
+    std::complex<float> *get_peak_vals();
+    uhd::time_spec_t *get_peak_times();
+    void print_peaks_data();
+
+    void reset_peaks_counter();
+    void reset();
+
+    bool process_corr(const std::complex<float> &abs_corr_val, const uhd::time_spec_t &samp_time);
+
+    void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
+
+    float avg_of_peak_vals();
+    uhd::time_spec_t get_sync_time();
+
+    float estimate_freq_offset();
+};
+
+#endif // PEAK_CLASS

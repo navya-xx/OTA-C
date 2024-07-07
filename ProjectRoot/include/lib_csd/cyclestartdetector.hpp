@@ -2,7 +2,9 @@
 #define CSD_CLASS
 
 #include "pch.hpp"
+#include "log_macros.hpp"
 #include "ConfigParser.hpp"
+#include "peakdetector.hpp"
 
 class CycleStartDetector
 {
@@ -16,7 +18,7 @@ public:
     uhd::time_spec_t get_wait_time(float tx_wait_microsec);
 
     uhd::time_spec_t csd_tx_start_timer;
-    float e2e_est_ref_sig_amp;
+    float est_ref_sig_amp;
 
 private:
     std::vector<std::complex<float>> samples_buffer;
@@ -32,7 +34,7 @@ private:
     float est_e2e_ref_sig_amp();
 
     size_t N_zfc, m_zfc, R_zfc;
-    size_t num_samp_corr;
+    size_t corr_seq_len;
     size_t capacity;
 
     size_t front;
