@@ -92,7 +92,6 @@ void USRP_class::initialize()
 {
     // Entire routine to setup USRP, streamers, testing Rx/Tx capabilities, etc.
     std::string device_id = parser.getValue_str("device-id");
-    std::string node_type = parser.getValue_str("node-type");
 
     bool usrp_make_success = false;
     std::string args = "serial=" + device_id;
@@ -146,16 +145,9 @@ void USRP_class::initialize()
 
     // set tx/rx gains
     float _rx_gain, _tx_gain;
-    if (node_type == "leaf")
-    {
-        _rx_gain = parser.getValue_float("rx-gain");
-        _tx_gain = parser.getValue_float("tx-gain");
-    }
-    else
-    {
-        _rx_gain = parser.getValue_float("cent-rx-gain");
-        _tx_gain = parser.getValue_float("cent-tx-gain");
-    }
+    _rx_gain = parser.getValue_float("rx-gain");
+    _tx_gain = parser.getValue_float("tx-gain");
+
     if (_rx_gain >= 0.0)
     {
         LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", _rx_gain);
