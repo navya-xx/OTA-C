@@ -13,11 +13,11 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
-int random_delay()
+int random_delay(const int &min, const int &max)
 {
-    std::random_device rd;                                           // Seed generator
-    std::mt19937 gen(rd());                                          // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_int_distribution<> distr(size_t(3e5), size_t(8e5)); // Range from 1e5 to 5e5 microsec
+    std::random_device rd;                           // Seed generator
+    std::mt19937 gen(rd());                          // Standard mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<> distr(min, max); // Range from 1e5 to 5e5 microsec
 
     // Generate a random delay
     int delay = distr(gen);
@@ -70,9 +70,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*-------- Transmit Waveform --------*/
     // transmit multiple copies of the waveform with random delays
     std::vector<std::complex<float>> complete_tx_seq;
+
+    size_t random_min = int(1e4), random_max = int(1e5);
+
     for (int i = 0; i < 20; i++)
     {
-        int delay = random_delay();
+        int delay = random_delay(random_min, random_max);
         size_t num_samps = int(delay * tx_samp_rate / 1e6);
         LOG_INFO_FMT("Num samps added in the gap = %1%.", num_samps);
         complete_tx_seq.insert(complete_tx_seq.end(), tx_waveform.begin(), tx_waveform.end());
