@@ -15,9 +15,9 @@ void sig_int_handler(int)
 
 int random_delay()
 {
-    std::random_device rd;                                 // Seed generator
-    std::mt19937 gen(rd());                                // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_int_distribution<> distr(100000, 500000); // Range from 1e5 to 5e5 microsec
+    std::random_device rd;                                           // Seed generator
+    std::mt19937 gen(rd());                                          // Standard mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<> distr(size_t(3e5), size_t(8e5)); // Range from 1e5 to 5e5 microsec
 
     // Generate a random delay
     int delay = distr(gen);
@@ -73,7 +73,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     for (int i = 0; i < 20; i++)
     {
         int delay = random_delay();
-        size_t num_samps = delay / tx_samp_rate;
+        size_t num_samps = std::min(int(delay / tx_samp_rate), 100);
+        LOG_INFO_FMT("Num samps added in the gap = %1%.", num_samps);
         complete_tx_seq.insert(complete_tx_seq.end(), tx_waveform.begin(), tx_waveform.end());
         complete_tx_seq.insert(complete_tx_seq.end(), num_samps, std::complex<float>(0.0, 0.0));
     }
