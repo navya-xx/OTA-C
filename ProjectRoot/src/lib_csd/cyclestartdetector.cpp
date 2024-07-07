@@ -90,7 +90,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
                      { return (num_produced >= corr_seq_len + (N_zfc - 1)) and (not csd_success_signal); });
 
     if (not peak_det_obj_ref.detection_flag)
-        correlation_operation();
+        correlation_operation(samples_buffer);
 
     if (peak_det_obj_ref.detection_flag)
     {
@@ -113,7 +113,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     }
 }
 
-void CycleStartDetector::correlation_operation()
+void CycleStartDetector::correlation_operation(const std::vector<std::complex<float>> &samples)
 {
     // Perform cross-correlation
     bool found_peak = false;
@@ -125,7 +125,7 @@ void CycleStartDetector::correlation_operation()
         // compute correlation
         std::complex<float> corr(0.0, 0.0);
         for (size_t j = 0; j < N_zfc; ++j)
-            corr += (samples_buffer[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
+            corr += (samples[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
 
         found_peak = peak_det_obj_ref.process_corr(corr, timer[(front + i) % capacity]);
 

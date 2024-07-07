@@ -44,6 +44,48 @@ void save_stream_to_file(const std::string &filename, std::ofstream &outfile, st
     }
 }
 
+std::vector<std::complex<float>> read_from_file(const std::string &filename)
+{
+    std::vector<std::complex<float>> data;
+
+    // Open the file in binary mode
+    std::ifstream inputFile(filename, std::ios::binary);
+    if (!inputFile)
+    {
+        LOG_ERROR_FMT("Error opening file: %1%", filename);
+        return data; // Return an empty vector if file cannot be opened
+    }
+
+    // Get the size of the file
+    inputFile.seekg(0, std::ios::end);
+    std::streamsize fileSize = inputFile.tellg();
+    inputFile.seekg(0, std::ios::beg);
+
+    // Ensure the file size is a multiple of the size of std::complex<float>
+    if (fileSize % sizeof(std::complex<float>) != 0)
+    {
+        LOG_ERROR("File size is not a multiple of std::complex<float>");
+        return data;
+    }
+
+    // Calculate the number of complex numbers in the file
+    size_t numElements = fileSize / sizeof(std::complex<float>);
+
+    // Resize the vector to hold all complex numbers
+    data.resize(numElements);
+
+    // Read the data
+    inputFile.read(reinterpret_cast<char *>(data.data()), fileSize);
+
+    if (!inputFile)
+    {
+        LOG_ERROR_FMT("Error reading file: ", filename);
+        return std::vector<std::complex<float>>(); // Return an empty vector on read error
+    }
+
+    return data;
+}
+
 float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const float threshold)
 {
     float sum = 0.0;

@@ -12,7 +12,8 @@ private:
     ConfigParser parser;
 
     size_t *peak_indices;
-    std::complex<float> *peak_vals;
+    std::complex<float> *corr_samples;
+    float *peak_vals;
     uhd::time_spec_t *peak_times;
 
     size_t total_num_peaks;
@@ -27,7 +28,7 @@ private:
 
     bool is_update_pnr_threshold;
 
-    void insertPeak(const std::complex<float> &peak_val, const uhd::time_spec_t &peak_time);
+    void insertPeak(const std::complex<float> &corr_sample, float &peak_val, const uhd::time_spec_t &peak_time);
     void update_pnr_threshold();
     void updatePrevPeak();
     void removeLastPeak();

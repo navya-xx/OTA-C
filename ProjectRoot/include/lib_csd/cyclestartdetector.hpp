@@ -29,7 +29,7 @@ private:
     uhd::time_spec_t rx_sample_duration;
     PeakDetectionClass peak_det_obj_ref;
 
-    void correlation_operation();
+    void correlation_operation(const std::vector<std::complex<float>> &samples);
     void reset();
     float est_e2e_ref_sig_amp();
 

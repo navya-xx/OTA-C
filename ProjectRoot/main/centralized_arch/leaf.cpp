@@ -6,6 +6,11 @@
 #include "USRPclass.hpp"
 
 #define LOG_LEVEL LogLevel::DEBUG
+static bool stop_signal_called = false;
+void sig_int_handler(int)
+{
+    stop_signal_called = true;
+}
 
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
@@ -39,6 +44,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     USRP_class usrp_classobj(parser);
 
     usrp_classobj.initialize();
+
+    parser.set_value("max-rx-packet-size", std::to_string(usrp_classobj.max_rx_packet_size), "int", "Max Rx packet size");
 
     return EXIT_SUCCESS;
 };
