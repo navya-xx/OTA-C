@@ -4,8 +4,8 @@
 #include "pch.hpp"
 
 #include "log_macros.hpp"
-#include "Utility.hpp"
-#include "ConfigParser.hpp"
+#include "utility.hpp"
+#include "config_parser.hpp"
 
 extern const bool DEBUG;
 
@@ -24,7 +24,10 @@ public:
         const float &duration = 0.0,
         const uhd::time_spec_t &rx_time = uhd::time_spec_t(0.0),
         bool is_save_to_file = false,
-        const std::function<void(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &) {});
+        const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)
+        { return false; });
+
+    void adjust_for_freq_offset(const float &freq_offset);
 
     std::ofstream rx_save_stream;
     float init_background_noise;

@@ -1,8 +1,8 @@
 #include "pch.hpp"
 #include "log_macros.hpp"
 #include "cyclestartdetector.hpp"
-#include "ConfigParser.hpp"
-#include "Utility.hpp"
+#include "config_parser.hpp"
+#include "utility.hpp"
 
 #define LOG_LEVEL LogLevel::DEBUG
 static bool stop_signal_called = false;
@@ -17,8 +17,9 @@ void producer_thread(const std::vector<std::complex<float>> &stream_data, PeakDe
     size_t packet_size = parser.getValue_int("max-rx-packet-size");
     double sampling_time = 1 / parser.getValue_float("rate");
     size_t packet_counter = 0;
+    size_t total_num_packets = size_t(stream_data.size() / packet_size);
 
-    while (not csd_success_signal and not stop_signal_called)
+    while (not stop_signal_called and packet_counter < total_num_packets)
     {
         std::vector<std::complex<float>> data_it(stream_data.begin() + packet_counter * packet_size, stream_data.begin() + (packet_counter + 1) * packet_size);
         uhd::time_spec_t curr_packet_time = init_timer + uhd::time_spec_t(packet_counter * packet_size * sampling_time);
@@ -27,14 +28,19 @@ void producer_thread(const std::vector<std::complex<float>> &stream_data, PeakDe
     }
 
     LOG_INFO("Producer finished");
+    stop_signal_called = true;
 }
 
 void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal)
 {
-    while (not csd_success_signal and not stop_signal_called)
+    while (not stop_signal_called)
     {
         if (csd_obj.consume(csd_success_signal))
+        {
             LOG_INFO("***Successful CSD!");
+            LOG_INFO("Reset CSD");
+            csd_success_signal = false;
+        }
     }
 }
 
@@ -61,7 +67,7 @@ int main()
     parser.print_values();
 
     /*------ Read data -------------*/
-    std::string filename = projectDir + "/storage/csd_test_data/rx_saved_file_32C79C6_20240707_txP80.dat";
+    std::string filename = projectDir + "/storage/csd_test_data/rx_saved_file_32C79C6_20240707_txP30_3.dat";
     auto rx_data = read_from_file(filename);
 
     /*------ Run CycleStartDetector -------------*/

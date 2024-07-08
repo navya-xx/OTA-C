@@ -100,7 +100,7 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, floa
     if (peaks_count == 0) // First peak starts with index 0
         samples_from_first_peak = 0;
     // when more than 2 peaks, check previous registered peaks for correct spacing
-    else if (peaks_count > 1 and peaks_count < total_num_peaks)
+    else if (peaks_count > 1 and peaks_count < total_num_peaks - 1)
     {
         const size_t reg_peaks_spacing = peak_indices[peaks_count - 1] - peak_indices[peaks_count - 2];
 
@@ -119,7 +119,7 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, floa
         }
     }
     // check the last peak -> if at correct spot, return success
-    else if (peaks_count == total_num_peaks)
+    else if (peaks_count == total_num_peaks - 1)
     {
         const size_t last_peak_spacing = samples_from_first_peak - peak_indices[peaks_count - 1];
         if (last_peak_spacing > ref_seq_len - peak_det_tol and last_peak_spacing < ref_seq_len + peak_det_tol)
@@ -130,25 +130,23 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, floa
         LOG_WARN("*PeaksDet* : Registered peaks count > total number of peaks."
                  "Should not reach here!");
 
+    // fill info for the currently found peak
+    peak_indices[peaks_count] = samples_from_first_peak;
+    corr_samples[peaks_count] = corr_sample;
+    peak_vals[peaks_count] = peak_val;
+    peak_times[peaks_count] = peak_time;
+    ++peaks_count;
+
     if (detection_flag)
     {
         LOG_INFO("*PeaksDet* : Successful detection!");
         print_peaks_data();
         return;
     }
-    else
-    {
-        // fill info for the currently found peak
-        peak_indices[peaks_count] = samples_from_first_peak;
-        corr_samples[peaks_count] = corr_sample;
-        peak_vals[peaks_count] = peak_val;
-        peak_times[peaks_count] = peak_time;
-    }
 
     if (is_update_pnr_threshold)
         update_pnr_threshold();
 
-    ++peaks_count;
     prev_peak_index = samples_from_first_peak;
     prev_peak_val = peak_val;
 }
@@ -178,8 +176,6 @@ bool PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
         // First peak
         if (peaks_count == 0)
             insertPeak(corr_sample, curr_peak_value, samp_time);
-        else if (peaks_count == total_num_peaks - 1)
-            print_peaks_data();
         else
         {
             // distance of current peak from last
@@ -267,6 +263,7 @@ float PeakDetectionClass::estimate_freq_offset()
     uhd::time_spec_t init_timer = peak_times[0];
     double init_phase_shift = phases[0];
     double phase_time_prod = 0, time_sqr = 0;
+    // linear fit to phase offsets
     for (size_t i = 1; i < peaks_count; ++i)
     {
         double timer_diff = (peak_times[i] - init_timer).get_real_secs();

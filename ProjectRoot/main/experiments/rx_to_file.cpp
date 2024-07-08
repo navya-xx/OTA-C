@@ -1,9 +1,9 @@
 #include "pch.hpp"
 
 #include "log_macros.hpp"
-#include "Utility.hpp"
-#include "ConfigParser.hpp"
-#include "USRPclass.hpp"
+#include "utility.hpp"
+#include "config_parser.hpp"
+#include "usrp_class.hpp"
 
 #define LOG_LEVEL LogLevel::DEBUG
 static bool stop_signal_called = false;

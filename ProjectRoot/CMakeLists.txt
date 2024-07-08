@@ -75,14 +75,14 @@ endfunction()
 
 # SET(executables_list centralized_arch_leaf exp_tx_zfc exp_rx_to_file)
 # SET(files_list main/centralized_arch/leaf.cpp main/experiments/tx_zfc.cpp main/experiments/rx_to_file.cpp)
-SET(executables_list exp_csd exp_tx_zfc)
+SET(executables_list exp_csd)
 SET(files_list main/experiments/tests/csd_peakdet_test.cpp main/experiments/tx_zfc.cpp)
 SET(counter 0)
 
 ### Make the executable #######################################################
 foreach(executable ${executables_list})
     list(GET files_list ${counter} file_loc)
-    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_config/ConfigParser.cpp src/lib_waveform/Waveforms.cpp src/lib_utils/Utility.cpp src/lib_usrp/USRPclass.cpp)
+    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp)
     target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES})
     math(EXPR counter "${counter} + 1")
     enable_precompiled_headers(${executable})

@@ -3,7 +3,7 @@
 
 #include "pch.hpp"
 #include "log_macros.hpp"
-#include "ConfigParser.hpp"
+#include "config_parser.hpp"
 #include "peakdetector.hpp"
 
 class CycleStartDetector

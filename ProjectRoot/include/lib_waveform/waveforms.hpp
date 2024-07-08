@@ -19,13 +19,14 @@ public:
 
     void initialize(WAVEFORM_TYPE wf_type, size_t wf_len, size_t wf_reps = 1, size_t wf_gap = 0, size_t zfc_q = 1, float scale = 1.0, size_t rand_seed = 0, bool is_pad_ends = false);
 
+    size_t wf_len, wf_reps, wf_gap, zfc_q, rand_seed;
+    float scale = 1.0;
+    bool is_pad_ends;
+
     std::vector<std::complex<float>> generate_waveform();
 
 private:
     WAVEFORM_TYPE wf_type;
-    size_t wf_len, wf_reps, wf_gap, zfc_q, rand_seed;
-    float scale;
-    bool is_pad_ends;
 
     std::vector<std::complex<float>> generateZadoffChuSequence();
 

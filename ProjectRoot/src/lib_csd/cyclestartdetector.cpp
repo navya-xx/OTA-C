@@ -1,5 +1,5 @@
 #include "cyclestartdetector.hpp"
-#include "Waveforms.hpp"
+#include "waveforms.hpp"
 
 CycleStartDetector::CycleStartDetector(
     ConfigParser &parser,
@@ -98,6 +98,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         est_ref_sig_amp = est_e2e_ref_sig_amp();
 
         // reset corr and peak det objects
+        LOG_INFO_FMT("Tx_timer is %1%", csd_tx_start_timer.get_real_secs());
         reset();
 
         csd_success_signal = true;

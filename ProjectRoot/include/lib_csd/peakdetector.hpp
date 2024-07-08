@@ -3,8 +3,8 @@
 
 #include "pch.hpp"
 #include "log_macros.hpp"
-#include "ConfigParser.hpp"
-#include "Utility.hpp"
+#include "config_parser.hpp"
+#include "utility.hpp"
 
 class PeakDetectionClass
 {

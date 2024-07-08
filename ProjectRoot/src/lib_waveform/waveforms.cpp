@@ -1,4 +1,4 @@
-#include "Waveforms.hpp"
+#include "waveforms.hpp"
 
 /* Class object for generating different waveforms */
 
@@ -102,25 +102,11 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
             final_sequence.insert(final_sequence.end(), wf_gap, std::complex<float>(0.0, 0.0));
     }
 
-    // // add cyclic_padding
-    // if (is_pad_ends)
-    // {
-    //     size_t cyclic_shift = 2;
-    //     std::vector<std::complex<float>> scaled_seq;
-    //     float scaleFactor = 0.3;
-    //     for (auto &element : sequence)
-    //     {
-    //         scaled_seq.insert(scaled_seq.end(), element * scaleFactor);
-    //     }
-    //     final_sequence.insert(final_sequence.begin(), scaled_seq.begin() + cyclic_shift, scaled_seq.end());
-    //     final_sequence.insert(final_sequence.end(), scaled_seq.begin(), scaled_seq.end() - cyclic_shift);
-    // }
-
     // add zero at the beginning and end
     if (is_pad_ends)
     {
-        final_sequence.insert(final_sequence.begin(), 5 * wf_len, std::complex<float>(0.0, 0.0));
-        final_sequence.insert(final_sequence.end(), 5 * wf_len, std::complex<float>(0.0, 0.0));
+        final_sequence.insert(final_sequence.begin(), 2 * wf_len, std::complex<float>(0.0, 0.0));
+        final_sequence.insert(final_sequence.end(), 2 * wf_len, std::complex<float>(0.0, 0.0));
     }
 
     return final_sequence;

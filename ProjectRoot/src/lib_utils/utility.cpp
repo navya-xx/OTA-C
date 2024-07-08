@@ -1,4 +1,4 @@
-#include "Utility.hpp"
+#include "utility.hpp"
 
 std::string currentDateTime()
 {
@@ -126,4 +126,11 @@ std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector
     }
 
     return phase;
+}
+
+void remove_freq_offset(std::vector<std::complex<float>> &samples, const float &freq_offset, const float &phase_offset, const float &sampling_time)
+{
+    for (size_t i = 0; i < samples.size(); ++i)
+    {
+    }
 }

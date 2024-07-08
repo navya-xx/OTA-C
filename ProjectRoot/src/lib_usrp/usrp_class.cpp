@@ -1,4 +1,4 @@
-#include "USRPclass.hpp"
+#include "usrp_class.hpp"
 
 USRP_class::USRP_class(const ConfigParser &parser) : parser(parser) {};
 
@@ -345,7 +345,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
-std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<void(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
+std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
 {
     std::string filename;
 
@@ -370,7 +370,6 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
 
     auto usrp_now = usrp->get_time_now();
     float time_diff = (rx_time - usrp_now).get_real_secs();
-    LOG_DEBUG_FMT("Rx delay : %.4f microsecs", (time_diff * 1e6));
 
     if (rx_time <= usrp_now or rx_time == uhd::time_spec_t(0.0))
     {
@@ -380,6 +379,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     else
     {
         LOG_DEBUG("Receiving WITH delay.");
+        LOG_DEBUG_FMT("Rx delay : %.4f microsecs", (time_diff * 1e6));
         stream_cmd.stream_now = false;
         stream_cmd.time_spec = rx_time;
     }
@@ -394,7 +394,6 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     std::vector<std::complex<float>> buff(max_rx_packet_size);
     bool reception_complete = false;
     size_t retry_rx = 0;
-
     size_t num_acc_samps = 0;
 
     while (not reception_complete and not stop_signal_called)
@@ -411,7 +410,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         catch (uhd::io_error e)
         {
             std::string error_msg = "Caught an IO exception in CSD Receiver Thread. ERROR : " + static_cast<std::string>(e.what());
-            LOG_ERROR(error_msg);
+            LOG_WARN(error_msg);
             ++retry_rx;
             if (retry_rx > 5)
             {
@@ -436,12 +435,13 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
             success = false;
         }
 
+        // TODO: catch reception error gracefully without breaking
         if (not success)
             break;
 
         // run callback
         std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
-        callback(forward, num_curr_rx_samps, md.time_spec);
+        bool callback_success = callback(forward, num_curr_rx_samps, md.time_spec);
 
         // process (save, update counters, etc...) received samples and continue
         if (is_save_to_file and req_num_rx_samps == 0) // continuous saving
@@ -461,6 +461,8 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
             if (num_acc_samps >= req_num_rx_samps)
                 reception_complete = true;
         }
+        else if (callback_success)
+            reception_complete = true;
     }
 
     if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
@@ -480,3 +482,16 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     else // do not return anything if total num rx samps not given
         return std::vector<std::complex<float>>{};
 };
+
+void USRP_class::adjust_for_freq_offset(const float &freq_offset)
+{
+    // set the sample rate
+    int channel = 0; // we only use one channel on each device
+    float new_rx_rate = rx_rate - freq_offset;
+    float new_tx_rate = tx_rate - freq_offset;
+    LOG_DEBUG_FMT("Re-Setting Tx/Rx Rate: %1% Msps.", (new_rx_rate / 1e6));
+    usrp->set_tx_rate(new_tx_rate);
+    usrp->set_rx_rate(new_rx_rate, channel);
+    tx_rate = usrp->get_tx_rate(channel);
+    rx_rate = usrp->get_rx_rate(channel);
+}
