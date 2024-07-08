@@ -75,8 +75,8 @@ endfunction()
 
 # SET(executables_list centralized_arch_leaf exp_tx_zfc exp_rx_to_file)
 # SET(files_list main/centralized_arch/leaf.cpp main/experiments/tx_zfc.cpp main/experiments/rx_to_file.cpp)
-SET(executables_list exp_csd)
-SET(files_list main/experiments/tests/csd_peakdet_test.cpp main/experiments/tx_zfc.cpp)
+SET(executables_list exp_csd exp_tx_zfc exp_rx_to_file)
+SET(files_list main/experiments/tests/csd_peakdet_test.cpp main/experiments/tx_zfc.cpp main/experiments/rx_to_file.cpp)
 SET(counter 0)
 
 ### Make the executable #######################################################
