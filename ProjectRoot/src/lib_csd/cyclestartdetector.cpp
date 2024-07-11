@@ -128,12 +128,18 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
         for (size_t j = 0; j < N_zfc; ++j)
             corr += (samples[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
 
-        found_peak = peak_det_obj_ref.process_corr(corr, timer[(front + i) % capacity]);
-
         abs_val = std::abs(corr) / N_zfc;
-
-        if (update_noise_level)
-            sum_ampl += abs_val;
+        if (abs_val / peak_det_obj_ref.noise_level >= peak_det_obj_ref.curr_pnr_threshold)
+        {
+            found_peak = true;
+            peak_det_obj_ref.process_corr(corr, timer[(front + i) % capacity]);
+        }
+        else
+        {
+            found_peak = false;
+            if (update_noise_level)
+                sum_ampl += abs_val;
+        }
 
         if (peak_det_obj_ref.detection_flag)
             break;

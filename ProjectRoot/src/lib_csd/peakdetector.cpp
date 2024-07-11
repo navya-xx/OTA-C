@@ -165,73 +165,63 @@ void PeakDetectionClass::updatePrevPeak()
         removeLastPeak();
 }
 
-bool PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, const uhd::time_spec_t &samp_time)
+void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, const uhd::time_spec_t &samp_time)
 {
     const size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
 
     float curr_peak_value = std::abs(corr_sample) / ref_seq_len / noise_level;
 
-    if (curr_peak_value > curr_pnr_threshold)
-    {
-        // First peak
-        if (peaks_count == 0)
-            insertPeak(corr_sample, curr_peak_value, samp_time);
-        else
-        {
-            // distance of current peak from last
-            if (prev_peak_index > samples_from_first_peak)
-                LOG_WARN_FMT("*PeakDet* :Previous peak index '%1%' > Number of samples from first peak '%2%'."
-                             "This should not happen!",
-                             prev_peak_index, samples_from_first_peak);
-
-            // next peak is too far from the last
-            // reset peaks and mark this peak as first
-            if (samples_from_last_peak > ref_seq_len + peak_det_tol)
-            {
-                LOG_DEBUG_FMT("*PeakDet* : Next peak is too far from the last. "
-                              "Resetting -- samples from last peak '%1%'.",
-                              samples_from_last_peak);
-                reset_peaks_counter();
-                insertPeak(corr_sample, curr_peak_value, samp_time);
-            }
-            // a higher peak exists in close proximity to last
-            // update previous peak
-            else if (samples_from_last_peak < ref_seq_len - peak_det_tol)
-            {
-                // check if this peak is higher than the previous
-                if (prev_peak_val < curr_peak_value)
-                {
-                    LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
-                                  "Last peak val '%1%' is less than current val '%2%'.",
-                                  prev_peak_val, curr_peak_value);
-                    updatePrevPeak();
-                    insertPeak(corr_sample, curr_peak_value, samp_time);
-                }
-                // else -> do nothing
-            }
-            // peak found at the right stop
-            // insert as a new peak and wait till its updated to the right spot
-            else
-            {
-                if (prev_peak_val < 0.8 * curr_peak_value)
-                {
-                    LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
-                                  "Last peak val '%1%' is less than 80\% of current val '%2%'.",
-                                  prev_peak_val, curr_peak_value);
-                    updatePrevPeak();
-                    if (peaks_count > 2)
-                        LOG_WARN("Only first peak can show this artifact! This should not happen at the in-between peaks!");
-                }
-                insertPeak(corr_sample, curr_peak_value, samp_time);
-            }
-        }
-        // a peak is found
-        return true;
-    }
+    // First peak
+    if (peaks_count == 0)
+        insertPeak(corr_sample, curr_peak_value, samp_time);
     else
     {
-        // No peak found
-        return false;
+        // distance of current peak from last
+        if (prev_peak_index > samples_from_first_peak)
+            LOG_WARN_FMT("*PeakDet* :Previous peak index '%1%' > Number of samples from first peak '%2%'."
+                         "This should not happen!",
+                         prev_peak_index, samples_from_first_peak);
+
+        // next peak is too far from the last
+        // reset peaks and mark this peak as first
+        if (samples_from_last_peak > ref_seq_len + peak_det_tol)
+        {
+            LOG_DEBUG_FMT("*PeakDet* : Next peak is too far from the last. "
+                          "Resetting -- samples from last peak '%1%'.",
+                          samples_from_last_peak);
+            reset_peaks_counter();
+            insertPeak(corr_sample, curr_peak_value, samp_time);
+        }
+        // a higher peak exists in close proximity to last
+        // update previous peak
+        else if (samples_from_last_peak < ref_seq_len - peak_det_tol)
+        {
+            // check if this peak is higher than the previous
+            if (prev_peak_val < curr_peak_value)
+            {
+                LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
+                              "Last peak val '%1%' is less than current val '%2%'.",
+                              prev_peak_val, curr_peak_value);
+                updatePrevPeak();
+                insertPeak(corr_sample, curr_peak_value, samp_time);
+            }
+            // else -> do nothing
+        }
+        // peak found at the right stop
+        // insert as a new peak and wait till its updated to the right spot
+        else
+        {
+            if (prev_peak_val < 0.8 * curr_peak_value)
+            {
+                LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
+                              "Last peak val '%1%' is less than 80\% of current val '%2%'.",
+                              prev_peak_val, curr_peak_value);
+                updatePrevPeak();
+                if (peaks_count > 2)
+                    LOG_WARN("Only first peak can show this artifact! This should not happen at the in-between peaks!");
+            }
+            insertPeak(corr_sample, curr_peak_value, samp_time);
+        }
     }
 }
 

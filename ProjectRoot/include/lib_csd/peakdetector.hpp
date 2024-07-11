@@ -19,7 +19,7 @@ private:
     size_t total_num_peaks;
 
     size_t ref_seq_len;
-    float pnr_threshold, curr_pnr_threshold, max_pnr;
+    float pnr_threshold, max_pnr;
     float init_noise_level;
 
     size_t peak_det_tol;
@@ -40,7 +40,7 @@ public:
 
     size_t peaks_count;
     size_t prev_peak_index;
-    float prev_peak_val;
+    float prev_peak_val, curr_pnr_threshold;
     size_t samples_from_first_peak;
     bool detection_flag;
 
@@ -54,7 +54,7 @@ public:
     void reset_peaks_counter();
     void reset();
 
-    bool process_corr(const std::complex<float> &abs_corr_val, const uhd::time_spec_t &samp_time);
+    void process_corr(const std::complex<float> &abs_corr_val, const uhd::time_spec_t &samp_time);
 
     void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
 
