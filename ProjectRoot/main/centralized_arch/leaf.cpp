@@ -31,6 +31,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t rand_seed = 0;
     float min_ch_scale = parser.getValue_float("min-e2e-amp");
     wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
+    LOG_DEBUG("Waveform initialized.");
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -47,7 +48,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
         // CycleStartDetector - producer loop
-        auto rx_samples = usrp_obj.reception(stop_signal_called, max_rx_packet_size, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
         float cfo = peakDet_obj.estimate_freq_offset();
         LOG_INFO_FMT("Estimated Clock Drift = %1% rad/sec.", cfo);
