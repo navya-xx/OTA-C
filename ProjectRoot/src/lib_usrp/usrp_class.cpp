@@ -214,35 +214,38 @@ void USRP_class::initialize()
     tx_sample_duration = 1 / tx_rate;
 
     //_____________________ TEST TX - RX _____________________
-    std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
-    bool dont_stop = false;
-    bool tx_success = transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop);
-    if (tx_success)
+    if (intialize_with_dummy_txrx)
     {
-        LOG_DEBUG("Transmit test successful!");
-    }
-    else
-    {
-        LOG_WARN("Transmit test failed!");
-    }
+        std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
+        bool dont_stop = false;
+        bool tx_success = transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop);
+        if (tx_success)
+        {
+            LOG_DEBUG("Transmit test successful!");
+        }
+        else
+        {
+            LOG_WARN("Transmit test failed!");
+        }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    size_t num_pkts = 10;
-    auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
-    if (rx_samples.size() == max_rx_packet_size * num_pkts)
-    {
-        LOG_DEBUG_FMT("Reception test successful! Total %1% samples received.", rx_samples.size());
+        size_t num_pkts = 10;
+        auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
+        if (rx_samples.size() == max_rx_packet_size * num_pkts)
+        {
+            LOG_DEBUG_FMT("Reception test successful! Total %1% samples received.", rx_samples.size());
+        }
+        else
+        {
+            LOG_WARN("Reception test Failed!");
+        }
+
+        init_background_noise = averageAbsoluteValue(rx_samples);
+        LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_background_noise);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
-    else
-    {
-        LOG_WARN("Reception test Failed!");
-    }
-
-    init_background_noise = averageAbsoluteValue(rx_samples);
-    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_background_noise);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     LOG_INFO("--------- USRP initilization finished -----------------");
 };

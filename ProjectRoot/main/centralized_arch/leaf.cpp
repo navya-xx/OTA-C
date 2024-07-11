@@ -26,11 +26,13 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t wf_len = parser.getValue_int("test-signal-len");
     size_t wf_reps = parser.getValue_int("test-tx-reps");
     size_t wf_gap = size_t(parser.getValue_float("tx-gap-millisec") / 1e3 * usrp_obj.tx_rate);
+    size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * wf_len);
     size_t zfc_q = 41;
     size_t rand_seed = 0;
     float min_ch_scale = parser.getValue_float("min-e2e-amp");
-    wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, zfc_q, 1.0, rand_seed, true);
+    wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
 
+    // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
     {
         csd_obj.produce(samples, sample_size, sample_time);
@@ -47,21 +49,28 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // CycleStartDetector - producer loop
         auto rx_samples = usrp_obj.reception(stop_signal_called, max_rx_packet_size, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
+        float cfo = peakDet_obj.estimate_freq_offset();
+        LOG_INFO_FMT("Estimated Clock Drift = %1% rad/sec.", cfo);
+        usrp_obj.adjust_for_freq_offset(cfo);
+        LOG_INFO_FMT("Corrected Clock Drift -> New sampling rate = %1% samples/sec.", usrp_obj.rx_rate);
+
         LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
         ++round;
 
         // Transmission after cyclestartdetector
-        float est_ref_sig_amp = csd_obj.est_ref_sig_amp;
-        float cfo = peakDet_obj.estimate_freq_offset();
-        LOG_INFO_FMT("Estimated Frequency Offset = %1%.", cfo);
-        usrp_obj.adjust_for_freq_offset(cfo);
-        wf_gen.scale = min_ch_scale / est_ref_sig_amp;
-        auto tx_samples = wf_gen.generate_waveform();
         uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
+        float est_ref_sig_amp = csd_obj.est_ref_sig_amp;
+        wf_gen.scale = min_ch_scale / est_ref_sig_amp;
+        wf_gen.wf_gap = size_t(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate);
+        auto tx_samples = wf_gen.generate_waveform();
 
         usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, false);
 
+        // move to next round
         csd_success_signal = false;
+
+        // stop here (only one round for now)
+        stop_signal_called = true;
     }
 }
 

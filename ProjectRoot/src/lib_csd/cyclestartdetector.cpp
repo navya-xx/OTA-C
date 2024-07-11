@@ -94,7 +94,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
     if (peak_det_obj_ref.detection_flag)
     {
-        csd_tx_start_timer = get_wait_time(parser.getValue_float("tx-wait-microsec"));
+        csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
         est_ref_sig_amp = est_e2e_ref_sig_amp();
 
         // reset corr and peak det objects

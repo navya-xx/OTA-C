@@ -30,7 +30,7 @@ public:
     void adjust_for_freq_offset(const float &freq_offset);
 
     std::ofstream rx_save_stream;
-    float init_background_noise;
+    float init_background_noise = 0.0;
     size_t max_rx_packet_size, max_tx_packet_size;
 
     uhd::usrp::multi_usrp::sptr usrp;
@@ -38,6 +38,7 @@ public:
     uhd::tx_streamer::sptr tx_streamer;
     float tx_rate, rx_rate, tx_gain, rx_gain, tx_bw, rx_bw, carrier_freq;
     uhd::time_spec_t rx_sample_duration, tx_sample_duration, rx_md_time, tx_md_time;
+    bool intialize_with_dummy_txrx = false;
 
 private:
     ConfigParser parser;

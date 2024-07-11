@@ -5,16 +5,16 @@
 // initialize
 WaveformGenerator::WaveformGenerator() {};
 
-void WaveformGenerator::initialize(WAVEFORM_TYPE init_wf_type, size_t init_wf_len, size_t init_wf_reps, size_t init_wf_gap, size_t init_zfc_q, float init_scale, size_t init_rand_seed, bool init_is_pad_ends)
+void WaveformGenerator::initialize(WAVEFORM_TYPE init_wf_type, size_t init_wf_len, size_t init_wf_reps, size_t init_wf_gap, size_t init_wf_pad, size_t init_zfc_q, float init_scale, size_t init_rand_seed)
 {
     wf_type = init_wf_type;
     wf_len = init_wf_len;
     wf_reps = init_wf_reps;
     wf_gap = init_wf_gap;
+    wf_pad = init_wf_pad;
     zfc_q = init_zfc_q;
     scale = init_scale;
     rand_seed = init_rand_seed;
-    is_pad_ends = init_is_pad_ends;
 };
 
 // Function to generate Zadoff-Chu sequence
@@ -103,10 +103,10 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
     }
 
     // add zero at the beginning and end
-    if (is_pad_ends)
+    if (wf_pad > 0)
     {
-        final_sequence.insert(final_sequence.begin(), 2 * wf_len, std::complex<float>(0.0, 0.0));
-        final_sequence.insert(final_sequence.end(), 2 * wf_len, std::complex<float>(0.0, 0.0));
+        final_sequence.insert(final_sequence.begin(), wf_pad, std::complex<float>(0.0, 0.0));
+        final_sequence.insert(final_sequence.end(), wf_pad, std::complex<float>(0.0, 0.0));
     }
 
     return final_sequence;
