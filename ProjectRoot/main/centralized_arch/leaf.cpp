@@ -25,7 +25,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     WaveformGenerator wf_gen;
     size_t wf_len = parser.getValue_int("test-signal-len");
     size_t wf_reps = parser.getValue_int("test-tx-reps");
-    size_t wf_gap = size_t(parser.getValue_float("tx-gap-millisec") / 1e3 * usrp_obj.tx_rate);
+    size_t wf_gap = size_t(parser.getValue_float("tx-gap-microsec") / 1e6 * usrp_obj.tx_rate);
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * wf_len);
     size_t zfc_q = 41;
     size_t rand_seed = 0;
