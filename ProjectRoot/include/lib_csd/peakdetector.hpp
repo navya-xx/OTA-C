@@ -62,7 +62,7 @@ public:
     float avg_of_peak_vals();
     uhd::time_spec_t get_sync_time();
 
-    float estimate_freq_offset();
+    float estimate_phase_drift();
 };
 
 #endif // PEAK_CLASS

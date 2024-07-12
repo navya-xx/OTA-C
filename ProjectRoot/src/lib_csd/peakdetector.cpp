@@ -254,7 +254,7 @@ uhd::time_spec_t PeakDetectionClass::get_sync_time()
     return peak_times[peaks_count - sync_with_peak_from_last];
 }
 
-float PeakDetectionClass::estimate_freq_offset()
+float PeakDetectionClass::estimate_phase_drift()
 {
     std::vector<std::complex<float>> peak_corr_vals(corr_samples, corr_samples + peaks_count);
     std::vector<double> phases = unwrap(peak_corr_vals); // returns phases between [-pi, pi]
@@ -268,8 +268,8 @@ float PeakDetectionClass::estimate_freq_offset()
         phase_time_prod += (phases[i] - init_phase_shift) * timer_diff;
         time_sqr += timer_diff * timer_diff;
     }
-    double cfo = phase_time_prod / time_sqr;
-    return cfo;
+    double phase_drift_rate = phase_time_prod / time_sqr;
+    return phase_drift_rate;
 }
 
 void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)

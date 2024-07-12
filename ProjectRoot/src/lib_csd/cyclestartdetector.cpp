@@ -92,11 +92,14 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     if (peak_det_obj_ref.detection_flag)
     {
         csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
+        LOG_INFO_FMT("Tx_timer is %1%", csd_tx_start_timer.get_real_secs());
+        // phase drift
         est_ref_sig_amp = est_e2e_ref_sig_amp();
-        estimated_clock_drift = peak_det_obj_ref.estimate_freq_offset();
+        estimated_sampling_rate_offset = std::round(peak_det_obj_ref.estimate_phase_drift() / (2 * M_PI));
+        remaining_cfo = (peak_det_obj_ref.estimate_phase_drift() / (2 * M_PI) - estimated_sampling_rate_offset) * (2 * M_PI);
+        LOG_INFO_FMT("Phase drift %1% and CFO adjustment %2%.", estimated_sampling_rate_offset, remaining_cfo);
 
         // reset corr and peak det objects
-        LOG_INFO_FMT("Tx_timer is %1%", csd_tx_start_timer.get_real_secs());
 
         reset();
 

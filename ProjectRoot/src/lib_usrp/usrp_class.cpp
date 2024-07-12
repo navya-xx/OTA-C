@@ -479,8 +479,13 @@ void USRP_class::adjust_for_freq_offset(const float &freq_offset)
     float new_rx_rate = rx_rate - freq_offset;
     float new_tx_rate = tx_rate - freq_offset;
     LOG_DEBUG_FMT("Re-Setting Tx/Rx Rate: %1% Msps.", (new_rx_rate / 1e6));
-    usrp->set_tx_rate(new_tx_rate);
+    int closest_pow_2 = std::floor(std::log2(56e6 / new_rx_rate));
+    int master_clock_mul = std::pow(2, closest_pow_2);
+    usrp->set_master_clock_rate(new_rx_rate * master_clock_mul);
+    usrp->get_tree()->access<double>("/mboards/0/tick_rate").set(new_rx_rate * master_clock_mul);
     usrp->set_rx_rate(new_rx_rate, channel);
+    usrp->set_tx_rate(new_tx_rate);
+    LOG_DEBUG_FMT("New Rx rate after changing Master Clock Rate is %1%", usrp->get_rx_rate());
     tx_rate = usrp->get_tx_rate(channel);
     rx_rate = usrp->get_rx_rate(channel);
 }

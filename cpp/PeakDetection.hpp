@@ -96,7 +96,7 @@ public:
     float est_ch_pow_from_capture_ref_sig();
     uhd::time_spec_t get_sync_time();
 
-    float estimate_freq_offset();
+    float estimate_phase_drift();
 
     // ~PeakDetectionClass();
 };
