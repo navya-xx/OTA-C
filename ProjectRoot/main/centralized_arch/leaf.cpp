@@ -127,8 +127,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------ Run CycleStartDetector -------------*/
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
     uhd::time_spec_t rx_sample_duration = uhd::time_spec_t(rx_sample_duration_float);
-    float noise_level = usrp_obj.init_background_noise;
-    PeakDetectionClass peakDet_obj(parser, noise_level);
+    float init_noise_level = usrp_obj.init_background_noise;
+    PeakDetectionClass peakDet_obj(parser, init_noise_level);
     CycleStartDetector csd_obj(parser, rx_sample_duration, peakDet_obj);
 
     /*------ Threads - Consumer / Producer --------*/

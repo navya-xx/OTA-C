@@ -18,7 +18,7 @@ CycleStartDetector::CycleStartDetector(
     R_zfc = parser.getValue_int("Ref-R-zfc");
 
     WaveformGenerator wf_gen = WaveformGenerator();
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, 1, 0, m_zfc, 1.0, 0, false);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, 1, 0, 0, m_zfc, 1.0, 0);
     zfc_seq = wf_gen.generate_waveform();
 
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
@@ -112,7 +112,8 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 
         // auto end = std::chrono::high_resolution_clock::now();
         // size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        // std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / parser.getValue_float("rate") * 1e6) << " microsecs. \t" << std::flush;
+        std::cout << "\r # samples without peak = " << num_samples_without_peak << ". Max peak-to-noise-ratio = " << max_pnr << std::flush;
+        // << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / parser.getValue_float("rate") * 1e6) << " microsecs. \t" << std::flush;
     }
     cv_producer.notify_one();
 }
@@ -123,6 +124,7 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
     bool found_peak = false;
     float sum_ampl = 0.0;
     float abs_val = 0.0;
+    float curr_pnr = 0.0;
 
     for (uint16_t i = 0; i < corr_seq_len; ++i)
     {
@@ -132,7 +134,12 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
             corr += (samples[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
 
         abs_val = std::abs(corr) / N_zfc;
-        if (abs_val / peak_det_obj_ref.noise_level >= peak_det_obj_ref.curr_pnr_threshold)
+        curr_pnr = abs_val / peak_det_obj_ref.noise_level;
+        // debug
+        if (curr_pnr > max_pnr)
+            max_pnr = curr_pnr;
+
+        if (curr_pnr >= peak_det_obj_ref.curr_pnr_threshold)
         {
             found_peak = true;
             std::cout << std::endl;

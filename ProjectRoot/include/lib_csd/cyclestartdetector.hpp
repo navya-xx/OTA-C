@@ -49,6 +49,9 @@ private:
     boost::mutex mtx;
     boost::condition_variable cv_producer;
     boost::condition_variable cv_consumer;
+
+    // DEBUG
+    float max_pnr = 0.0;
 };
 
 #endif // CSD_CLASS
