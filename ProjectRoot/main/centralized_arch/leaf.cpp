@@ -51,9 +51,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // CycleStartDetector - producer loop
         auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
-        float cfo = peakDet_obj.estimate_freq_offset();
-        LOG_INFO_FMT("Estimated Clock Drift = %1% rad/sec.", cfo);
-        usrp_obj.adjust_for_freq_offset(cfo);
+        LOG_INFO_FMT("Estimated Clock Drift = %1% rad/sec.", csd_obj.estimated_clock_drift);
+        usrp_obj.adjust_for_freq_offset(csd_obj.estimated_clock_drift);
         LOG_INFO_FMT("Corrected Clock Drift -> New sampling rate = %1% samples/sec.", usrp_obj.rx_rate);
 
         LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
@@ -69,10 +68,10 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, false);
 
         // move to next round
-        // csd_success_signal = false;
+        csd_success_signal = false;
 
         // stop here (only one round for now)
-        stop_signal_called = true;
+        // stop_signal_called = true;
     }
 }
 

@@ -93,9 +93,11 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     {
         csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
         est_ref_sig_amp = est_e2e_ref_sig_amp();
+        estimated_clock_drift = peak_det_obj_ref.estimate_freq_offset();
 
         // reset corr and peak det objects
         LOG_INFO_FMT("Tx_timer is %1%", csd_tx_start_timer.get_real_secs());
+
         reset();
 
         csd_success_signal = true;

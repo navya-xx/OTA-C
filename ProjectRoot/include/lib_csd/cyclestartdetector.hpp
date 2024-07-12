@@ -19,6 +19,7 @@ public:
 
     uhd::time_spec_t csd_tx_start_timer;
     float est_ref_sig_amp;
+    float estimated_clock_drift = 0.0;
 
 private:
     std::vector<std::complex<float>> samples_buffer;
