@@ -53,7 +53,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, q_zfc, 1.0, 0, true);
+    size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     auto tx_waveform = wf_gen.generate_waveform();
     uhd::time_spec_t transmit_time = uhd::time_spec_t(0.0); // initially transmit immediately
 
