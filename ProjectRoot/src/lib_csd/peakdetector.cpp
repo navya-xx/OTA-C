@@ -225,6 +225,14 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
     }
 }
 
+void PeakDetectionClass::increase_samples_counter()
+{
+    if (peaks_count > 0)
+    {
+        ++samples_from_first_peak;
+    }
+}
+
 float PeakDetectionClass::avg_of_peak_vals()
 {
     float e2e_est_ref_sig_amp = 0.0;

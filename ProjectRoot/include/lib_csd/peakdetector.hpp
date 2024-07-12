@@ -55,6 +55,7 @@ public:
     void reset();
 
     void process_corr(const std::complex<float> &abs_corr_val, const uhd::time_spec_t &samp_time);
+    void increase_samples_counter();
 
     void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
 

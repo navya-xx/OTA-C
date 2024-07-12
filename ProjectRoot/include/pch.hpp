@@ -32,5 +32,6 @@
 #include <functional>
 #include <random>
 #include <cmath>
+#include <limits>
 
 #endif // PCH_HPP

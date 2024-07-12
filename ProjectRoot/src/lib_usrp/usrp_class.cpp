@@ -364,7 +364,6 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     }
 
     bool success = true;
-    uhd::rx_metadata_t md;
 
     // setup streaming
     uhd::stream_cmd_t stream_cmd(req_num_rx_samps > max_rx_packet_size or req_num_rx_samps == 0 ? uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS : uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
@@ -394,45 +393,31 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     double timeout = burst_pkt_time + rx_delay;
 
     std::vector<std::complex<float>> rx_samples;
-    std::vector<std::complex<float>> buff(max_rx_packet_size);
     bool reception_complete = false;
     size_t retry_rx = 0;
     size_t num_acc_samps = 0;
+    bool callback_success = false;
+    size_t num_curr_rx_samps;
+    std::vector<std::complex<float>> buff(max_rx_packet_size);
 
     while (not reception_complete and not stop_signal_called)
     {
         size_t size_rx = (req_num_rx_samps == 0) ? max_rx_packet_size : std::min(req_num_rx_samps - num_acc_samps, max_rx_packet_size);
 
-        size_t num_curr_rx_samps;
-
-        try
-        {
-            num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
-            timeout = burst_pkt_time; // small timeout for subsequent packets
-        }
-        catch (uhd::io_error e)
-        {
-            std::string error_msg = "Caught an IO exception in CSD Receiver Thread. ERROR : " + static_cast<std::string>(e.what());
-            LOG_WARN(error_msg);
-            ++retry_rx;
-            if (retry_rx > 5)
-            {
-                success = false;
-            }
-            else
-                continue;
-        }
+        uhd::rx_metadata_t md;
+        num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
+        timeout = burst_pkt_time; // small timeout for subsequent packets
 
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
         {
             LOG_WARN_FMT("Timeout while streaming");
             success = false;
         }
-        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        else if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
         {
             LOG_WARN("*** Got an overflow indication.");
         }
-        if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        else if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
         {
             LOG_WARN_FMT("Receiver error: %1%", md.strerror());
             success = false;
@@ -443,29 +428,30 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
             break;
 
         // run callback
-        std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
-        bool callback_success = callback(forward, num_curr_rx_samps, md.time_spec);
+        callback_success = callback(buff, num_curr_rx_samps, md.time_spec);
 
         // process (save, update counters, etc...) received samples and continue
         if (is_save_to_file and req_num_rx_samps == 0) // continuous saving
+        {
+            std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
             save_stream_to_file(filename, rx_save_stream, forward);
+        }
         else if (req_num_rx_samps > 0) // fixed number of samples -- save in a separate vector to return
-            rx_samples.insert(rx_samples.end(), forward.begin(), forward.end());
+            rx_samples.insert(rx_samples.end(), buff.begin(), buff.begin() + num_curr_rx_samps);
 
-        num_acc_samps += num_curr_rx_samps;
-
-        if (req_num_rx_samps == 0 and duration > 0) // check if rx duration expired
+        if (callback_success)
+            reception_complete = true;
+        else if (req_num_rx_samps == 0 and duration > 0) // check if rx duration expired
         {
             if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
                 reception_complete = true;
         }
         else if (req_num_rx_samps > 0) // check if all rx samples received
         {
+            num_acc_samps += num_curr_rx_samps;
             if (num_acc_samps >= req_num_rx_samps)
                 reception_complete = true;
         }
-        else if (callback_success)
-            reception_complete = true;
     }
 
     if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)

@@ -42,6 +42,8 @@ private:
     size_t num_produced;
     std::vector<std::complex<float>> zfc_seq;
 
+    size_t num_samples_without_peak = 0;
+
     bool update_noise_level = false;
 
     boost::mutex mtx;

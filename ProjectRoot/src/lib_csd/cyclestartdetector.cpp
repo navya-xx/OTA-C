@@ -58,7 +58,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     boost::unique_lock<boost::mutex> lock(mtx);
 
     cv_producer.wait(lock, [this, &samples_size]
-                     { return (capacity - num_produced >= samples_size); }); // Wait for enough space to produce
+                     { return (capacity >= samples_size + num_produced); }); // Wait for enough space to produce
 
     // insert first timer
     uhd::time_spec_t next_time = packet_start_time; // USRP time of first packet
@@ -66,8 +66,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     // insert samples into the buffer
     for (size_t i = 0; i < samples_size; ++i)
     {
-        std::complex<float> sample = samples[i];
-        samples_buffer[rear] = sample;
+        samples_buffer[rear] = samples[i];
         timer[rear] = next_time; // store absolute sample times
 
         rear = (rear + 1) % capacity;
@@ -89,8 +88,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     cv_consumer.wait(lock, [this, &csd_success_signal]
                      { return (num_produced >= corr_seq_len + (N_zfc - 1)) and (not csd_success_signal); });
 
-    if (not peak_det_obj_ref.detection_flag)
-        correlation_operation(samples_buffer);
+    // if (not peak_det_obj_ref.detection_flag)
 
     if (peak_det_obj_ref.detection_flag)
     {
@@ -107,8 +105,16 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     }
     else
     {
+        // auto start = std::chrono::high_resolution_clock::now();
+        correlation_operation(samples_buffer);
+        // auto end = std::chrono::high_resolution_clock::now();
+        // size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". \t" << std::flush;
+        // ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / 2e5 * 1e6) << " microsecs. \t" << std::flush;
         front = (front + corr_seq_len) % capacity;
-        num_produced = std::max((num_produced - corr_seq_len), size_t(0));
+        if (num_produced < corr_seq_len)
+            LOG_ERROR_FMT("num_produced %1% < corr_seq_len %2%. Should not reach here!!!", num_produced, corr_seq_len);
+        num_produced = num_produced - corr_seq_len;
         cv_producer.notify_one();
         return false;
     }
@@ -121,30 +127,37 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
     float sum_ampl = 0.0;
     float abs_val = 0.0;
 
-    for (size_t i = 0; i < corr_seq_len; ++i)
+    for (uint16_t i = 0; i < corr_seq_len; ++i)
     {
         // compute correlation
         std::complex<float> corr(0.0, 0.0);
-        for (size_t j = 0; j < N_zfc; ++j)
+        for (uint16_t j = 0; j < N_zfc; ++j)
             corr += (samples[(front + i + j) % capacity] * std::conj(zfc_seq[j]));
 
         abs_val = std::abs(corr) / N_zfc;
         if (abs_val / peak_det_obj_ref.noise_level >= peak_det_obj_ref.curr_pnr_threshold)
         {
             found_peak = true;
+            std::cout << std::endl;
+            LOG_DEBUG("Found peak!");
             peak_det_obj_ref.process_corr(corr, timer[(front + i) % capacity]);
+            num_samples_without_peak = 0;
         }
         else
         {
             found_peak = false;
             if (update_noise_level)
                 sum_ampl += abs_val;
+
+            if (num_samples_without_peak == std::numeric_limits<size_t>::max())
+                num_samples_without_peak = 0; // reset
+            ++num_samples_without_peak;
         }
 
         if (peak_det_obj_ref.detection_flag)
             break;
         else
-            ++peak_det_obj_ref.samples_from_first_peak;
+            peak_det_obj_ref.increase_samples_counter();
     }
 
     // udpate noise level

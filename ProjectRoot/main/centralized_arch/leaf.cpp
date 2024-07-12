@@ -37,6 +37,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
     {
         csd_obj.produce(samples, sample_size, sample_time);
+
         if (csd_success_signal)
             return true;
         else
@@ -124,7 +125,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------ Run CycleStartDetector -------------*/
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
     uhd::time_spec_t rx_sample_duration = uhd::time_spec_t(rx_sample_duration_float);
-    float noise_level = 0.000304542; // refer to info.text
+    float noise_level = usrp_obj.init_background_noise;
     PeakDetectionClass peakDet_obj(parser, noise_level);
     CycleStartDetector csd_obj(parser, rx_sample_duration, peakDet_obj);
 
