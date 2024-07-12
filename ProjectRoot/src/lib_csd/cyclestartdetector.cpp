@@ -148,7 +148,6 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
         {
             found_peak = true;
             std::cout << std::endl;
-            LOG_DEBUG("Found peak!");
             peak_det_obj_ref.process_corr(corr, timer[(front + i) % capacity]);
             num_samples_without_peak = 0;
         }

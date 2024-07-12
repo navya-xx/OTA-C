@@ -60,6 +60,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // Transmission after cyclestartdetector
         uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
+        LOG_INFO_FMT("Current timer %.5f and Tx start timer %.5f.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
         float est_ref_sig_amp = csd_obj.est_ref_sig_amp;
         wf_gen.scale = min_ch_scale / est_ref_sig_amp;
         wf_gen.wf_gap = size_t(std::floor(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate / 1e6));
