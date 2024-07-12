@@ -58,7 +58,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     uhd::time_spec_t transmit_time = uhd::time_spec_t(0.0); // initially transmit immediately
 
     // transmit ZFC seq as reference for sync
-    usrp_obj.transmission(tx_waveform, transmit_time, stop_signal_called, false);
+    usrp_obj.transmission(tx_waveform, transmit_time, stop_signal_called, true);
 
     // Receive samples for a fixed duration and return
     double rx_duration_secs = 5.0;

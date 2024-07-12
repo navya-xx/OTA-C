@@ -78,7 +78,7 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     cv_consumer.notify_one();
 }
 
-bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
+void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
 
@@ -99,23 +99,22 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         reset();
 
         csd_success_signal = true;
-        cv_producer.notify_one();
-        return true;
     }
     else
     {
-        auto start = std::chrono::high_resolution_clock::now();
+        // auto start = std::chrono::high_resolution_clock::now();
+
         correlation_operation(samples_buffer);
         front = (front + corr_seq_len) % capacity;
         if (num_produced < corr_seq_len)
             LOG_ERROR_FMT("num_produced %1% < corr_seq_len %2%. Should not reach here!!!", num_produced, corr_seq_len);
         num_produced = num_produced - corr_seq_len;
-        cv_producer.notify_one();
-        auto end = std::chrono::high_resolution_clock::now();
-        size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / parser.getValue_float("rate") * 1e6) << " microsecs. \t" << std::flush;
-        return false;
+
+        // auto end = std::chrono::high_resolution_clock::now();
+        // size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        // std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / parser.getValue_float("rate") * 1e6) << " microsecs. \t" << std::flush;
     }
+    cv_producer.notify_one();
 }
 
 void CycleStartDetector::correlation_operation(const std::vector<std::complex<float>> &samples)

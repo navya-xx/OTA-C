@@ -69,7 +69,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, false);
 
         // move to next round
-        csd_success_signal = false;
+        // csd_success_signal = false;
 
         // stop here (only one round for now)
         stop_signal_called = true;
@@ -80,7 +80,8 @@ void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::ato
 {
     while (not stop_signal_called)
     {
-        if (csd_obj.consume(csd_success_signal))
+        csd_obj.consume(csd_success_signal);
+        if (csd_success_signal)
         {
             LOG_INFO("***Successful CSD!");
         }

@@ -13,7 +13,7 @@ public:
 
     void produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time);
 
-    bool consume(std::atomic<bool> &csd_success_signal);
+    void consume(std::atomic<bool> &csd_success_signal);
 
     uhd::time_spec_t get_wait_time(float tx_wait_microsec);
 
