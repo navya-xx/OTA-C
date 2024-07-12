@@ -113,7 +113,7 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
         cv_producer.notify_one();
         auto end = std::chrono::high_resolution_clock::now();
         size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / 2e5 * 1e6) << " microsecs. \t" << std::flush;
+        std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / parser.getValue_float("rate") * 1e6) << " microsecs. \t" << std::flush;
         return false;
     }
 }
