@@ -113,7 +113,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         size_t rand_seed = std::stoi(argv[2]);
         parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
     }
-    parser.print_values();
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
@@ -121,6 +120,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_obj.initialize();
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
+
+    parser.print_values();
 
     /*------ Run CycleStartDetector -------------*/
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");

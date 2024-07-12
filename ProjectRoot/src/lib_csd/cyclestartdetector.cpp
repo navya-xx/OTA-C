@@ -56,7 +56,6 @@ void CycleStartDetector::reset()
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &packet_start_time)
 {
     boost::unique_lock<boost::mutex> lock(mtx);
-
     cv_producer.wait(lock, [this, &samples_size]
                      { return (capacity >= samples_size + num_produced); }); // Wait for enough space to produce
 
@@ -105,17 +104,16 @@ bool CycleStartDetector::consume(std::atomic<bool> &csd_success_signal)
     }
     else
     {
-        // auto start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
         correlation_operation(samples_buffer);
-        // auto end = std::chrono::high_resolution_clock::now();
-        // size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". \t" << std::flush;
-        // ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / 2e5 * 1e6) << " microsecs. \t" << std::flush;
         front = (front + corr_seq_len) % capacity;
         if (num_produced < corr_seq_len)
             LOG_ERROR_FMT("num_produced %1% < corr_seq_len %2%. Should not reach here!!!", num_produced, corr_seq_len);
         num_produced = num_produced - corr_seq_len;
         cv_producer.notify_one();
+        auto end = std::chrono::high_resolution_clock::now();
+        size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        std::cout << "\rNumber of samples processed without a peak = " << num_samples_without_peak << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / 2e5 * 1e6) << " microsecs. \t" << std::flush;
         return false;
     }
 }
