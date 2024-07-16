@@ -49,6 +49,14 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
         // CycleStartDetector - producer loop
+        // debug
+        std::string storage_dir = parser.getValue_str("storage-folder");
+        std::string device_id = parser.getValue_str("device-id");
+        std::string curr_time_str = currentDateTimeFilename();
+
+        std::string ref_datfile = storage_dir + "/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
+        csd_obj.saved_ref_filename = ref_datfile;
+
         auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
         LOG_INFO_FMT("Estimated Clock Drift = %.8f samples/sec.", csd_obj.estimated_sampling_rate_offset);
@@ -114,6 +122,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         size_t rand_seed = std::stoi(argv[2]);
         parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
     }
+    parser.set_value("storage-folder", projectDir + "/storage", "str", "Location of storage director");
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
@@ -130,10 +139,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     float init_noise_level = usrp_obj.init_background_noise;
     PeakDetectionClass peakDet_obj(parser, init_noise_level);
     CycleStartDetector csd_obj(parser, rx_sample_duration, peakDet_obj);
-
-    // debug
-    std::string ref_datfile = projectDir + "/storage/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
-    csd_obj.saved_ref_filename = ref_datfile;
 
     /*------ Threads - Consumer / Producer --------*/
     std::atomic<bool> csd_success_signal(false);
