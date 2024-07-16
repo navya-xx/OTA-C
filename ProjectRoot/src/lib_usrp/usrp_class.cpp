@@ -137,6 +137,10 @@ void USRP_class::initialize()
         {
             LOG_WARN("ERROR: Unable to confirm clock signal locked on board");
         }
+        else
+        {
+            LOG_INFO("Lock on clock signal -- Successful!");
+        }
     }
     else
         usrp->set_clock_source("internal");
