@@ -40,6 +40,8 @@ public:
     uhd::time_spec_t rx_sample_duration, tx_sample_duration, rx_md_time, tx_md_time;
     bool intialize_with_dummy_txrx = true;
 
+    bool external_ref = false;
+
 private:
     ConfigParser parser;
 

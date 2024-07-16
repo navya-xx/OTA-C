@@ -120,7 +120,26 @@ void USRP_class::initialize()
     LOG_INFO_FMT("Initilizing Device: %1%", usrp->get_pp_string());
 
     //_____________________ SETUP STREAMERS _____________________
-    usrp->set_clock_source("internal");
+
+    if (external_ref)
+    {
+        usrp->set_clock_source("external");
+
+        LOG_INFO("Now confirming lock on clock signals...");
+        bool is_locked = false;
+        auto end_time = std::chrono::steady_clock::now() + std::chrono::duration(std::chrono::milliseconds(1000));
+
+        while ((is_locked = usrp->get_mboard_sensor("ref_locked", 0).to_bool()) == false and std::chrono::steady_clock::now() < end_time)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        if (is_locked == false)
+        {
+            LOG_WARN("ERROR: Unable to confirm clock signal locked on board");
+        }
+    }
+    else
+        usrp->set_clock_source("internal");
 
     // set the sample rate
     float rate = parser.getValue_float("rate");
