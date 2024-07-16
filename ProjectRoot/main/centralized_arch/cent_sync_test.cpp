@@ -45,6 +45,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
 
+    usrp_obj.external_ref = true;
     usrp_obj.initialize();
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
