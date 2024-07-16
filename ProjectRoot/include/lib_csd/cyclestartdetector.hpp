@@ -4,6 +4,7 @@
 #include "pch.hpp"
 #include "log_macros.hpp"
 #include "config_parser.hpp"
+#include "circular_buffer.hpp"
 #include "peakdetector.hpp"
 #include "utility.hpp"
 
