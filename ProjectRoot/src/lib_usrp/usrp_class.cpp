@@ -121,7 +121,7 @@ void USRP_class::initialize()
     if (external_ref)
     {
         usrp->set_clock_source("external");
-        usrp->set_time_source("external");
+        // usrp->set_time_source("external");
 
         LOG_INFO("Now confirming lock on clock signals...");
         bool is_locked = false;
@@ -135,7 +135,7 @@ void USRP_class::initialize()
         {
             LOG_WARN("ERROR: Unable to confirm clock signal locked on board");
             usrp->set_clock_source("internal");
-            usrp->set_time_source("internal");
+            // usrp->set_time_source("internal");
         }
         else
         {
@@ -145,7 +145,7 @@ void USRP_class::initialize()
     else
     {
         usrp->set_clock_source("internal");
-        usrp->set_time_source("internal");
+        // usrp->set_time_source("internal");
         LOG_INFO_FMT("Clock and time sources set to : %1% and %2%.", usrp->get_clock_source(0), usrp->get_time_source(0));
     }
 
