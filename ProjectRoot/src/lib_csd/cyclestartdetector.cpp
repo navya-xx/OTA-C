@@ -162,6 +162,9 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
             if (num_samples_without_peak == std::numeric_limits<size_t>::max())
                 num_samples_without_peak = 0; // reset
             ++num_samples_without_peak;
+
+            saved_ref.pop_front();
+            saved_ref.push_back(samples[(front + i + N_zfc - 1) % capacity]);
         }
 
         if (peak_det_obj_ref.detection_flag)
@@ -176,11 +179,7 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
             break;
         }
         else
-        {
             peak_det_obj_ref.increase_samples_counter();
-            saved_ref.pop_front();
-            saved_ref.push_back(samples[(front + i) % capacity]);
-        }
     }
 
     // udpate noise level
