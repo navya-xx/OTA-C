@@ -5,6 +5,7 @@
 #include "log_macros.hpp"
 #include "config_parser.hpp"
 #include "peakdetector.hpp"
+#include "utility.hpp"
 
 class CycleStartDetector
 {
@@ -21,6 +22,9 @@ public:
     float est_ref_sig_amp;
     float estimated_sampling_rate_offset;
     float remaining_cfo;
+
+    // debug
+    std::string saved_ref_filename;
 
 private:
     std::vector<std::complex<float>> samples_buffer;
@@ -54,6 +58,7 @@ private:
 
     // DEBUG
     float max_pnr = 0.0;
+    std::deque<std::complex<float>> saved_ref;
 };
 
 #endif // CSD_CLASS

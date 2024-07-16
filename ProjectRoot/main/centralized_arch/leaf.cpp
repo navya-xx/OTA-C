@@ -131,6 +131,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     PeakDetectionClass peakDet_obj(parser, init_noise_level);
     CycleStartDetector csd_obj(parser, rx_sample_duration, peakDet_obj);
 
+    // debug
+    std::string ref_datfile = projectDir + "/storage/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
+    csd_obj.saved_ref_filename = ref_datfile;
+
     /*------ Threads - Consumer / Producer --------*/
     std::atomic<bool> csd_success_signal(false);
 

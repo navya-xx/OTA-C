@@ -36,6 +36,8 @@ CycleStartDetector::CycleStartDetector(
 
     samples_buffer.resize(capacity, std::complex<float>(0.0, 0.0));
     timer.resize(capacity, uhd::time_spec_t(0.0));
+    // debug
+    saved_ref.resize(N_zfc * R_zfc * 2);
 };
 
 void CycleStartDetector::reset()
@@ -163,9 +165,22 @@ void CycleStartDetector::correlation_operation(const std::vector<std::complex<fl
         }
 
         if (peak_det_obj_ref.detection_flag)
+        {
+            // debug
+            std::ofstream outfile;
+            std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
+            save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
+            saved_ref.clear();
+            saved_ref.resize(N_zfc * R_zfc * 2);
+
             break;
+        }
         else
+        {
             peak_det_obj_ref.increase_samples_counter();
+            saved_ref.pop_front();
+            saved_ref.push_back(samples[(front + i) % capacity]);
+        }
     }
 
     // udpate noise level
