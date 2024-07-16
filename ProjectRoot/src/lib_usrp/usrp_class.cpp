@@ -114,9 +114,6 @@ void USRP_class::initialize()
     if (not usrp_make_success)
         LOG_ERROR("Failed to create USRP device. Exiting!");
 
-    // set current clock to zero
-    usrp->set_time_now(uhd::time_spec_t(0.0));
-
     LOG_INFO_FMT("Initilizing Device: %1%", usrp->get_pp_string());
 
     //_____________________ SETUP STREAMERS _____________________
@@ -273,9 +270,11 @@ void USRP_class::initialize()
 
         init_background_noise = averageAbsoluteValue(rx_samples);
         LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_background_noise);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+
+    // set current clock to zero
+    usrp->set_time_now(uhd::time_spec_t(0.0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     LOG_INFO("--------- USRP initilization finished -----------------");
 };
