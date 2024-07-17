@@ -36,7 +36,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
     {
-        csd_obj.produce(samples, sample_size, sample_time);
+        csd_obj.produce(samples, sample_size, sample_time, stop_signal_called);
 
         if (csd_success_signal)
             return true;
@@ -91,7 +91,7 @@ void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::ato
 {
     while (not stop_signal_called)
     {
-        csd_obj.consume(csd_success_signal);
+        csd_obj.consume(csd_success_signal, stop_signal_called);
         if (csd_success_signal)
         {
             LOG_INFO("***Successful CSD!");

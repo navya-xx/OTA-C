@@ -20,7 +20,11 @@ endif()
 option(UHD_USE_STATIC_LIBS OFF)
 
 # To add UHD as a dependency to this project, add a line such as this:
+find_package(Boost REQUIRED)
 find_package(UHD 4.2.0 REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_search_module(FFTW REQUIRED fftw3 IMPORTED_TARGET)
+# find_package(FFTW3 REQUIRED)
 # find_package(Curses REQUIRED)
 # The version in  ^^^^^  here is a minimum version.
 # To specify an exact version:
@@ -51,8 +55,8 @@ list(REMOVE_DUPLICATES INCLUDE_DIRS)
 include_directories(
     ${Boost_INCLUDE_DIRS}
     ${UHD_INCLUDE_DIRS}
-    # ${CURSES_INCLUDE_DIR}
     ${INCLUDE_DIRS}
+    # ${FFTW3_INCLUDE_DIR}
 )
 link_directories(${Boost_LIBRARY_DIRS})
 
@@ -80,8 +84,8 @@ SET(counter 0)
 ### Make the executable #######################################################
 foreach(executable ${executables_list})
     list(GET files_list ${counter} file_loc)
-    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp)
-    target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES})
+    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_fft/FFTWrapper.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp)
+    target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} PkgConfig::FFTW)
     math(EXPR counter "${counter} + 1")
     enable_precompiled_headers(${executable})
 endforeach()
