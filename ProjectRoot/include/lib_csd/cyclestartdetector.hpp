@@ -11,7 +11,7 @@
 class CycleStartDetector
 {
 public:
-    CycleStartDetector(ConfigParser &parser, const uhd::time_spec_t &rx_sample_duration, PeakDetectionClass &peak_det_obj);
+    CycleStartDetector(ConfigParser &parser, size_t &capacity, const uhd::time_spec_t &rx_sample_duration, PeakDetectionClass &peak_det_obj);
 
     void produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time);
 
@@ -28,15 +28,15 @@ public:
     std::string saved_ref_filename;
 
 private:
-    std::vector<std::complex<float>> samples_buffer;
-    std::vector<uhd::time_spec_t> timer;
+    SyncedBufferManager<std::complex<float>, uhd::time_spec_t> synced_buffer; // contains both samples_buffer and timer_buffer
+
     uhd::time_spec_t prev_timer;
 
     ConfigParser parser;
     uhd::time_spec_t rx_sample_duration;
     PeakDetectionClass peak_det_obj_ref;
 
-    void correlation_operation(const std::vector<std::complex<float>> &samples);
+    void correlation_operation(const std::vector<std::complex<float>> &samples, const std::vector<uhd::time_spec_t> &timer);
     void reset();
     float est_e2e_ref_sig_amp();
 
@@ -44,18 +44,11 @@ private:
     size_t corr_seq_len;
     size_t capacity;
 
-    size_t front;
-    size_t rear;
-    size_t num_produced;
     std::vector<std::complex<float>> zfc_seq;
 
     size_t num_samples_without_peak = 0;
 
     bool update_noise_level = false;
-
-    boost::mutex mtx;
-    boost::condition_variable cv_producer;
-    boost::condition_variable cv_consumer;
 
     // DEBUG
     float max_pnr = 0.0;
