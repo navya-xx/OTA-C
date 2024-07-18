@@ -501,6 +501,99 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         return std::vector<std::complex<float>>{};
 };
 
+void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &duration)
+{
+    std::string data_filename, timer_filename;
+
+    const char *homeDir = std::getenv("HOME");
+    std::string homeDirStr(homeDir);
+    std::string curr_datetime = currentDateTimeFilename();
+    data_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_data_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
+    timer_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_timer_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
+
+    std::ofstream rx_save_datastream, rx_save_timer;
+
+    bool success = true;
+
+    // setup streaming
+    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+
+    stream_cmd.num_samps = max_rx_packet_size;
+
+    auto usrp_now = usrp->get_time_now();
+    stream_cmd.stream_now = true;
+    rx_streamer->issue_stream_cmd(stream_cmd);
+
+    const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_rx_packet_size / rx_rate));
+    double timeout = burst_pkt_time;
+
+    std::vector<std::complex<float>> rx_samples;
+    bool reception_complete = false;
+    size_t retry_rx = 0;
+    size_t num_acc_samps = 0;
+    bool callback_success = false;
+    size_t num_curr_rx_samps;
+    std::vector<std::complex<float>> buff(max_rx_packet_size);
+
+    std::vector<uhd::time_spec_t> timer_seq;
+
+    while (not reception_complete and not stop_signal_called)
+    {
+        size_t size_rx = max_rx_packet_size;
+
+        uhd::rx_metadata_t md;
+        num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
+
+        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        {
+            LOG_WARN_FMT("Timeout while streaming");
+            success = false;
+        }
+        else if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        {
+            LOG_WARN("*** Got an overflow indication.");
+        }
+        else if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        {
+            LOG_WARN_FMT("Receiver error: %1%", md.strerror());
+            success = false;
+        }
+
+        // TODO: catch reception error gracefully without breaking
+        if (not success)
+            break;
+
+        std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
+        timer_seq.insert(timer_seq.end(), md.time_spec);
+        save_stream_to_file(data_filename, rx_save_datastream, forward);
+
+        if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
+            reception_complete = true;
+    }
+
+    if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
+    {
+        stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+        rx_streamer->issue_stream_cmd(stream_cmd);
+    }
+
+    if (!rx_save_timer.is_open())
+    {
+        rx_save_timer.open(timer_filename, std::ios::out | std::ios::binary | std::ios::app);
+        if (!rx_save_timer.is_open())
+        {
+            LOG_WARN("Error: Could not open file for writing.");
+            return;
+        }
+    }
+
+    for (const auto &val : timer_seq)
+    {
+        float time_val = val.get_real_secs();
+        rx_save_timer.write(reinterpret_cast<char *>(&time_val), sizeof(time_val));
+    }
+};
+
 void USRP_class::adjust_for_freq_offset(const float &freq_offset)
 {
     // set the sample rate

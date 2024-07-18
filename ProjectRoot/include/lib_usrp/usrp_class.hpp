@@ -27,6 +27,8 @@ public:
         const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)
         { return false; });
 
+    void receive_save_with_timer(bool &stop_signal_called, const float &duration);
+
     void adjust_for_freq_offset(const float &freq_offset);
 
     std::ofstream rx_save_stream;

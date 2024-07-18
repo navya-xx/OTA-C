@@ -48,7 +48,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*-------- Receive data stream --------*/
 
     float duration = 10.0;
-    auto ret_val = usrp_classobj.reception(stop_signal_called, 0, duration, uhd::time_spec_t(0.0), true);
+    usrp_classobj.receive_save_with_timer(stop_signal_called, duration);
 
     return EXIT_SUCCESS;
 };
