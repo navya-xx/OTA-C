@@ -54,7 +54,7 @@ CycleStartDetector::CycleStartDetector(
     }
 
     // debug
-    saved_ref.resize(N_zfc * R_zfc * 2);
+    saved_ref.resize(N_zfc * R_zfc * 10);
 };
 
 void CycleStartDetector::reset()
@@ -197,7 +197,7 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
             std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
             save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
             saved_ref.clear();
-            saved_ref.resize(N_zfc * R_zfc * 2);
+            saved_ref.resize(N_zfc * R_zfc * 10);
 
             // break the for loop
             break;
