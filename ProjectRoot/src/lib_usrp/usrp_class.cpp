@@ -535,7 +535,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     size_t num_curr_rx_samps;
     std::vector<std::complex<float>> buff(max_rx_packet_size);
 
-    std::vector<uhd::time_spec_t> timer_seq;
+    std::vector<double> timer_seq;
 
     while (not reception_complete and not stop_signal_called)
     {
@@ -568,7 +568,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
 
         timer_seq.clear();
         LOG_INFO_FMT("Rx data at time : %.5f", md.time_spec.get_real_secs());
-        timer_seq.insert(timer_seq.begin(), num_curr_rx_samps, md.time_spec);
+        timer_seq.insert(timer_seq.begin(), num_curr_rx_samps, md.time_spec.get_real_secs());
         save_timer_to_file(timer_filename, rx_save_timer, timer_seq);
 
         if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)

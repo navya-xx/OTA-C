@@ -44,7 +44,7 @@ void save_stream_to_file(const std::string &filename, std::ofstream &outfile, st
     }
 }
 
-void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std::vector<uhd::time_spec_t> stream)
+void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std::vector<double> stream)
 {
     // Open the file in append mode (if not already open)
     if (!outfile.is_open())
@@ -57,10 +57,9 @@ void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std
         }
     }
 
-    for (const auto &time : stream)
+    for (auto &time : stream)
     {
-        double time_val = time.get_real_secs();
-        outfile.write(reinterpret_cast<char *>(&time_val), sizeof(time_val));
+        outfile.write(reinterpret_cast<char *>(&time), sizeof(time));
     }
 }
 
