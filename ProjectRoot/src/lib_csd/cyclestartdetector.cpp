@@ -92,9 +92,10 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
     {
         csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
         LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
-        // phase drift
         est_ref_sig_amp = est_e2e_ref_sig_amp();
-        estimated_sampling_rate_offset = std::round(peak_det_obj_ref.estimate_phase_drift() / (2 * M_PI));
+        // phase drift
+        float est_phase_drift = peak_det_obj_ref.estimate_phase_drift();
+        estimated_sampling_rate_offset = std::round(est_phase_drift / (2 * M_PI));
         remaining_cfo = (peak_det_obj_ref.estimate_phase_drift() / (2 * M_PI) - estimated_sampling_rate_offset) * (2 * M_PI);
         LOG_INFO_FMT("Phase drift %1% and CFO adjustment %2%.", estimated_sampling_rate_offset, remaining_cfo);
 
