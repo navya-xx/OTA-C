@@ -512,6 +512,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     timer_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_timer_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
 
     std::ofstream rx_save_datastream, rx_save_timer;
+    rx_save_timer.open(timer_filename, std::ios::out | std::ios::binary | std::ios::app);
 
     bool success = true;
 
@@ -566,15 +567,16 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
         save_stream_to_file(data_filename, rx_save_datastream, forward);
 
-        LOG_INFO_FMT("Rx data at time : %.5f", md.time_spec.get_real_secs());
-        const double time_data = md.time_spec.get_real_secs();
-        timer_seq.clear();
-        timer_seq.resize(num_curr_rx_samps, time_data);
-        save_timer_to_file(timer_filename, rx_save_timer, timer_seq);
+        double time_data = md.time_spec.get_real_secs();
+        LOG_INFO_FMT("Rx data at time : %.5f", time_data);
+        rx_save_timer.write(reinterpret_cast<char *>(&time_data), sizeof(time_data));
+        rx_save_timer.write(reinterpret_cast<char *>(&num_acc_samps), sizeof(num_acc_samps));
 
         if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
             reception_complete = true;
     }
+
+    rx_save_timer.close();
 
     if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
     {
