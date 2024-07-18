@@ -68,7 +68,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::vector<std::complex<float>> tx_samples;
     tx_samples.insert(tx_samples.begin(), wf_pad, std::complex<float>(0.0, 0.0));
     double time_gap = 0.01; // 10ms gap
-    size_t num_samples_gap = size_t(time_gap / usrp_obj.tx_rate);
+    size_t num_samples_gap = size_t(time_gap * usrp_obj.tx_rate);
     for (int i = 0; i < 10; ++i)
     {
         tx_samples.insert(tx_samples.end(), tx_waveform.begin(), tx_waveform.end());
