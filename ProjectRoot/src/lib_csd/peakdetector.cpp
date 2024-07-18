@@ -23,6 +23,7 @@ PeakDetectionClass::PeakDetectionClass(
     sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
 
     peak_indices = new size_t[total_num_peaks];
+    peak_vals = new float[total_num_peaks];
     corr_samples = new std::complex<float>[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
@@ -32,7 +33,7 @@ PeakDetectionClass::PeakDetectionClass(
     noise_level = init_noise_level;
 };
 
-std::complex<float> *PeakDetectionClass::get_peak_vals()
+std::complex<float> *PeakDetectionClass::get_corr_samples_at_peaks()
 {
     return corr_samples;
 }
@@ -88,6 +89,16 @@ void PeakDetectionClass::reset()
     detection_flag = false;
     noise_level = init_noise_level;
     noise_counter = 0;
+
+    // reset pointers
+    delete[] peak_indices;
+    delete[] peak_vals;
+    delete[] corr_samples;
+    delete[] peak_times;
+    peak_indices = new size_t[total_num_peaks];
+    peak_vals = new float[total_num_peaks];
+    corr_samples = new std::complex<float>[total_num_peaks];
+    peak_times = new uhd::time_spec_t[total_num_peaks];
 }
 
 void PeakDetectionClass::reset_peaks_counter()

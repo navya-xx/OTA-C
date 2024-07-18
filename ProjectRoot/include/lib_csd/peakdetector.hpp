@@ -47,7 +47,7 @@ public:
     float noise_level;
     long int noise_counter;
 
-    std::complex<float> *get_peak_vals();
+    std::complex<float> *get_corr_samples_at_peaks();
     uhd::time_spec_t *get_peak_times();
     void print_peaks_data();
 
