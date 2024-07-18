@@ -57,9 +57,9 @@ void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std
         }
     }
 
-    for (auto &time : stream)
+    for (const double &time : stream)
     {
-        outfile.write(reinterpret_cast<char *>(&time), sizeof(time));
+        outfile.write(reinterpret_cast<const char *>(&time), sizeof(double));
     }
 }
 

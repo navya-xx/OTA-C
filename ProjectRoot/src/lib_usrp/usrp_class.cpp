@@ -566,9 +566,10 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
         save_stream_to_file(data_filename, rx_save_datastream, forward);
 
-        timer_seq.clear();
         LOG_INFO_FMT("Rx data at time : %.5f", md.time_spec.get_real_secs());
-        timer_seq.insert(timer_seq.begin(), num_curr_rx_samps, md.time_spec.get_real_secs());
+        const double time_data = md.time_spec.get_real_secs();
+        timer_seq.clear();
+        timer_seq.resize(num_curr_rx_samps, time_data);
         save_timer_to_file(timer_filename, rx_save_timer, timer_seq);
 
         if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
