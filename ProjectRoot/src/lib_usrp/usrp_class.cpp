@@ -564,8 +564,11 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
             break;
 
         std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
-        timer_seq.insert(timer_seq.end(), num_curr_rx_samps, md.time_spec);
         save_stream_to_file(data_filename, rx_save_datastream, forward);
+
+        timer_seq.clear();
+        timer_seq.insert(timer_seq.begin(), num_curr_rx_samps, md.time_spec);
+        save_timer_to_file(timer_filename, rx_save_timer, timer_seq);
 
         if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
             reception_complete = true;
@@ -575,22 +578,6 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     {
         stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
         rx_streamer->issue_stream_cmd(stream_cmd);
-    }
-
-    if (!rx_save_timer.is_open())
-    {
-        rx_save_timer.open(timer_filename, std::ios::out | std::ios::binary | std::ios::app);
-        if (!rx_save_timer.is_open())
-        {
-            LOG_WARN("Error: Could not open file for writing.");
-            return;
-        }
-    }
-
-    for (const auto &val : timer_seq)
-    {
-        float time_val = val.get_real_secs();
-        rx_save_timer.write(reinterpret_cast<char *>(&time_val), sizeof(time_val));
     }
 };
 

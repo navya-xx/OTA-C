@@ -44,6 +44,26 @@ void save_stream_to_file(const std::string &filename, std::ofstream &outfile, st
     }
 }
 
+void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std::vector<uhd::time_spec_t> stream)
+{
+    // Open the file in append mode (if not already open)
+    if (!outfile.is_open())
+    {
+        outfile.open(filename, std::ios::out | std::ios::binary | std::ios::app);
+        if (!outfile.is_open())
+        {
+            LOG_WARN("Error: Could not open file for writing.");
+            return;
+        }
+    }
+
+    for (const auto &time : stream)
+    {
+        float time_val = time.get_real_secs();
+        outfile.write(reinterpret_cast<char *>(&time_val), sizeof(time_val));
+    }
+}
+
 std::vector<std::complex<float>> read_from_file(const std::string &filename)
 {
     std::vector<std::complex<float>> data;
