@@ -59,7 +59,7 @@ void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std
 
     for (const auto &time : stream)
     {
-        float time_val = time.get_real_secs();
+        double time_val = time.get_real_secs();
         outfile.write(reinterpret_cast<char *>(&time_val), sizeof(time_val));
     }
 }
