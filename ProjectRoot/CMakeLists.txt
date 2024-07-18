@@ -30,6 +30,24 @@ pkg_search_module(FFTW REQUIRED fftw3 IMPORTED_TARGET)
 # To specify an exact version:
 #find_package(UHD 4.0.0 EXACT REQUIRED)
 
+find_library(
+    FFTW_DOUBLE_THREADS_LIB
+    NAMES "fftw3_threads"
+    PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
+)
+          
+if (FFTW_DOUBLE_THREADS_LIB)
+    set(FFTW_DOUBLE_THREADS_LIB_FOUND TRUE)
+    set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_THREADS_LIB})
+    add_library(FFTW::DoubleThreads INTERFACE IMPORTED)
+    set_target_properties(FFTW::DoubleThreads
+        PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+        INTERFACE_LINK_LIBRARIES "${FFTW_DOUBLE_THREADS_LIB}"
+    )
+else()
+    set(FFTW_DOUBLE_THREADS_LIB_FOUND FALSE)
+endif()
+
 # This example also requires Boost.
 # Set components here, then include UHDBoost to do the actual finding
 set(UHD_BOOST_REQUIRED_COMPONENTS
@@ -85,7 +103,7 @@ SET(counter 0)
 foreach(executable ${executables_list})
     list(GET files_list ${counter} file_loc)
     add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_fft/FFTWrapper.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp)
-    target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} PkgConfig::FFTW)
+    target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} PkgConfig::FFTW ${FFTW_DOUBLE_THREADS_LIB})
     math(EXPR counter "${counter} + 1")
     enable_precompiled_headers(${executable})
 endforeach()

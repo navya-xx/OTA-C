@@ -16,6 +16,7 @@ CycleStartDetector::CycleStartDetector(
     N_zfc = parser.getValue_int("Ref-N-zfc");
     m_zfc = parser.getValue_int("Ref-m-zfc");
     R_zfc = parser.getValue_int("Ref-R-zfc");
+
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
     // capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
     if (capacity <= max_rx_packet_size)
@@ -35,7 +36,8 @@ CycleStartDetector::CycleStartDetector(
     {
         fft_L *= 2;
     }
-    fftw_wrapper.initialize(fft_L);
+    int num_FFT_threads = int(parser.getValue_int("num-FFT-threads"));
+    fftw_wrapper.initialize(fft_L, num_FFT_threads);
     std::vector<std::complex<float>> padded_zfc;
     fftw_wrapper.zeroPad(zfc_seq, padded_zfc, fft_L);
     fftw_wrapper.fft(padded_zfc, zfc_seq_fft_conj);
@@ -175,7 +177,6 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
         if (curr_pnr >= peak_det_obj_ref.curr_pnr_threshold)
         {
             found_peak = true;
-            std::cout << std::endl;
             peak_det_obj_ref.process_corr(corr, timer[i]);
             num_samples_without_peak = 0;
         }

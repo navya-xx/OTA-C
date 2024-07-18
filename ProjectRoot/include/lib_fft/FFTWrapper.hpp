@@ -11,7 +11,7 @@ public:
     FFTWrapper();
     ~FFTWrapper();
 
-    void initialize(size_t size);
+    void initialize(size_t size, int num_threads = 1);
 
     // Perform FFT of input array
     void fft(const std::vector<std::complex<float>> &input,

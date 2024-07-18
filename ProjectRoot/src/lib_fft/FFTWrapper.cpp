@@ -2,9 +2,18 @@
 
 FFTWrapper::FFTWrapper() {}
 
-void FFTWrapper::initialize(size_t size)
+void FFTWrapper::initialize(size_t size, int num_threads)
 {
+    if (num_threads <= 0)
+    {
+        LOG_ERROR("Number of threads must be positive.");
+    }
     size_ = size;
+
+    // Initialize FFTW with threading
+    fftw_init_threads();
+    fftw_plan_with_nthreads(num_threads);
+
     fft_input_ = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * size_);
     fft_output_ = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * size_);
     fft_plan_ = fftw_plan_dft_1d(size_, fft_input_, fft_output_, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -17,6 +26,7 @@ FFTWrapper::~FFTWrapper()
     fftw_destroy_plan(ifft_plan_);
     fftw_free(fft_input_);
     fftw_free(fft_output_);
+    fftw_cleanup_threads();
 }
 
 void FFTWrapper::fft(const std::vector<std::complex<float>> &input,
