@@ -533,7 +533,6 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     size_t retry_rx = 0;
     size_t num_acc_samps = 0;
     bool callback_success = false;
-    size_t num_curr_rx_samps;
     std::vector<std::complex<float>> buff(max_rx_packet_size);
 
     std::vector<double> timer_seq;
@@ -543,7 +542,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         size_t size_rx = max_rx_packet_size;
 
         uhd::rx_metadata_t md;
-        num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
+        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
 
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
         {
@@ -570,7 +569,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         double time_data = md.time_spec.get_real_secs();
         LOG_INFO_FMT("Rx data at time : %.5f", time_data);
         rx_save_timer.write(reinterpret_cast<char *>(&time_data), sizeof(time_data));
-        rx_save_timer.write(reinterpret_cast<char *>(&num_acc_samps), sizeof(num_acc_samps));
+        rx_save_timer.write(reinterpret_cast<char *>(&num_curr_rx_samps), sizeof(num_curr_rx_samps));
 
         if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
             reception_complete = true;
