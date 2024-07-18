@@ -58,12 +58,25 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, 0, q_zfc, 1.0, 0);
     auto tx_waveform = wf_gen.generate_waveform();
-    uhd::time_spec_t transmit_time = uhd::time_spec_t(0.0); // initially transmit immediately
+    // add fixed gap between ref signals
+
+    uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0); // initially transmit immediately
 
     // transmit ZFC seq as reference for sync
-    usrp_obj.transmission(tx_waveform, transmit_time, stop_signal_called, true);
+    std::vector<std::complex<float>> tx_samples;
+    tx_samples.insert(tx_samples.begin(), wf_pad, std::complex<float>(0.0, 0.0));
+    double time_gap = 0.01; // 10ms gap
+    size_t num_samples_gap = size_t(time_gap / usrp_obj.tx_rate);
+    for (int i = 0; i < 10; ++i)
+    {
+        tx_samples.insert(tx_samples.end(), tx_waveform.begin(), tx_waveform.end());
+        tx_samples.insert(tx_samples.end(), num_samples_gap, std::complex<float>(0.0, 0.0));
+    }
+
+    tx_samples.insert(tx_samples.end(), wf_pad, std::complex<float>(0.0, 0.0));
+    usrp_obj.transmission(tx_samples, transmit_time, stop_signal_called, true);
 
     // Receive samples for a fixed duration and return
     double rx_duration_secs = 5.0;

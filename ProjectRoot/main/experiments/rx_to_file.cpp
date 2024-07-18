@@ -42,7 +42,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     /*------- USRP setup --------------*/
     USRP_class usrp_classobj(parser);
-
+    usrp_classobj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
     usrp_classobj.initialize();
 
     /*-------- Receive data stream --------*/
