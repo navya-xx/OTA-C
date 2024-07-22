@@ -122,12 +122,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     parser.set_value("device-id", device_id, "str", "USRP device number");
     if (argc > 2)
     {
-        size_t rand_seed = std::stoi(argv[2]);
-        parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
-    }
-    if (argc > 3)
-    {
-        size_t test_zfc_q = std::stoi(argv[3]);
+        size_t test_zfc_q = std::stoi(argv[2]);
         parser.set_value("test-zfc-m", std::to_string(test_zfc_q), "int", "ZFC param `m` for test signal.");
     }
     else
