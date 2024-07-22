@@ -102,13 +102,6 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
             final_sequence.insert(final_sequence.end(), wf_gap, std::complex<float>(0.0, 0.0));
     }
 
-    if (wf_type == WAVEFORM_TYPE::ZFC)
-    {
-        // add ZFC seq N-1 samples
-        final_sequence.insert(final_sequence.begin(), sequence.begin() + 1, sequence.end());
-        final_sequence.insert(final_sequence.end(), sequence.begin(), sequence.end() - 1);
-    }
-
     // add zero at the beginning and end
     if (wf_pad > 0)
     {

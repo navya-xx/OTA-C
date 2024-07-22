@@ -77,7 +77,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         wf_gen.wf_gap = size_t(std::floor(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate / 1e6));
         auto tx_samples = wf_gen.generate_waveform();
 
-        usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, false);
+        usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, true);
 
         // move to next round
         csd_success_signal = false;
