@@ -27,7 +27,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t wf_reps = parser.getValue_int("test-tx-reps");
     size_t wf_gap = size_t(parser.getValue_float("tx-gap-microsec") / 1e6 * usrp_obj.tx_rate);
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * wf_len);
-    size_t zfc_q = 41;
+    size_t zfc_q = parser.getValue_int("test-zfc-m");
     size_t rand_seed = 0;
     float min_ch_scale = parser.getValue_float("min-e2e-amp");
     wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
@@ -125,6 +125,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         size_t rand_seed = std::stoi(argv[2]);
         parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
     }
+    if (argc > 3)
+    {
+        size_t test_zfc_q = std::stoi(argv[3]);
+        parser.set_value("test-zfc-m", std::to_string(test_zfc_q), "int", "ZFC param `m` for test signal.");
+    }
+    else
+        parser.set_value("test-zfc-m", std::to_string(41), "int", "ZFC param `m` for test signal.");
     parser.set_value("storage-folder", projectDir + "/storage", "str", "Location of storage director");
 
     /*------- USRP setup --------------*/
