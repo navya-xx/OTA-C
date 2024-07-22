@@ -355,6 +355,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
 
         uhd::async_metadata_t async_md;
         bool got_async_burst_ack = false;
+        timeout = burst_pkt_time + time_diff;
         // loop through all messages for the ACK packet (may have underflow messages in queue)
         while (not got_async_burst_ack and tx_streamer->recv_async_msg(async_md, timeout))
             got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);

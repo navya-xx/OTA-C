@@ -57,9 +57,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
-    size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
-    auto tx_waveform = wf_gen.generate_waveform();
+    // size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, 0, q_zfc, 1.0, 0);
+    const auto tx_waveform = wf_gen.generate_waveform();
+    const std::vector<std::complex<float>> zero_waveform(reps_zfc * N_zfc);
     // add fixed gap between ref signals
 
     // transmit ZFC seq as reference for sync
@@ -75,6 +76,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // tx_samples.insert(tx_samples.end(), wf_pad, std::complex<float>(0.0, 0.0));
 
     double time_gap = 0.5; // 100ms gap
+    usrp_obj.transmission(zero_waveform, uhd::time_spec_t(0.0), stop_signal_called, false);
     uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0);
     for (int i = 0; i < 10; ++i)
     {
@@ -82,6 +84,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         usrp_obj.transmission(tx_waveform, transmit_time, stop_signal_called, true);
         transmit_time = transmit_time + uhd::time_spec_t(time_gap);
     }
+    usrp_obj.transmission(zero_waveform, uhd::time_spec_t(0.0), stop_signal_called, false);
 
     // Receive samples for a fixed duration and return
     // double rx_duration_secs = 5.0;
