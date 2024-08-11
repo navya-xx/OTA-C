@@ -31,7 +31,6 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t rand_seed = 0;
     float min_ch_scale = parser.getValue_float("min-e2e-amp");
     wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
-    LOG_DEBUG_FMT("Waveform initialized. ZFC (%1%, %2%)", wf_len, zfc_q);
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -73,10 +72,12 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
         LOG_INFO_FMT("Current timer %.5f and Tx start timer %.5f.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
         float est_ref_sig_amp = csd_obj.est_ref_sig_amp;
-        wf_gen.scale = min_ch_scale / est_ref_sig_amp;
+        // wf_gen.scale = min_ch_scale / est_ref_sig_amp;
+        wf_gen.scale = 1.0;
         wf_gen.wf_gap = size_t(std::floor(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate / 1e6));
         auto tx_samples = wf_gen.generate_waveform();
 
+        LOG_DEBUG_FMT("Transmitting waveform ZFC (L=%1%, m=%2%, R=%3%, scale=%4%)", wf_len, zfc_q, wf_reps, wf_gen.scale);
         usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, true);
 
         // move to next round
