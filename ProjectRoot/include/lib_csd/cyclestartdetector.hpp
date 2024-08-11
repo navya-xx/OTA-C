@@ -23,7 +23,7 @@ public:
 
     uhd::time_spec_t csd_tx_start_timer;
     float est_ref_sig_amp;
-    float estimated_sampling_rate_offset;
+    float estimated_sampling_rate_offset, est_phase_drift;
     float remaining_cfo;
 
     // debug
