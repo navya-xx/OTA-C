@@ -122,15 +122,11 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
             // insert data into deque buffer
             samples_buffer.pop_front();
             samples_buffer.push_back(sample);
-
-            //  debug
-            saved_ref.pop_front();
-            saved_ref.push_back(sample);
         }
 
-        std::vector<std::complex<float>> corr_result;
-        fft_cross_correlate(samples_buffer, corr_result);
-        peak_detector(corr_result, timer);
+        std::vector<std::complex<float>> corr_results;
+        fft_cross_correlate(samples_buffer, corr_results);
+        peak_detector(corr_results, timer);
 
         // correlation_operation(samples_buffer, timer);
 
@@ -195,6 +191,10 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
                 num_samples_without_peak = 0; // reset
             ++num_samples_without_peak;
         }
+
+        //  debug
+        saved_ref.pop_front();
+        saved_ref.push_back(samples_buffer[i + N_zfc - 1]);
 
         if (peak_det_obj_ref.detection_flag)
         {
