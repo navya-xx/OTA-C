@@ -31,7 +31,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t rand_seed = 0;
     float min_ch_scale = parser.getValue_float("min-e2e-amp");
     wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
-    LOG_DEBUG("Waveform initialized.");
+    LOG_DEBUG_FMT("Waveform initialized. ZFC (%1%, %2%)", wf_len, zfc_q);
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
