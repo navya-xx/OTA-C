@@ -71,13 +71,13 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // Transmission after cyclestartdetector
         uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
         LOG_INFO_FMT("Current timer %.5f and Tx start timer %.5f.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
-        float est_ref_sig_amp = csd_obj.est_ref_sig_amp;
+        // float est_ref_sig_amp = csd_obj.est_ref_sig_amp;
         // wf_gen.scale = min_ch_scale / est_ref_sig_amp;
         wf_gen.scale = 1.0;
-        wf_gen.wf_gap = size_t(std::floor(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate / 1e6));
+        wf_gen.wf_gap = 0; // size_t(std::floor(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate / 1e6));
         auto tx_samples = wf_gen.generate_waveform();
 
-        LOG_DEBUG_FMT("Transmitting waveform ZFC (L=%1%, m=%2%, R=%3%, scale=%4%)", wf_len, zfc_q, wf_reps, wf_gen.scale);
+        LOG_DEBUG_FMT("Transmitting waveform ZFC (L=%1%, m=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale);
         usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, true);
 
         // move to next round
