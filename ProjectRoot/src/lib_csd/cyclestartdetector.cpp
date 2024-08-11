@@ -56,7 +56,7 @@ CycleStartDetector::CycleStartDetector(
     }
 
     // debug
-    saved_ref.resize(N_zfc * R_zfc * 10);
+    saved_ref.resize(N_zfc * (R_zfc + 1));
 };
 
 void CycleStartDetector::reset()
@@ -64,6 +64,9 @@ void CycleStartDetector::reset()
     synced_buffer.reset();
     prev_timer = uhd::time_spec_t(0.0);
     peak_det_obj_ref.reset();
+
+    saved_ref.clear();
+    saved_ref.resize(N_zfc * (R_zfc + 1));
 }
 
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &packet_start_time, bool &stop_signal_called)
@@ -199,8 +202,6 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
             std::ofstream outfile;
             std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
             save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
-            saved_ref.clear();
-            saved_ref.resize(N_zfc * R_zfc * 10);
 
             // break the for loop
             break;
