@@ -96,6 +96,10 @@ void USRP_class::initialize()
     bool usrp_make_success = false;
     std::string args = "serial=" + device_id;
 
+    usrp = uhd::usrp::multi_usrp::make(args);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    usrp_make_success = true;
+
     // for (int i = 0; i < 3; ++i)
     // {
     //     try
