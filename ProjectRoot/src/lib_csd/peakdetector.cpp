@@ -269,15 +269,15 @@ float PeakDetectionClass::estimate_phase_drift()
 {
     std::vector<std::complex<float>> peak_corr_vals(corr_samples, corr_samples + peaks_count);
     std::vector<double> phases = unwrap(peak_corr_vals); // returns phases between [-pi, pi]
-    uhd::time_spec_t clock_offset = peak_times[0];
+    // uhd::time_spec_t clock_offset = peak_times[0];
     double init_phase_shift = phases[0];
     double phase_time_prod = 0, time_sqr = 0;
     // linear fit to phase offsets
     for (size_t i = 1; i < peaks_count; ++i)
     {
-        double timer_diff = (peak_times[i] - clock_offset).get_real_secs();
-        phase_time_prod += (phases[i] - init_phase_shift) * timer_diff;
-        time_sqr += timer_diff * timer_diff;
+        // double timer_diff = (peak_times[i] - clock_offset).get_real_secs();
+        phase_time_prod += (phases[i] - init_phase_shift) * i;
+        time_sqr += i * i;
     }
     double phase_drift_rate = phase_time_prod / time_sqr;
     return phase_drift_rate;
