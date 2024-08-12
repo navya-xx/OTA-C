@@ -1,9 +1,9 @@
 #!/bin/bash
 
-remote_nodes=("rpi4m1@192.168.5.241" "rpi4m2@192.168.5.242" "rpi4m3@192.168.5.243" "rpi4m4@192.168.5.244" "rpi4m5@192.168.5.245" "rpi4compute@192.168.5.246" "nuc01@192.168.5.248") # "nuc01@192.168.5.248")
+remote_nodes=("rpi4m1@192.168.5.241" "rpi4m2@192.168.5.242" "rpi4m3@192.168.5.243" "rpi4m4@192.168.5.244" "rpi4m5@192.168.5.245" "rpi4compute@192.168.5.246") # "nuc01@192.168.5.248" "nuc01@192.168.5.248")
 
-leaf_node_serials=("32B172B" "32C793E" "32B1708" "32C7981" "32C7920" "32C79BE" "32C79C6")  # "32B1728"
-leaf_node_ids=(23 53 89 113 151 197 211) # 241)
+leaf_node_serials=("32B172B" "32C793E" "32B1708" "32C7981" "32C7920" "32C79BE") # "32C79C6" "32B1728")
+leaf_node_ids=(23 53 89 113 151 197) # 211 241)
 
 # Name of the tmux session
 SESSION_NAME="mysession"
@@ -14,7 +14,7 @@ tmux new-session -d -s $SESSION_NAME
 # Split the window into panes (2 rows, 3 columns)
 tmux split-window -h -t $SESSION_NAME     # Split horizontally into 2 panes
 tmux split-window -h -t $SESSION_NAME     # Split horizontally into 2 panes
-tmux split-window -h -t $SESSION_NAME     # Split horizontally into 2 panes
+# tmux split-window -h -t $SESSION_NAME     # Split horizontally into 2 panes
 tmux split-window -v -t $SESSION_NAME:0.0 # Split the first pane vertically
 tmux split-window -v -t $SESSION_NAME:0.2 # Split the second pane vertically
 tmux split-window -v -t $SESSION_NAME:0.4 # Split the second pane vertically
