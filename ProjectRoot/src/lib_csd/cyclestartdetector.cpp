@@ -98,8 +98,8 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
         est_ref_sig_amp = est_e2e_ref_sig_amp();
         // phase drift
         est_phase_drift = peak_det_obj_ref.estimate_phase_drift();
-        estimated_sampling_rate_offset = std::round(est_phase_drift / (2 * M_PI));
-        remaining_cfo = (peak_det_obj_ref.estimate_phase_drift() / (2 * M_PI) - estimated_sampling_rate_offset) * (2 * M_PI);
+        // estimated_sampling_rate_offset = std::round(est_phase_drift / (2 * M_PI));
+        // remaining_cfo = (peak_det_obj_ref.estimate_phase_drift() / (2 * M_PI) - estimated_sampling_rate_offset) * (2 * M_PI);
         LOG_INFO_FMT("Phase drift %1% radians/sample.", est_phase_drift);
 
         // reset corr and peak det objects
