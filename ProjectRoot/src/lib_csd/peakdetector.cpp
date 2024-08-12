@@ -250,10 +250,10 @@ float PeakDetectionClass::avg_of_peak_vals()
     float max_peak = get_max_peak_val();
 
     // average channel power from corr_samples
-    for (int i = 0; i < total_num_peaks; ++i)
+    for (int i = 1; i < total_num_peaks - 1; ++i)
         e2e_est_ref_sig_amp += std::abs(corr_samples[i]);
 
-    e2e_est_ref_sig_amp = e2e_est_ref_sig_amp / total_num_peaks;
+    e2e_est_ref_sig_amp = e2e_est_ref_sig_amp / (total_num_peaks - 2) / ref_seq_len;
 
     // update max_pnr
     max_pnr = std::max(max_peak * max_peak_mul, pnr_threshold);
