@@ -68,7 +68,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
     // Receive samples for a fixed duration and return
-    double rx_duration_secs = 5.0;
+    double rx_duration_secs = 1.0;
     auto received_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration_secs, uhd::time_spec_t(0.0), true);
 
     return EXIT_SUCCESS;
