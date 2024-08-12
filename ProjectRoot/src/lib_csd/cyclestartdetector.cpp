@@ -61,7 +61,7 @@ CycleStartDetector::CycleStartDetector(
 
 void CycleStartDetector::reset()
 {
-    synced_buffer.reset();
+    synced_buffer.clear();
     prev_timer = uhd::time_spec_t(0.0);
     peak_det_obj_ref.reset();
 
