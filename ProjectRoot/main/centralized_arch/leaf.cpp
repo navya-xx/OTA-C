@@ -29,7 +29,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * wf_len);
     size_t zfc_q = parser.getValue_int("test-zfc-m");
     size_t rand_seed = 0;
-    float min_ch_scale = parser.getValue_float("min-e2e-amp");
+    // float min_ch_scale = parser.getValue_float("min-e2e-amp");
     wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
 
     // This function is called by the receiver as a callback everytime a frame is received
@@ -79,6 +79,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         LOG_DEBUG_FMT("Transmitting waveform ZFC (L=%1%, m=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale);
         usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, true);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
         // move to next round
         csd_success_signal = false;

@@ -210,9 +210,9 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
             // check if this peak is higher than the previous
             if (prev_peak_val < curr_peak_value)
             {
-                LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
-                              "Last peak val '%1%' is less than current val '%2%'.",
-                              prev_peak_val, curr_peak_value);
+                // LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
+                //               "Last peak val '%1%' is less than current val '%2%'.",
+                //               prev_peak_val, curr_peak_value);
                 updatePrevPeak();
                 insertPeak(corr_sample, curr_peak_value, samp_time);
             }
@@ -229,7 +229,7 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
                               prev_peak_val, curr_peak_value);
                 updatePrevPeak();
                 if (peaks_count > 2)
-                    LOG_WARN("Only first peak can show this artifact! This should not happen at the in-between peaks!");
+                    LOG_WARN("This should not happen at the in-between peaks! Only first peak might show this artifact! ");
             }
             insertPeak(corr_sample, curr_peak_value, samp_time);
         }

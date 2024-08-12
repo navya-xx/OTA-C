@@ -65,11 +65,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0);
     usrp_obj.transmission(tx_waveform, transmit_time, stop_signal_called, true);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     // Receive samples for a fixed duration and return
     double rx_duration_secs = 1.0;
-    auto received_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration_secs, uhd::time_spec_t(0.0), true);
+    auto received_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration_secs, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(0.05), true);
 
     return EXIT_SUCCESS;
 };
