@@ -96,20 +96,20 @@ void USRP_class::initialize()
     bool usrp_make_success = false;
     std::string args = "serial=" + device_id;
 
-    for (int i = 0; i < 3; ++i)
-    {
-        try
-        {
-            usrp = uhd::usrp::multi_usrp::make(args);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            usrp_make_success = true;
-            break;
-        }
-        catch (const std::exception &e)
-        {
-            LOG_ERROR_FMT("%1%", e.what());
-        }
-    }
+    // for (int i = 0; i < 3; ++i)
+    // {
+    //     try
+    //     {
+    //         usrp = uhd::usrp::multi_usrp::make(args);
+    //         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //         usrp_make_success = true;
+    //         break;
+    //     }
+    //     catch (const std::exception &e)
+    //     {
+    //         LOG_ERROR_FMT("%1%", e.what());
+    //     }
+    // }
 
     if (not usrp_make_success)
         LOG_ERROR("Failed to create USRP device. Exiting!");
@@ -440,7 +440,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
 
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
         {
-            LOG_WARN_FMT("Timeout while streaming");
+            LOG_WARN("Timeout while streaming");
             success = false;
         }
         else if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
@@ -455,7 +455,10 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
 
         // TODO: catch reception error gracefully without breaking
         if (not success)
-            break;
+        {
+            LOG_WARN("*** Reception of stream data UNSUCCESSFUL! ***");
+            continue;
+        }
 
         // run callback
         callback_success = callback(buff, num_curr_rx_samps, md.time_spec);
