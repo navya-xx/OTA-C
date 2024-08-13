@@ -82,7 +82,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             int counter = 0;
             for (auto &samp : tx_samples)
             {
-                samp *= std::complex<float>(std::cos(csd_obj.cfo * counter), -std::sin(csd_obj.cfo * counter));
+                samp *= std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
                 counter++;
             }
         }
