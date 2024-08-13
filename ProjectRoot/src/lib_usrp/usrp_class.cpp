@@ -503,6 +503,9 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     if (req_num_rx_samps > 0 and is_save_to_file) // save all received samples if a total number of desired rx samples given
         save_stream_to_file(filename, rx_save_stream, rx_samples);
 
+    if (rx_save_stream.is_open())
+        rx_save_stream.close();
+
     if (success and req_num_rx_samps > 0)
         return rx_samples;
     else // do not return anything if total num rx samps not given

@@ -27,8 +27,10 @@ do
     node_name="${remote_nodes[$i]}"
     node_serial="${leaf_node_serials[$i]}"
     node_id="${leaf_node_ids[$i]}"
+    command_pre="mv \$HOME/OTA-C/ProjectRoot/storage \$HOME/OTA-C/ProjectRoot/bkp_storage && mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs"
+    command_run="mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs/ && cd \$HOME/OTA-C/ProjectRoot/build/ && ./CA_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/ProjectRoot/storage/logs/leaf_output.log"
 
-    tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} 'mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs/ && cd \$HOME/OTA-C/ProjectRoot/build/ && ./CA_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/ProjectRoot/storage/logs/leaf_output.log'" C-m
+    tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} '${command_pre} && ${command_run}'" C-m
 
 done
 
