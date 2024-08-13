@@ -6,16 +6,23 @@ CycleStartDetector::CycleStartDetector(
     const uhd::time_spec_t &rx_sample_duration,
     PeakDetectionClass &peak_det_obj) : parser(parser),
                                         synced_buffer(capacity),
+                                        saved_ref(1),
                                         rx_sample_duration(rx_sample_duration),
                                         peak_det_obj_ref(peak_det_obj),
                                         samples_buffer(),
                                         timer(),
-                                        fftw_wrapper()
+                                        fftw_wrapper(),
+                                        cfo(0.0),
+                                        cfo_counter(0)
 {
     prev_timer = uhd::time_spec_t(0.0);
     N_zfc = parser.getValue_int("Ref-N-zfc");
     m_zfc = parser.getValue_int("Ref-m-zfc");
     R_zfc = parser.getValue_int("Ref-R-zfc");
+
+    // capture entire ref signal and more
+    save_ref_len = N_zfc * (R_zfc + 2);
+    saved_ref.resize(save_ref_len);
 
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
     // capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
@@ -55,8 +62,20 @@ CycleStartDetector::CycleStartDetector(
                      capacity, corr_seq_len);
     }
 
-    // debug
-    saved_ref.resize(N_zfc * R_zfc);
+    // FFT length
+    while (fft_LL < save_ref_len + N_zfc - 1)
+    {
+        fft_LL *= 2;
+    }
+
+    fftw_wrapper_LL.initialize(fft_LL, num_FFT_threads);
+    std::vector<std::complex<float>> padded_zfc_LL;
+    fftw_wrapper_LL.zeroPad(zfc_seq, padded_zfc_LL, fft_LL);
+    fftw_wrapper_LL.fft(padded_zfc_LL, zfc_seq_fft_conj_LL);
+    for (auto &val : zfc_seq_fft_conj_LL)
+    {
+        val = std::conj(val);
+    }
 };
 
 void CycleStartDetector::reset()
@@ -66,7 +85,59 @@ void CycleStartDetector::reset()
     peak_det_obj_ref.reset();
 
     saved_ref.clear();
-    saved_ref.resize(N_zfc * R_zfc);
+    saved_ref.resize(save_ref_len);
+}
+
+void CycleStartDetector::post_peak_det()
+{
+    // phase drift
+    cfo = peak_det_obj_ref.estimate_phase_drift(); // radians/sample
+    // cfo_count_max = rational_number_approximation(cfo / (2 * M_PI));
+    LOG_INFO_FMT("Phase drift %1% radians/sample.", cfo);
+
+    // updating peaks after CFO correction
+    update_peaks_info();
+    LOG_INFO_FMT("Estimated channel power is %1%.", est_ref_sig_amp);
+
+    // get wait time before transmission
+    csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
+    LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
+}
+
+void CycleStartDetector::update_peaks_info()
+{
+    // correct CFO
+    std::deque<std::complex<float>> cfo_corrected_ref(save_ref_len);
+    std::deque<std::complex<float>> saved_ref_(save_ref_len);
+    std::vector<uhd::time_spec_t> new_timer(save_ref_len);
+    for (size_t n = 0; n < save_ref_len; ++n)
+    {
+        saved_ref.pop(saved_ref_[n], new_timer[n]);
+        double phase_shift = cfo * n;
+        std::complex<float> phase_shift_comp(std::cos(phase_shift), std::sin(phase_shift));
+        cfo_corrected_ref[n] = saved_ref_[n] * phase_shift_comp;
+    }
+
+    // Calculate cross-corr again
+    std::vector<std::complex<float>> cfo_corr_results = fft_cross_correlate_LL(cfo_corrected_ref);
+
+    // find correct peaks
+    std::vector<float> abs_corr(cfo_corrected_ref.size());
+    for (size_t n = 0; n < cfo_corr_results.size(); ++n)
+        abs_corr[n] = std::abs(cfo_corr_results[n]);
+
+    int ref_start_index = peak_det_obj_ref.updatePeaksAfterCFO(abs_corr, new_timer);
+    float sig_ampl = 0.0;
+    for (int i = 0; i < N_zfc * R_zfc; ++i)
+        sig_ampl += std::abs(cfo_corrected_ref[ref_start_index + i]);
+    est_ref_sig_amp = sig_ampl;
+
+    // // debug -- save data to a file for later analysis
+    std::ofstream outfile;
+    std::vector<std::complex<float>> vec_saved_ref(saved_ref_.begin(), saved_ref_.end());
+    vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
+    vec_saved_ref.insert(vec_saved_ref.end(), cfo_corrected_ref.begin(), cfo_corrected_ref.end());
+    save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
 }
 
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &packet_start_time, bool &stop_signal_called)
@@ -93,17 +164,11 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
 
     if (peak_det_obj_ref.detection_flag)
     {
-        csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
-        LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
-        est_ref_sig_amp = est_e2e_ref_sig_amp();
-        // phase drift
-        est_phase_drift = peak_det_obj_ref.estimate_phase_drift();
-        // estimated_sampling_rate_offset = std::round(est_phase_drift / (2 * M_PI));
-        // remaining_cfo = (peak_det_obj_ref.estimate_phase_drift() / (2 * M_PI) - estimated_sampling_rate_offset) * (2 * M_PI);
-        LOG_INFO_FMT("Phase drift %1% radians/sample.", est_phase_drift);
+        post_peak_det();
 
         // reset corr and peak det objects
         reset();
+
         csd_success_signal = true;
     }
     else
@@ -119,13 +184,20 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
                 // LOG_DEBUG("Yield Consumer");
                 std::this_thread::yield();
             }
+            // adjust for CFO
+            if (cfo != 0.0)
+            {
+                sample /= std::complex<float>(std::cos(cfo * cfo_counter), std::sin(cfo * cfo_counter));
+                cfo_counter++;
+                if (cfo_counter == cfo_count_max)
+                    cfo_counter = 0;
+            }
             // insert data into deque buffer
             samples_buffer.pop_front();
             samples_buffer.push_back(sample);
         }
 
-        std::vector<std::complex<float>> corr_results;
-        fft_cross_correlate(samples_buffer, corr_results);
+        std::vector<std::complex<float>> corr_results = fft_cross_correlate(samples_buffer);
         peak_detector(corr_results, timer);
 
         // correlation_operation(samples_buffer, timer);
@@ -137,7 +209,7 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
     }
 }
 
-void CycleStartDetector::fft_cross_correlate(const std::deque<std::complex<float>> &samples, std::vector<std::complex<float>> &result)
+std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate(const std::deque<std::complex<float>> &samples)
 {
     std::vector<std::complex<float>> padded_samples, fft_samples, product(fft_L), ifft_result;
     fftw_wrapper.zeroPad(samples, padded_samples, fft_L);
@@ -150,11 +222,25 @@ void CycleStartDetector::fft_cross_correlate(const std::deque<std::complex<float
 
     fftw_wrapper.ifft(product, ifft_result);
 
-    result.resize(corr_seq_len);
-    for (int i = 0; i < corr_seq_len; ++i)
+    std::vector<std::complex<float>> result(ifft_result.begin(), ifft_result.begin() + corr_seq_len);
+    return result;
+}
+
+std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate_LL(const std::deque<std::complex<float>> &samples)
+{
+    std::vector<std::complex<float>> padded_samples, fft_samples, product(fft_LL), ifft_result;
+    fftw_wrapper_LL.zeroPad(samples, padded_samples, fft_LL);
+    fftw_wrapper_LL.fft(padded_samples, fft_samples);
+
+    for (int i = 0; i < fft_LL; ++i)
     {
-        result[i] = ifft_result[i];
+        product[i] = fft_samples[i] * zfc_seq_fft_conj_LL[i];
     }
+
+    fftw_wrapper_LL.ifft(product, ifft_result);
+
+    std::vector<std::complex<float>> result(ifft_result.begin(), ifft_result.begin() + N_zfc * (R_zfc + 2));
+    return result;
 }
 
 void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &corr_results, const std::vector<uhd::time_spec_t> &timer)
@@ -194,79 +280,18 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
 
         //  debug
         saved_ref.pop_front();
-        saved_ref.push_back(samples_buffer[i + N_zfc - 1]);
+        saved_ref.push(samples_buffer[i + N_zfc - 1], timer[i + N_zfc - 1]);
 
         if (peak_det_obj_ref.detection_flag)
         {
-            // debug -- save data to a file for later analysis
-            std::ofstream outfile;
-            std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
-            save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
-
-            // break the for loop
-            break;
-        }
-        else // increase conuter
-            peak_det_obj_ref.increase_samples_counter();
-    }
-
-    // udpate noise level
-    if ((not found_peak) and update_noise_level and (not peak_det_obj_ref.detection_flag))
-        peak_det_obj_ref.updateNoiseLevel(sum_ampl / corr_seq_len, corr_seq_len);
-}
-
-void CycleStartDetector::correlation_operation(const std::vector<std::complex<float>> &samples, const std::vector<uhd::time_spec_t> &timer)
-{
-    // Perform cross-correlation
-    bool found_peak = false;
-    float sum_ampl = 0.0;
-    float corr_abs_val = 0.0;
-    float curr_pnr = 0.0;
-
-    for (int i = 0; i < corr_seq_len; ++i)
-    {
-        // compute correlation
-        std::complex<float> corr(0.0, 0.0);
-        for (uint16_t j = 0; j < N_zfc; ++j)
-            corr += (samples[i + j] * std::conj(zfc_seq[j]));
-
-        corr_abs_val = std::abs(corr) / N_zfc;
-        curr_pnr = corr_abs_val / peak_det_obj_ref.noise_level;
-
-        // debug
-        if (curr_pnr > max_pnr)
-            max_pnr = curr_pnr;
-
-        if (curr_pnr >= peak_det_obj_ref.curr_pnr_threshold)
-        {
-            found_peak = true;
-            std::cout << std::endl;
-            peak_det_obj_ref.process_corr(corr, timer[i]);
-            num_samples_without_peak = 0;
-        }
-        else
-        {
-            found_peak = false;
-            if (update_noise_level)
-                sum_ampl += corr_abs_val;
-
-            if (num_samples_without_peak == std::numeric_limits<size_t>::max())
-                num_samples_without_peak = 0; // reset
-            ++num_samples_without_peak;
-        }
-
-        //  debug
-        saved_ref.pop_front();
-        saved_ref.push_back(samples[i + N_zfc - 1]); // save the last sample of the corr seq
-
-        if (peak_det_obj_ref.detection_flag)
-        {
-            // debug -- save data to a file for later analysis
-            std::ofstream outfile;
-            std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
-            save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
-            saved_ref.clear();
-            saved_ref.resize(N_zfc * R_zfc);
+            // add N_zfc more samples to the end
+            size_t M = 0;
+            while ((M + i < corr_seq_len) & (M < N_zfc))
+            {
+                saved_ref.pop_front();
+                saved_ref.push(samples_buffer[i + N_zfc - 1], timer[i + N_zfc - 1]);
+                M++;
+            }
 
             // break the for loop
             break;

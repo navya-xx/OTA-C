@@ -23,14 +23,16 @@ public:
 
     uhd::time_spec_t csd_tx_start_timer;
     float est_ref_sig_amp;
-    float estimated_sampling_rate_offset, est_phase_drift;
-    float remaining_cfo;
+    double cfo;
+    size_t cfo_counter, cfo_count_max = std::numeric_limits<size_t>::max();
+    size_t save_ref_len;
 
     // debug
     std::string saved_ref_filename;
 
 private:
     SyncedBufferManager<std::complex<float>, uhd::time_spec_t> synced_buffer; // contains both samples_buffer and timer_buffer
+    SyncedBufferManager<std::complex<float>, uhd::time_spec_t> saved_ref;
     std::deque<std::complex<float>> samples_buffer;
     std::vector<uhd::time_spec_t> timer;
 
@@ -40,7 +42,6 @@ private:
     uhd::time_spec_t rx_sample_duration;
     PeakDetectionClass peak_det_obj_ref;
 
-    void correlation_operation(const std::vector<std::complex<float>> &samples, const std::vector<uhd::time_spec_t> &timer);
     void reset();
     float est_e2e_ref_sig_amp();
 
@@ -50,20 +51,22 @@ private:
 
     std::vector<std::complex<float>> zfc_seq;
 
+    void post_peak_det();
+    void update_peaks_info();
+
     // FFT related
-    size_t fft_L = 1;
-    FFTWrapper fftw_wrapper;
-    std::vector<std::complex<float>> zfc_seq_fft_conj;
-    void fft_cross_correlate(const std::deque<std::complex<float>> &samples, std::vector<std::complex<float>> &result);
+    size_t fft_L = 1, fft_LL = 1;
+    FFTWrapper fftw_wrapper, fftw_wrapper_LL;
+    std::vector<std::complex<float>> zfc_seq_fft_conj, zfc_seq_fft_conj_LL;
+    std::vector<std::complex<float>> fft_cross_correlate(const std::deque<std::complex<float>> &samples);
+    std::vector<std::complex<float>> fft_cross_correlate_LL(const std::deque<std::complex<float>> &samples);
     void peak_detector(const std::vector<std::complex<float>> &corr_results, const std::vector<uhd::time_spec_t> &timer);
 
     size_t num_samples_without_peak = 0;
 
     bool update_noise_level = false;
 
-    // DEBUG
     float max_pnr = 0.0;
-    std::deque<std::complex<float>> saved_ref;
 };
 
 #endif // CSD_CLASS

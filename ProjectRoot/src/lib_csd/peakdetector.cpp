@@ -280,7 +280,52 @@ float PeakDetectionClass::estimate_phase_drift()
         time_sqr += i * i;
     }
     double phase_drift_rate = phase_time_prod / time_sqr;
-    return phase_drift_rate;
+    return phase_drift_rate / ref_seq_len; // radians per symbol
+}
+
+int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::vector<uhd::time_spec_t> &new_timer)
+{
+    // find index of first possible peak
+    int first_peak_index = 0, final_fpi = 0;
+    float max_peak = peak_vals[0];
+    auto max_peak_iter = std::max_element(peak_vals, peak_vals + peaks_count);
+    if (max_peak_iter != peak_vals + peaks_count)
+        max_peak = *max_peak_iter;
+    while (true)
+    {
+        float v = abs_corr_vals[first_peak_index];
+        if (v > 0.5 * max_peak)
+            break;
+        first_peak_index++;
+    }
+    if (first_peak_index == 0)
+        LOG_WARN("PeakDetectionClass::updatePeaksAfterCFO -> First peak detection failed!");
+
+    float max_peak_avg = 0.0;
+    for (int i = 0; i < ref_seq_len * 2; ++i)
+    {
+        float tmp = 0.0;
+        for (int j = 0; j < total_num_peaks; ++j)
+        {
+            tmp += abs_corr_vals[first_peak_index + i + j * ref_seq_len];
+        }
+        tmp /= total_num_peaks;
+        if (tmp > max_peak_avg)
+        {
+            max_peak_avg = tmp;
+            final_fpi = first_peak_index + i;
+        }
+    }
+
+    for (int i = 0; i < total_num_peaks; ++i)
+    {
+        peak_vals[i] = abs_corr_vals[final_fpi + i * ref_seq_len];
+        peak_times[i] = new_timer[final_fpi + i * ref_seq_len];
+    }
+
+    int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);
+
+    return ref_start_index;
 }
 
 void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)

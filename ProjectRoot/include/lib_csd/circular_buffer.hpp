@@ -9,9 +9,11 @@ class CircularBuffer
 {
 public:
     CircularBuffer(size_t &capacity);
-    bool push(const BUFF_DATA_TYPE &data);
-    bool pop(BUFF_DATA_TYPE &data);
+    bool push(const BUFF_DATA_TYPE &data); // push back
+    bool pop(BUFF_DATA_TYPE &data);        // pop last
+    bool pop_front();                      // remove first element
 
+    void resize(const size_t &capacity);
     void reset();
     void clear();
     bool is_empty() const;
@@ -31,7 +33,9 @@ public:
 
     bool push(const COMPLEX_DATA_TYPE &item1, const TIME_DATA_TYPE &item2);
     bool pop(COMPLEX_DATA_TYPE &item1, TIME_DATA_TYPE &item2);
+    bool pop_front();
 
+    void resize(const size_t &capacity);
     void reset();
     void clear();
 
@@ -49,6 +53,13 @@ CircularBuffer<BUFF_DATA_TYPE>::CircularBuffer(size_t &capacity) : buffer_(capac
         LOG_ERROR("Buffer capacity must be a power of 2");
     }
 };
+
+template <typename BUFF_DATA_TYPE>
+void CircularBuffer<BUFF_DATA_TYPE>::resize(const size_t &capacity)
+{
+    capacity_ = capacity;
+    buffer_.resize(capacity);
+}
 
 template <typename BUFF_DATA_TYPE>
 bool CircularBuffer<BUFF_DATA_TYPE>::push(const BUFF_DATA_TYPE &item)
@@ -74,6 +85,18 @@ bool CircularBuffer<BUFF_DATA_TYPE>::pop(BUFF_DATA_TYPE &item)
     }
     item = buffer_[current_tail];
     tail_.store((current_tail + 1) & (capacity_ - 1), std::memory_order_release);
+    return true;
+}
+
+template <typename BUFF_DATA_TYPE>
+bool CircularBuffer<BUFF_DATA_TYPE>::pop_front()
+{
+    size_t current_head = head_.load(std::memory_order_relaxed);
+    if (current_head == tail_.load(std::memory_order_acquire))
+    {
+        return false; // Buffer is empty
+    }
+    head_.store((current_head + 1) & (capacity_ - 1), std::memory_order_release);
     return true;
 }
 
@@ -130,6 +153,26 @@ bool SyncedBufferManager<COMPLEX_DATA_TYPE, TIME_DATA_TYPE>::pop(COMPLEX_DATA_TY
         return false;
     }
     return true;
+}
+
+template <typename COMPLEX_DATA_TYPE, typename TIME_DATA_TYPE>
+bool SyncedBufferManager<COMPLEX_DATA_TYPE, TIME_DATA_TYPE>::pop_front()
+{
+    bool popped_front_1 = samples_buffer.pop_front();
+    bool popped_front_2 = timer_buffer.pop_front();
+
+    if (!popped_front_1 || !popped_front_2)
+    {
+        return false;
+    }
+    return true;
+}
+
+template <typename COMPLEX_DATA_TYPE, typename TIME_DATA_TYPE>
+void SyncedBufferManager<COMPLEX_DATA_TYPE, TIME_DATA_TYPE>::resize(const size_t &capacity)
+{
+    samples_buffer.resize(capacity);
+    timer_buffer.resize(capacity);
 }
 
 template <typename COMPLEX_DATA_TYPE, typename TIME_DATA_TYPE>

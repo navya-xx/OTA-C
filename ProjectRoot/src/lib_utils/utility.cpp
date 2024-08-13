@@ -153,3 +153,18 @@ void remove_freq_offset(std::vector<std::complex<float>> &samples, const float &
     {
     }
 }
+
+size_t rational_number_approximation(double a, double e, size_t max_iter)
+{
+    size_t N = static_cast<size_t>(std::ceil(1.0 / (2 * e)));
+    size_t m = static_cast<size_t>(std::round(a * N));
+    size_t iter = 0;
+
+    while ((std::abs(a - static_cast<double>(m / N)) >= e) & (iter < max_iter))
+    {
+        N++;
+        m = static_cast<size_t>(std::round(a * N));
+        iter++;
+    }
+    return N;
+}

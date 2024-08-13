@@ -77,7 +77,17 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         wf_gen.wf_gap = 0; // size_t(std::floor(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate / 1e6));
         auto tx_samples = wf_gen.generate_waveform();
 
-        LOG_DEBUG_FMT("Est sig ampl = %1%", est_ref_sig_amp);
+        // adjust for CFO
+        if (csd_obj.cfo != 0.0)
+        {
+            for (auto &samp : tx_samples)
+            {
+                samp /= std::complex<float>(std::cos(csd_obj.cfo * csd_obj.cfo_counter), std::sin(csd_obj.cfo * csd_obj.cfo_counter));
+                csd_obj.cfo_counter++;
+                if (csd_obj.cfo_counter == csd_obj.cfo_count_max)
+                    csd_obj.cfo_counter = 0;
+            }
+        }
         LOG_DEBUG_FMT("Transmitting waveform ZFC (L=%1%, m=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale);
         usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, true);
 
