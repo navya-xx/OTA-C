@@ -8,6 +8,8 @@ leaf_node_ids=(23 53 89 113 151) # 197 211 241)
 # Name of the tmux session
 SESSION_NAME="mysession"
 
+tmux kill-session -t $SESSION_NAME
+
 # Create a new tmux session, but don't attach to it yet
 tmux new-session -d -s $SESSION_NAME
 
