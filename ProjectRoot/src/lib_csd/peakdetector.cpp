@@ -210,9 +210,9 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
             // check if this peak is higher than the previous
             if (prev_peak_val < curr_peak_value)
             {
-                // LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
-                //               "Last peak val '%1%' is less than current val '%2%'.",
-                //               prev_peak_val, curr_peak_value);
+                LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
+                              "Last peak val '%1%' is less than current val '%2%'.",
+                              prev_peak_val, curr_peak_value);
                 updatePrevPeak();
                 insertPeak(corr_sample, curr_peak_value, samp_time);
             }
@@ -283,43 +283,33 @@ float PeakDetectionClass::estimate_phase_drift()
     return phase_drift_rate / ref_seq_len; // radians per symbol
 }
 
-int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::vector<uhd::time_spec_t> &new_timer)
+int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::deque<uhd::time_spec_t> &new_timer)
 {
     // find index of first possible peak
-    int first_peak_index = 0, final_fpi = 0;
-    float max_peak = peak_vals[0];
-    auto max_peak_iter = std::max_element(peak_vals, peak_vals + peaks_count);
-    if (max_peak_iter != peak_vals + peaks_count)
-        max_peak = *max_peak_iter;
-    while (true)
-    {
-        float v = abs_corr_vals[first_peak_index];
-        if (v > 0.5 * max_peak)
-            break;
-        first_peak_index++;
-    }
-    if (first_peak_index == 0)
-        LOG_WARN("PeakDetectionClass::updatePeaksAfterCFO -> First peak detection failed!");
-
+    int first_peak_index = std::floor(ref_seq_len / 2), final_fpi = 0;
     float max_peak_avg = 0.0;
-    for (int i = 0; i < ref_seq_len * 2; ++i)
+    for (int i = 0; i < ref_seq_len + std::floor(ref_seq_len / 2); ++i)
     {
         float tmp = 0.0;
         for (int j = 0; j < total_num_peaks; ++j)
         {
+            size_t c_ind = first_peak_index + i + j * ref_seq_len;
+            if (c_ind > abs_corr_vals.size())
+                LOG_WARN("PeakDetectionClass::updatePeaksAfterCFO -> Index out of range!");
             tmp += abs_corr_vals[first_peak_index + i + j * ref_seq_len];
         }
         tmp /= total_num_peaks;
         if (tmp > max_peak_avg)
         {
             max_peak_avg = tmp;
+            LOG_INFO_FMT("Current Max peak avg est = %1%", max_peak_avg);
             final_fpi = first_peak_index + i;
         }
     }
 
     for (int i = 0; i < total_num_peaks; ++i)
     {
-        peak_vals[i] = abs_corr_vals[final_fpi + i * ref_seq_len];
+        peak_vals[i] = abs_corr_vals[final_fpi + i * ref_seq_len] / ref_seq_len / noise_level;
         peak_times[i] = new_timer[final_fpi + i * ref_seq_len];
     }
 

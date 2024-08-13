@@ -63,7 +63,7 @@ public:
     uhd::time_spec_t get_sync_time();
 
     float estimate_phase_drift();
-    int updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::vector<uhd::time_spec_t> &new_timer);
+    int updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::deque<uhd::time_spec_t> &new_timer);
 };
 
 #endif // PEAK_CLASS

@@ -80,12 +80,11 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // adjust for CFO
         if (csd_obj.cfo != 0.0)
         {
+            int counter = 0;
             for (auto &samp : tx_samples)
             {
-                samp /= std::complex<float>(std::cos(csd_obj.cfo * csd_obj.cfo_counter), std::sin(csd_obj.cfo * csd_obj.cfo_counter));
-                csd_obj.cfo_counter++;
-                if (csd_obj.cfo_counter == csd_obj.cfo_count_max)
-                    csd_obj.cfo_counter = 0;
+                samp *= std::complex<float>(std::cos(csd_obj.cfo * counter), -std::sin(csd_obj.cfo * counter));
+                counter++;
             }
         }
         LOG_DEBUG_FMT("Transmitting waveform ZFC (L=%1%, m=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale);

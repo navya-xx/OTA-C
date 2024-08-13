@@ -32,9 +32,13 @@ public:
 
 private:
     SyncedBufferManager<std::complex<float>, uhd::time_spec_t> synced_buffer; // contains both samples_buffer and timer_buffer
-    SyncedBufferManager<std::complex<float>, uhd::time_spec_t> saved_ref;
+    // SyncedBufferManager<std::complex<float>, uhd::time_spec_t> saved_ref;
+
     std::deque<std::complex<float>> samples_buffer;
     std::vector<uhd::time_spec_t> timer;
+
+    std::deque<std::complex<float>> saved_ref;
+    std::deque<uhd::time_spec_t> saved_ref_timer;
 
     uhd::time_spec_t prev_timer;
 

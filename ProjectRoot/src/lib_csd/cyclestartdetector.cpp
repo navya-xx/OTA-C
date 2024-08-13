@@ -6,7 +6,6 @@ CycleStartDetector::CycleStartDetector(
     const uhd::time_spec_t &rx_sample_duration,
     PeakDetectionClass &peak_det_obj) : parser(parser),
                                         synced_buffer(capacity),
-                                        saved_ref(1),
                                         rx_sample_duration(rx_sample_duration),
                                         peak_det_obj_ref(peak_det_obj),
                                         samples_buffer(),
@@ -23,6 +22,7 @@ CycleStartDetector::CycleStartDetector(
     // capture entire ref signal and more
     save_ref_len = N_zfc * (R_zfc + 2);
     saved_ref.resize(save_ref_len);
+    saved_ref_timer.resize(save_ref_len);
 
     size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
     // capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
@@ -83,9 +83,12 @@ void CycleStartDetector::reset()
     synced_buffer.clear();
     prev_timer = uhd::time_spec_t(0.0);
     peak_det_obj_ref.reset();
+    cfo_counter = 0;
 
     saved_ref.clear();
     saved_ref.resize(save_ref_len);
+    saved_ref_timer.clear();
+    saved_ref_timer.resize(save_ref_len);
 }
 
 void CycleStartDetector::post_peak_det()
@@ -93,11 +96,11 @@ void CycleStartDetector::post_peak_det()
     // phase drift
     cfo = peak_det_obj_ref.estimate_phase_drift(); // radians/sample
     // cfo_count_max = rational_number_approximation(cfo / (2 * M_PI));
-    LOG_INFO_FMT("Phase drift %1% radians/sample.", cfo);
+    LOG_INFO_FMT("Estimated CFO %1% radians/sample.", cfo);
 
     // updating peaks after CFO correction
     update_peaks_info();
-    LOG_INFO_FMT("Estimated channel power is %1%.", est_ref_sig_amp);
+    LOG_INFO_FMT("2. Estimated channel power is %1%.", est_ref_sig_amp);
 
     // get wait time before transmission
     csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
@@ -108,33 +111,31 @@ void CycleStartDetector::update_peaks_info()
 {
     // correct CFO
     std::deque<std::complex<float>> cfo_corrected_ref(save_ref_len);
-    std::deque<std::complex<float>> saved_ref_(save_ref_len);
-    std::vector<uhd::time_spec_t> new_timer(save_ref_len);
+
     for (size_t n = 0; n < save_ref_len; ++n)
-    {
-        saved_ref.pop(saved_ref_[n], new_timer[n]);
-        double phase_shift = cfo * n;
-        std::complex<float> phase_shift_comp(std::cos(phase_shift), std::sin(phase_shift));
-        cfo_corrected_ref[n] = saved_ref_[n] * phase_shift_comp;
-    }
+        cfo_corrected_ref[n] = saved_ref[n] * std::complex<float>(std::cos(cfo * n), -std::sin(cfo * n));
 
     // Calculate cross-corr again
     std::vector<std::complex<float>> cfo_corr_results = fft_cross_correlate_LL(cfo_corrected_ref);
 
     // find correct peaks
-    std::vector<float> abs_corr(cfo_corrected_ref.size());
-    for (size_t n = 0; n < cfo_corr_results.size(); ++n)
+    std::vector<float> abs_corr(save_ref_len);
+    for (size_t n = 0; n < save_ref_len; ++n)
         abs_corr[n] = std::abs(cfo_corr_results[n]);
 
-    int ref_start_index = peak_det_obj_ref.updatePeaksAfterCFO(abs_corr, new_timer);
+    int ref_start_index = peak_det_obj_ref.updatePeaksAfterCFO(abs_corr, saved_ref_timer);
+    LOG_INFO_FMT("ref_start_index %1%", ref_start_index);
+    if (ref_start_index + N_zfc * R_zfc > save_ref_len)
+        LOG_WARN("detected ref_start_index is incorrect");
     float sig_ampl = 0.0;
     for (int i = 0; i < N_zfc * R_zfc; ++i)
         sig_ampl += std::abs(cfo_corrected_ref[ref_start_index + i]);
-    est_ref_sig_amp = sig_ampl;
+    est_ref_sig_amp = sig_ampl / N_zfc * R_zfc;
+    LOG_INFO_FMT("1. Estimated channel power is %1%.", est_ref_sig_amp);
 
     // // debug -- save data to a file for later analysis
     std::ofstream outfile;
-    std::vector<std::complex<float>> vec_saved_ref(saved_ref_.begin(), saved_ref_.end());
+    std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
     vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
     vec_saved_ref.insert(vec_saved_ref.end(), cfo_corrected_ref.begin(), cfo_corrected_ref.end());
     save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
@@ -187,7 +188,7 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
             // adjust for CFO
             if (cfo != 0.0)
             {
-                sample /= std::complex<float>(std::cos(cfo * cfo_counter), std::sin(cfo * cfo_counter));
+                sample *= std::complex<float>(std::cos(cfo * cfo_counter), -std::sin(cfo * cfo_counter));
                 cfo_counter++;
                 if (cfo_counter == cfo_count_max)
                     cfo_counter = 0;
@@ -239,7 +240,7 @@ std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate_LL(cons
 
     fftw_wrapper_LL.ifft(product, ifft_result);
 
-    std::vector<std::complex<float>> result(ifft_result.begin(), ifft_result.begin() + N_zfc * (R_zfc + 2));
+    std::vector<std::complex<float>> result(ifft_result.begin(), ifft_result.begin() + save_ref_len);
     return result;
 }
 
@@ -278,10 +279,6 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
             ++num_samples_without_peak;
         }
 
-        //  debug
-        saved_ref.pop_front();
-        saved_ref.push(samples_buffer[i + N_zfc - 1], timer[i + N_zfc - 1]);
-
         if (peak_det_obj_ref.detection_flag)
         {
             // add N_zfc more samples to the end
@@ -289,7 +286,9 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
             while ((M + i < corr_seq_len) & (M < N_zfc))
             {
                 saved_ref.pop_front();
-                saved_ref.push(samples_buffer[i + N_zfc - 1], timer[i + N_zfc - 1]);
+                saved_ref.push_back(samples_buffer[M + i + N_zfc - 1]);
+                saved_ref_timer.pop_front();
+                saved_ref_timer.push_back(timer[M + i + N_zfc - 1]);
                 M++;
             }
 
@@ -297,7 +296,13 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
             break;
         }
         else // increase conuter
+        {
+            saved_ref.pop_front();
+            saved_ref.push_back(samples_buffer[i + N_zfc - 1]);
+            saved_ref_timer.pop_front();
+            saved_ref_timer.push_back(timer[i + N_zfc - 1]);
             peak_det_obj_ref.increase_samples_counter();
+        }
     }
 
     // udpate noise level
