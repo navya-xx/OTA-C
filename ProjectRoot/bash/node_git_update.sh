@@ -12,6 +12,8 @@ remote_nodes=("rpi4m1@192.168.5.241" "rpi4m2@192.168.5.242" "rpi4m3@192.168.5.24
 # Name of the tmux session
 SESSION_NAME="GitMake"
 
+tmux kill-session -t $SESSION_NAME
+
 # Create a new tmux session, but don't attach to it yet
 tmux new-session -d -s $SESSION_NAME
 
