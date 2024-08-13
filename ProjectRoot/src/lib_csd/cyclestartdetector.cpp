@@ -93,27 +93,27 @@ void CycleStartDetector::reset()
 
 void CycleStartDetector::post_peak_det()
 {
-    // phase drift
-    cfo = peak_det_obj_ref.estimate_phase_drift(); // radians/sample
+    // update phase drift
+    float new_cfo = peak_det_obj_ref.estimate_phase_drift();
+    cfo += new_cfo; // radians/sample
     // cfo_count_max = rational_number_approximation(cfo / (2 * M_PI));
     LOG_INFO_FMT("Estimated CFO %1% radians/sample.", cfo);
 
     // updating peaks after CFO correction
-    update_peaks_info();
-    LOG_INFO_FMT("2. Estimated channel power is %1%.", est_ref_sig_amp);
+    update_peaks_info(new_cfo);
 
     // get wait time before transmission
     csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
     LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
 }
 
-void CycleStartDetector::update_peaks_info()
+void CycleStartDetector::update_peaks_info(const float &new_cfo)
 {
     // correct CFO
     std::deque<std::complex<float>> cfo_corrected_ref(save_ref_len);
 
     for (size_t n = 0; n < save_ref_len; ++n)
-        cfo_corrected_ref[n] = saved_ref[n] * std::complex<float>(std::cos(cfo * n), -std::sin(cfo * n));
+        cfo_corrected_ref[n] = saved_ref[n] * std::complex<float>(std::cos(new_cfo * n), -std::sin(new_cfo * n));
 
     // Calculate cross-corr again
     std::vector<std::complex<float>> cfo_corr_results = fft_cross_correlate_LL(cfo_corrected_ref);
@@ -131,7 +131,7 @@ void CycleStartDetector::update_peaks_info()
     for (int i = 0; i < N_zfc * R_zfc; ++i)
         sig_ampl += std::abs(cfo_corrected_ref[ref_start_index + i]);
     est_ref_sig_amp = sig_ampl / N_zfc * R_zfc;
-    LOG_INFO_FMT("1. Estimated channel power is %1%.", est_ref_sig_amp);
+    LOG_INFO_FMT("Estimated channel power is %1%.", est_ref_sig_amp);
 
     // // debug -- save data to a file for later analysis
     std::ofstream outfile;

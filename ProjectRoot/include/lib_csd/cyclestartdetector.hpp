@@ -56,7 +56,7 @@ private:
     std::vector<std::complex<float>> zfc_seq;
 
     void post_peak_det();
-    void update_peaks_info();
+    void update_peaks_info(const float &new_cfo);
 
     // FFT related
     size_t fft_L = 1, fft_LL = 1;
