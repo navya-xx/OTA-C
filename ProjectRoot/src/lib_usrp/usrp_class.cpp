@@ -315,6 +315,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     size_t num_acc_samps = 0;
     size_t num_tx_samps_sent_now = 0;
     size_t retry_tx_counter = 0;
+    bool transmit_failure = false;
 
     while (num_acc_samps < total_num_samps and not stop_signal_called)
     {
@@ -327,24 +328,29 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
         if (num_tx_samps_sent_now < samps_to_send)
         {
             LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d", num_tx_samps_sent_now, samps_to_send);
-            ++retry_tx_counter;
-            if (retry_tx_counter > 5)
-            {
-                LOG_WARN("Failed to transmit signal!");
-                break;
-            }
-            else
-            {
-                time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
-                if (tx_time <= usrp_now or tx_time == uhd::time_spec_t(0.0))
-                    md.has_time_spec = false;
-                else
-                {
-                    md.has_time_spec = true;
-                    md.time_spec = tx_time;
-                }
-                continue;
-            }
+
+            // ++retry_tx_counter;
+            // if (retry_tx_counter > 5)
+            // {
+            //     LOG_WARN("Failed to transmit signal!");
+            //     break;
+            // }
+            // else
+            // {
+            //     time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
+            //     if (tx_time <= usrp_now or tx_time == uhd::time_spec_t(0.0))
+            //         md.has_time_spec = false;
+            //     else
+            //     {
+            //         md.has_time_spec = true;
+            //         md.time_spec = tx_time;
+            //     }
+            //     continue;
+            // }
+
+            md.has_time_spec = false;
+            transmit_failure = true;
+            break;
         }
         else
         {
@@ -354,6 +360,9 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
         md.start_of_burst = false;
         num_acc_samps += num_tx_samps_sent_now;
     }
+
+    if (transmit_failure)
+        return false;
 
     // send a mini EOB packet
     md.end_of_burst = true;
