@@ -329,7 +329,10 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
             LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d", num_tx_samps_sent_now, samps_to_send);
             ++retry_tx_counter;
             if (retry_tx_counter > 5)
+            {
+                LOG_WARN("Failed to transmit signal!");
                 break;
+            }
             else
             {
                 time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
@@ -343,9 +346,12 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
                 continue;
             }
         }
+        else
+        {
+            md.has_time_spec = false;
+        }
 
         md.start_of_burst = false;
-        md.has_time_spec = false;
         num_acc_samps += num_tx_samps_sent_now;
     }
 
