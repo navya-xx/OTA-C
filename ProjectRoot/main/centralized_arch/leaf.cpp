@@ -25,12 +25,18 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     WaveformGenerator wf_gen;
     size_t wf_len = parser.getValue_int("test-signal-len");
     size_t wf_reps = parser.getValue_int("test-tx-reps");
-    size_t wf_gap = size_t(parser.getValue_float("tx-gap-microsec") / 1e6 * usrp_obj.tx_rate);
-    size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * wf_len);
+    size_t wf_gap = 0; // size_t(parser.getValue_float("tx-gap-microsec") / 1e6 * usrp_obj.tx_rate);
+    size_t wf_pad = 0; // size_t(parser.getValue_int("Ref-padding-mul") * wf_len);
     size_t zfc_q = parser.getValue_int("test-zfc-m");
-    size_t rand_seed = 0;
+    size_t rand_seed = parser.getValue_int("test-zfc-m");
     float min_ch_scale = parser.getValue_float("min-e2e-amp");
-    wf_gen.initialize(wf_gen.ZFC, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
+    wf_gen.initialize(wf_gen.UNIT_RAND, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
+    auto unit_rand_samples = wf_gen.generate_waveform();
+    std::ofstream outfile;
+    std::string storage_dir = parser.getValue_str("storage-folder");
+    std::string device_id = parser.getValue_str("device-id");
+    std::string curr_time_str = currentDateTimeFilename();
+    save_stream_to_file(storage_dir + "/logs/transmit_unit_rand_" + device_id + "_" + curr_time_str + ".dat", outfile, unit_rand_samples);
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -49,8 +55,6 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // CycleStartDetector - producer loop
         // debug
-        std::string storage_dir = parser.getValue_str("storage-folder");
-        std::string device_id = parser.getValue_str("device-id");
         std::string curr_time_str = currentDateTimeFilename();
 
         std::string ref_datfile = storage_dir + "/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
@@ -73,7 +77,6 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         LOG_INFO_FMT("Current timer %.5f and Tx start timer %.5f.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
         wf_gen.scale = min_ch_scale / csd_obj.est_ref_sig_amp;
         // wf_gen.scale = 1.0;
-        wf_gen.wf_gap = 0; // size_t(std::floor(parser.getValue_float("tx-gap-microsec") * usrp_obj.tx_rate / 1e6));
         auto tx_samples = wf_gen.generate_waveform();
 
         // adjust for CFO
@@ -86,7 +89,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
                 counter++;
             }
         }
-        LOG_DEBUG_FMT("Transmitting waveform ZFC (L=%1%, m=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale);
+        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, tx_samples.size());
         bool transmit_success = usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, true);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
