@@ -37,6 +37,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::string curr_time_str = currentDateTimeFilename();
     std::ofstream outfile;
     save_stream_to_file(storage_dir + "/logs/transmit_unit_rand_" + device_id + "_" + curr_time_str + ".dat", outfile, unit_rand_samples);
+    if (outfile.is_open())
+        outfile.close();
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
