@@ -32,10 +32,10 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     float min_ch_scale = parser.getValue_float("min-e2e-amp");
     wf_gen.initialize(wf_gen.UNIT_RAND, wf_len, wf_reps, wf_gap, wf_pad, zfc_q, 1.0, rand_seed);
     auto unit_rand_samples = wf_gen.generate_waveform();
-    std::ofstream outfile;
     std::string storage_dir = parser.getValue_str("storage-folder");
     std::string device_id = parser.getValue_str("device-id");
     std::string curr_time_str = currentDateTimeFilename();
+    std::ofstream outfile;
     save_stream_to_file(storage_dir + "/logs/transmit_unit_rand_" + device_id + "_" + curr_time_str + ".dat", outfile, unit_rand_samples);
 
     // This function is called by the receiver as a callback everytime a frame is received
@@ -75,22 +75,19 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // Transmission after cyclestartdetector
         uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
         LOG_INFO_FMT("Current timer %.5f and Tx start timer %.5f.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
-        wf_gen.scale = min_ch_scale / csd_obj.est_ref_sig_amp;
-        // wf_gen.scale = 1.0;
-        auto tx_samples = wf_gen.generate_waveform();
 
         // adjust for CFO
         if (csd_obj.cfo != 0.0)
         {
             int counter = 0;
-            for (auto &samp : tx_samples)
+            for (auto &samp : unit_rand_samples)
             {
-                samp *= std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
+                samp *= min_ch_scale / csd_obj.est_ref_sig_amp * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
                 counter++;
             }
         }
-        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, tx_samples.size());
-        bool transmit_success = usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, true);
+        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, unit_rand_samples.size());
+        bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, true);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
 
