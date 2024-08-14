@@ -74,10 +74,13 @@ float PeakDetectionClass::get_max_peak_val()
 
 void PeakDetectionClass::update_pnr_threshold()
 {
-    if (max_pnr > 0.0)
-        curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val, pnr_threshold), max_pnr * max_peak_mul);
-    else
-        curr_pnr_threshold = std::max(curr_pnr_threshold, std::max(max_peak_mul * prev_peak_val, pnr_threshold));
+    if (is_update_pnr_threshold)
+    {
+        if (max_pnr > 0.0)
+            curr_pnr_threshold = std::min(std::max(max_peak_mul * prev_peak_val, pnr_threshold), max_pnr * max_peak_mul);
+        else
+            curr_pnr_threshold = std::max(curr_pnr_threshold, std::max(max_peak_mul * prev_peak_val, pnr_threshold));
+    }
 }
 
 void PeakDetectionClass::reset()
@@ -119,6 +122,7 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, floa
         if (reg_peaks_spacing > ref_seq_len + peak_det_tol or reg_peaks_spacing < ref_seq_len - peak_det_tol)
         {
             LOG_DEBUG("*PeaksDet* : Peaks spacing incorrect -> Remove all peaks except last.");
+            print_peaks_data();
             peak_indices[0] = 0;
             corr_samples[0] = corr_samples[peaks_count - 1];
             peak_vals[0] = peak_vals[peaks_count - 1];
@@ -155,11 +159,9 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, floa
         return;
     }
 
-    if (is_update_pnr_threshold)
-        update_pnr_threshold();
-
     prev_peak_index = samples_from_first_peak;
     prev_peak_val = peak_val;
+    update_pnr_threshold();
 }
 
 void PeakDetectionClass::removeLastPeak()
@@ -200,7 +202,7 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
             LOG_DEBUG_FMT("*PeakDet* : Next peak is too far from the last. "
                           "Resetting -- samples from last peak '%1%'.",
                           samples_from_last_peak);
-            reset_peaks_counter();
+            reset();
             insertPeak(corr_sample, curr_peak_value, samp_time);
         }
         // a higher peak exists in close proximity to last
