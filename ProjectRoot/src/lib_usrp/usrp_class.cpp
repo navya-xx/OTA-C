@@ -472,7 +472,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         }
         else if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND)
         {
-            LOG_WARN("A stream command was issued in the past and expired presently.");
+            LOG_WARN_FMT("ERROR : %1% .. A stream command was issued in the past and expired presently.", md.strerror());
             stream_cmd.stream_now = true; // start receiving immediately
             success = false;
         }
@@ -487,7 +487,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         {
             LOG_WARN("*** Reception of stream data UNSUCCESSFUL! ***");
             retry_count++;
-            if (retry_count > 5)
+            if (retry_count > 3)
                 break;
             continue;
         }
