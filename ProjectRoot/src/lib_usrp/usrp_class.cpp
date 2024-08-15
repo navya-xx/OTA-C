@@ -608,7 +608,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         save_stream_to_file(data_filename, rx_save_datastream, forward);
 
         double time_data = md.time_spec.get_real_secs();
-        LOG_INFO_FMT("Rx data at time : %.5f", time_data);
+        LOG_INFO_FMT("Rx data at time : %1%", time_data);
         rx_save_timer.write(reinterpret_cast<char *>(&time_data), sizeof(time_data));
         rx_save_timer.write(reinterpret_cast<char *>(&num_curr_rx_samps), sizeof(num_curr_rx_samps));
 
