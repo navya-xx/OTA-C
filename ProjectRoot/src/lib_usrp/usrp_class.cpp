@@ -474,6 +474,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         {
             LOG_WARN_FMT("ERROR : %1% .. A stream command was issued in the past and expired presently.", md.strerror());
             stream_cmd.stream_now = true; // start receiving immediately
+            rx_streamer->issue_stream_cmd(stream_cmd);
             success = false;
         }
         else if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
