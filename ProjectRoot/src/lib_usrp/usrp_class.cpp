@@ -415,8 +415,6 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         }
     }
 
-    bool success = true;
-
     // setup streaming
     uhd::stream_cmd_t stream_cmd(req_num_rx_samps > max_rx_packet_size or req_num_rx_samps == 0 ? uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS : uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE);
 
@@ -458,6 +456,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         size_t size_rx = (req_num_rx_samps == 0) ? max_rx_packet_size : std::min(req_num_rx_samps - num_acc_samps, max_rx_packet_size);
 
         uhd::rx_metadata_t md;
+        bool success = true;
         num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
         timeout = burst_pkt_time; // small timeout for subsequent packets
 
