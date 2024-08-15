@@ -451,6 +451,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     bool callback_success = false;
     size_t num_curr_rx_samps;
     std::vector<std::complex<float>> buff(max_rx_packet_size);
+    int retry_count = 0;
 
     while (not reception_complete and not stop_signal_called)
     {
@@ -469,6 +470,12 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         {
             LOG_WARN("*** Got an overflow indication.");
         }
+        else if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND)
+        {
+            LOG_WARN("A stream command was issued in the past and expired presently.");
+            stream_cmd.stream_now = true; // start receiving immediately
+            success = false;
+        }
         else if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
         {
             LOG_WARN_FMT("Receiver error: %1%", md.strerror());
@@ -479,8 +486,13 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         if (not success)
         {
             LOG_WARN("*** Reception of stream data UNSUCCESSFUL! ***");
+            retry_count++;
+            if (retry_count > 5)
+                break;
             continue;
         }
+        else
+            retry_count = 0;
 
         // run callback
         callback_success = callback(buff, num_curr_rx_samps, md.time_spec);
