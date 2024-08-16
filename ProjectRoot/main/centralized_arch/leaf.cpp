@@ -120,6 +120,7 @@ void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::ato
         }
         catch (...)
         {
+            LOG_INFO("The exception is caught in 'csd_obj.consume' and we continue!");
             continue;
         }
         if (csd_success_signal)
