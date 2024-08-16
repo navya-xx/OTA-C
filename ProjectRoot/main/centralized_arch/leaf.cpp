@@ -62,14 +62,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         std::string ref_datfile = storage_dir + "/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
         csd_obj.saved_ref_filename = ref_datfile;
 
-        try
-        {
-            auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
-        }
-        catch (...)
-        {
-            continue;
-        }
+        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
         if (stop_signal_called)
             break;
@@ -115,15 +108,6 @@ void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::ato
     while (not stop_signal_called)
     {
         csd_obj.consume(csd_success_signal, stop_signal_called);
-        // try
-        // {
-        //     csd_obj.consume(csd_success_signal, stop_signal_called);
-        // }
-        // catch (const std::exception &e)
-        // {
-        //     LOG_WARN_FMT("Caugth exception 'csd_obj.consume' : %1%. \n Continue...", e.what());
-        //     continue;
-        // }
         if (csd_success_signal)
         {
             LOG_INFO("***Successful CSD!");
