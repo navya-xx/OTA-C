@@ -31,10 +31,13 @@ do
     node_serial="${leaf_node_serials[$i]}"
     node_id="${leaf_node_ids[$i]}"
     # command_pre="mv \$HOME/OTA-C/ProjectRoot/storage \$HOME/OTA-C/ProjectRoot/bkp_storage && mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs"
-    command_pre="pkill -9 CA_leaf && sleep 1"
+    # command_pre="sleep 1 && pkill -f CA_leaf && sleep 1"
+    # tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} '${command_pre}'" C-m
+    # sleep 3
+
     command_run="mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs/ && cd \$HOME/OTA-C/ProjectRoot/build/ && ./CA_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/ProjectRoot/storage/logs/leaf_output.log"
 
-    tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} '${command_pre} && ${command_run}'" C-m
+    tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} '${command_run}'" C-m
 
 done
 

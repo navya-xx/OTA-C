@@ -150,7 +150,27 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // external reference
     usrp_obj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
-    usrp_obj.initialize();
+    try
+    {
+        usrp_obj.initialize();
+    }
+    catch (const std::exception &e)
+    {
+        LOG_WARN_FMT("Caught exception : %1%", e.what());
+        std::string processName = "CA_leaf";
+        LOG_INFO_FMT("Failed to start USRP. Kill previous running process %1% to free USRP.", processName);
+        std::string command = "pkill -f " + processName;
+        int result = system(command.c_str());
+
+        if (result == -1)
+        {
+            LOG_WARN("Failed to execute command.");
+        }
+        else
+        {
+            LOG_INFO_FMT("Command executed with result: %1%", result);
+        }
+    }
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
 
