@@ -123,9 +123,11 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             }
         }
         LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, unit_rand_samples.size());
-        bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, true);
+        bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, false);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
+        else
+            LOG_INFO("Transmission Sucessful!");
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 

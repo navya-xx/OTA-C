@@ -22,7 +22,7 @@ tmux split-window -v -t $SESSION_NAME:0.4 # Split the second pane vertically
 for (( i=0; i<${#remote_nodes[@]}; i++ ))
 do
     node_name="${remote_nodes[$i]}"
-    tmux send-keys -t $SESSION_NAME:0.$i  "ssh ${node_name} 'shutdown -r now'" C-m
+    tmux send-keys -t $SESSION_NAME:0.$i  "ssh ${node_name} 'sudo shutdown -r now'" C-m
 done
 
 sleep 10
@@ -30,7 +30,7 @@ sleep 10
 for (( i=0; i<${#remote_nodes[@]}; i++ ))
 do
     node_name="${remote_nodes[$i]}"
-    tmux send-keys -t $SESSION_NAME:0.$i  "ssh ${node_name} 'uhd_find_devices'" C-m
+    tmux send-keys -t $SESSION_NAME:0.$i  "ssh ${node_name} 'uhd_find_devices'"
 done
 
 tmux attach-session -t $SESSION_NAME

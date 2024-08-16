@@ -325,38 +325,52 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
 
         while (true)
         {
-            num_tx_samps_sent_now = tx_streamer->send(&buff.front() + num_acc_samps, samps_to_send, md, timeout);
-
-            if (num_tx_samps_sent_now < samps_to_send)
+            try
             {
-                LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d. Resetting streamer!", num_tx_samps_sent_now, samps_to_send);
+                num_tx_samps_sent_now = tx_streamer->send(&buff.front() + num_acc_samps, samps_to_send, md, timeout);
+                if (num_tx_samps_sent_now < samps_to_send)
+                {
+                    LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d. Resetting streamer!", num_tx_samps_sent_now, samps_to_send);
 
-                tx_streamer.reset();
+                    tx_streamer.reset();
 
+                    ++retry_tx_counter;
+                    if (retry_tx_counter > 5)
+                    {
+                        LOG_WARN_FMT("All %1% retries failed!", retry_tx_counter);
+                        transmit_failure = true;
+                        break;
+                    }
+                    else
+                    {
+                        LOG_WARN_FMT("Retry %1% to transmit signal after resetting tx_streamer!", retry_tx_counter);
+                        time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
+                        if (tx_time <= usrp_now or tx_time == uhd::time_spec_t(0.0))
+                            md.has_time_spec = false;
+                        else
+                        {
+                            md.has_time_spec = true;
+                            md.time_spec = tx_time;
+                        }
+                    }
+                }
+                else
+                {
+                    md.has_time_spec = false;
+                    break;
+                }
+            }
+            catch (const std::exception &e)
+            {
                 ++retry_tx_counter;
+                LOG_WARN_FMT("Error in transmission in usrp_class.cpp::tx_streamer->send(...) : %1%", e.what());
                 if (retry_tx_counter > 5)
                 {
                     LOG_WARN_FMT("All %1% retries failed!", retry_tx_counter);
                     transmit_failure = true;
                     break;
                 }
-                else
-                {
-                    LOG_WARN_FMT("Retry %1% to transmit signal after resetting tx_streamer!", retry_tx_counter);
-                    time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
-                    if (tx_time <= usrp_now or tx_time == uhd::time_spec_t(0.0))
-                        md.has_time_spec = false;
-                    else
-                    {
-                        md.has_time_spec = true;
-                        md.time_spec = tx_time;
-                    }
-                }
-            }
-            else
-            {
-                md.has_time_spec = false;
-                break;
+                continue;
             }
         }
 
@@ -389,7 +403,6 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
         if (not got_async_burst_ack)
         {
             LOG_WARN("ACK FAIL..!");
-            tx_streamer.reset();
         }
         else
             success = true;
