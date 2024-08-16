@@ -162,6 +162,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         std::string command = "pkill -9 " + processName + " && sleep 1";
         LOG_INFO_FMT("Command to execute: %1%", command);
         int result = system(command.c_str());
+        std::this_thread::sleep_for(std::chrono::seconds(1));
 
         if (result == -1)
         {
