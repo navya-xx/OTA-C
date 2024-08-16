@@ -206,7 +206,7 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
         // auto end = std::chrono::high_resolution_clock::now();
         // size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
         // std::cout << "\r # samples without peak = " << num_samples_without_peak << ". Max peak-to-noise-ratio = " << max_pnr << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / parser.getValue_float("rate") * 1e6) << " microsecs. \t" << std::flush;
-        // std::cout << "\r " << num_samples_without_peak << std::flush;
+        // std::cout << "\r Num samples without peak = " << num_samples_without_peak << std::flush;
     }
 }
 
