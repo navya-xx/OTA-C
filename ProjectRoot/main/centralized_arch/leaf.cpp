@@ -108,6 +108,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             {
                 rx_retry_count++;
                 LOG_WARN_FMT("Reception failed in usrp_obj.reception() with error : %1%", e.what());
+                continue;
             }
         }
 
