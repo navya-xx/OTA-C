@@ -96,7 +96,20 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         std::string ref_datfile = storage_dir + "/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
         csd_obj.saved_ref_filename = ref_datfile;
 
-        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+        int rx_retry_count = 0;
+        while (rx_retry_count < 5)
+        {
+            try
+            {
+                auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+                break;
+            }
+            catch (const std::exception &e)
+            {
+                rx_retry_count++;
+                LOG_WARN_FMT("Reception failed in usrp_obj.reception() with error : %1%", e.what());
+            }
+        }
 
         if (stop_signal_called)
             break;
