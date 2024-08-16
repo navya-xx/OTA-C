@@ -85,10 +85,7 @@ void Logger::handleError(const std::string &message)
             logFile << errorMsg << std::endl;
         }
         std::cerr << getLogLevelColor(LogLevel::ERROR) << errorMsg << resetLogLevelColor() << std::endl; // Also print to console
-
-        // repeat error
-        throw LoggerException(message);
-        // std::exit(EXIT_FAILURE);
+        std::exit(EXIT_FAILURE);
     }
 }
 
