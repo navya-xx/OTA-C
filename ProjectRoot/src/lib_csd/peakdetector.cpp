@@ -92,7 +92,8 @@ void PeakDetectionClass::reset()
 
     if (reset_counter > max_reset_count)
     {
-        LOG_ERROR("Reached max reset count for peak detection algorithm. Restarting the program!");
+        throw std::runtime_error("Reached max reset count for peak detection algorithm. Restarting the program!");
+        std::exit(EXIT_FAILURE);
     }
 
     peaks_count = 0;
