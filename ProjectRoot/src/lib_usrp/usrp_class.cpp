@@ -387,7 +387,10 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
         LOG_FLUSH_INFO();
 
         if (not got_async_burst_ack)
+        {
             LOG_WARN("ACK FAIL..!");
+            tx_streamer.reset();
+        }
         else
             success = true;
     }
@@ -395,6 +398,10 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     {
         if (num_acc_samps >= total_num_samps)
             success = true;
+        else
+        {
+            LOG_WARN("Transmission FAILED..!");
+        }
     }
 
     return success;

@@ -118,9 +118,9 @@ void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::ato
         {
             csd_obj.consume(csd_success_signal, stop_signal_called);
         }
-        catch (...)
+        catch (const std::exception &e)
         {
-            LOG_INFO("The exception is caught in 'csd_obj.consume' and we continue!");
+            LOG_WARN_FMT("Caugth exception 'csd_obj.consume' : %1%. \n Continue...", e.what());
             continue;
         }
         if (csd_success_signal)
