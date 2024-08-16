@@ -114,15 +114,16 @@ void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::ato
 {
     while (not stop_signal_called)
     {
-        try
-        {
-            csd_obj.consume(csd_success_signal, stop_signal_called);
-        }
-        catch (const std::exception &e)
-        {
-            LOG_WARN_FMT("Caugth exception 'csd_obj.consume' : %1%. \n Continue...", e.what());
-            continue;
-        }
+        csd_obj.consume(csd_success_signal, stop_signal_called);
+        // try
+        // {
+        //     csd_obj.consume(csd_success_signal, stop_signal_called);
+        // }
+        // catch (const std::exception &e)
+        // {
+        //     LOG_WARN_FMT("Caugth exception 'csd_obj.consume' : %1%. \n Continue...", e.what());
+        //     continue;
+        // }
         if (csd_success_signal)
         {
             LOG_INFO("***Successful CSD!");
