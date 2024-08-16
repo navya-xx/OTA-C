@@ -48,7 +48,7 @@ void killOtherInstances()
     }
 }
 
-void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, std::string homeDirStr)
+void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, std::string homeDirStr, boost::exception_ptr &exceptionPtr)
 {
     // reception/producer params
     size_t max_rx_packet_size = usrp_obj.max_rx_packet_size;
@@ -85,88 +85,84 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             return false;
     };
 
-    while (not stop_signal_called)
+    try
     {
-        LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
-        // CycleStartDetector - producer loop
-        // debug
-        std::string curr_time_str = currentDateTimeFilename();
-
-        std::string ref_datfile = storage_dir + "/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
-        csd_obj.saved_ref_filename = ref_datfile;
-
-        int rx_retry_count = 0;
-        while (rx_retry_count < 5)
+        while (not stop_signal_called)
         {
-            try
-            {
-                auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+            LOG_INFO_FMT("-------------- Round %1% ------------", round);
+
+            // CycleStartDetector - producer loop
+            // debug
+            std::string curr_time_str = currentDateTimeFilename();
+
+            std::string ref_datfile = storage_dir + "/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
+            csd_obj.saved_ref_filename = ref_datfile;
+
+            auto rx_samples = usrp_obj.reception(stop_signal_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+
+            if (stop_signal_called)
                 break;
-            }
-            catch (const std::exception &e)
+
+            // LOG_INFO_FMT("Estimated Clock Drift = %.8f samples/sec.", csd_obj.estimated_sampling_rate_offset);
+            // usrp_obj.adjust_for_freq_offset(csd_obj.estimated_sampling_rate_offset);
+            // LOG_INFO_FMT("Corrected Clock Drift -> New sampling rate = %1% samples/sec.", usrp_obj.rx_rate);
+
+            LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
+            ++round;
+
+            // Transmission after cyclestartdetector
+            uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
+            LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
+
+            // adjust for CFO
+            if (csd_obj.cfo != 0.0)
             {
-                rx_retry_count++;
-                LOG_WARN_FMT("Reception failed in usrp_obj.reception() with error : %1%", e.what());
-                continue;
+                int counter = 0;
+                for (auto &samp : unit_rand_samples)
+                {
+                    samp *= min_ch_scale / csd_obj.est_ref_sig_amp * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
+                    counter++;
+                }
             }
+            LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, unit_rand_samples.size());
+            bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, false);
+            if (!transmit_success)
+                LOG_WARN("Transmission Unsuccessful!");
+            else
+                LOG_INFO("Transmission Sucessful!");
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            // move to next round
+            csd_success_signal = false;
+
+            // stop here (only one round for now)
+            // stop_signal_called = true;
         }
-
-        if (rx_retry_count >= 5)
-        {
-            usrp_obj.initialize();
-        }
-
-        if (stop_signal_called)
-            break;
-
-        // LOG_INFO_FMT("Estimated Clock Drift = %.8f samples/sec.", csd_obj.estimated_sampling_rate_offset);
-        // usrp_obj.adjust_for_freq_offset(csd_obj.estimated_sampling_rate_offset);
-        // LOG_INFO_FMT("Corrected Clock Drift -> New sampling rate = %1% samples/sec.", usrp_obj.rx_rate);
-
-        LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
-        ++round;
-
-        // Transmission after cyclestartdetector
-        uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
-        LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
-
-        // adjust for CFO
-        if (csd_obj.cfo != 0.0)
-        {
-            int counter = 0;
-            for (auto &samp : unit_rand_samples)
-            {
-                samp *= min_ch_scale / csd_obj.est_ref_sig_amp * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
-                counter++;
-            }
-        }
-        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, unit_rand_samples.size());
-        bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, false);
-        if (!transmit_success)
-            LOG_WARN("Transmission Unsuccessful!");
-        else
-            LOG_INFO("Transmission Sucessful!");
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-        // move to next round
-        csd_success_signal = false;
-
-        // stop here (only one round for now)
-        // stop_signal_called = true;
+    }
+    catch (...)
+    {
+        exceptionPtr = boost::current_exception();
     }
 }
 
-void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal)
+void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, boost::exception_ptr &exceptionPtr)
 {
-    while (not stop_signal_called)
+    try
     {
-        csd_obj.consume(csd_success_signal, stop_signal_called);
-        if (csd_success_signal)
+        while (not stop_signal_called)
         {
-            LOG_INFO("***Successful CSD!");
+            csd_obj.consume(csd_success_signal, stop_signal_called);
+            if (csd_success_signal)
+            {
+                LOG_INFO("***Successful CSD!");
+            }
         }
+    }
+    catch (...)
+    {
+        exceptionPtr = boost::current_exception();
     }
 }
 
@@ -241,20 +237,75 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // setup thread_group
     boost::thread_group thread_group;
+    boost::exception_ptr exceptionPtr1;
+    boost::exception_ptr exceptionPtr2;
 
-    auto my_producer_thread = thread_group.create_thread([=, &usrp_obj, &csd_obj, &peakDet_obj, &parser, &csd_success_signal]()
-                                                         { producer_thread(usrp_obj, peakDet_obj, csd_obj, parser, csd_success_signal, homeDirStr); });
+    auto my_producer_thread = thread_group.create_thread([=, &usrp_obj, &csd_obj, &peakDet_obj, &parser, &csd_success_signal, &exceptionPtr1]()
+                                                         { producer_thread(usrp_obj, peakDet_obj, csd_obj, parser, csd_success_signal, homeDirStr, exceptionPtr1); });
 
     uhd::set_thread_name(my_producer_thread, "producer_thread");
 
     // consumer thread
-    auto my_consumer_thread = thread_group.create_thread([=, &csd_obj, &parser, &csd_success_signal]()
-                                                         { consumer_thread(csd_obj, parser, csd_success_signal); });
+    auto my_consumer_thread = thread_group.create_thread([=, &csd_obj, &parser, &csd_success_signal, &exceptionPtr2]()
+                                                         { consumer_thread(csd_obj, parser, csd_success_signal, exceptionPtr2); });
 
     uhd::set_thread_name(my_consumer_thread, "consumer_thread");
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     thread_group.join_all();
+
+    if (exceptionPtr1)
+    {
+        try
+        {
+            boost::rethrow_exception(exceptionPtr1);
+        }
+        catch (const std::exception &e)
+        {
+            LOG_WARN_FMT("Error occurred in 'producer_thread' : %1%", e.what());
+            LOG_INFO("Restarting the program...");
+
+            // Restart the program
+            // Prepare arguments for execv
+            char *args[argc + 1];
+            for (int i = 0; i < argc; ++i)
+            {
+                args[i] = argv[i];
+            }
+            args[argc] = nullptr; // execv expects a null-terminated array
+            execv(argv[0], args);
+
+            // If execv returns, there was an error
+            LOG_ERROR("Failed to restart the program.");
+            return EXIT_FAILURE; // Exit with an error code
+        }
+    }
+    else if (exceptionPtr2)
+    {
+        try
+        {
+            boost::rethrow_exception(exceptionPtr2);
+        }
+        catch (const std::exception &e)
+        {
+            LOG_WARN_FMT("Error occurred in 'consumer_thread' : %1%", e.what());
+            LOG_INFO("Restarting the program...");
+
+            // Restart the program
+            // Prepare arguments for execv
+            char *args[argc + 1];
+            for (int i = 0; i < argc; ++i)
+            {
+                args[i] = argv[i];
+            }
+            args[argc] = nullptr; // execv expects a null-terminated array
+            execv(argv[0], args);
+
+            // If execv returns, there was an error
+            LOG_ERROR("Failed to restart the program.");
+            return EXIT_FAILURE; // Exit with an error code
+        }
+    }
 
     return EXIT_SUCCESS;
 };

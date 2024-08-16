@@ -12,6 +12,7 @@
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/exception_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/date_time.hpp>
 #include <atomic>
