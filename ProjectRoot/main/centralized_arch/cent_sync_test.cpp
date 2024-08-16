@@ -35,10 +35,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------ Parse Config -------------*/
     ConfigParser parser(projectDir + "/main/centralized_arch/config.conf");
     parser.set_value("device-id", device_id, "str", "USRP device number");
+    int num_runs = int(parser.getValue_int("num-test-runs"));
     if (argc > 2)
     {
-        size_t rand_seed = std::stoi(argv[2]);
-        parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
+        num_runs = std::stoi(argv[2]);
+        parser.set_value("num-test-runs", std::to_string(num_runs), "int");
     }
 
     parser.set_value("storage-folder", projectDir + "/storage", "str", "Location of storage director");
@@ -61,7 +62,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     // wf_gen.initialize(wf_gen.IMPULSE, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     const auto tx_waveform = wf_gen.generate_waveform();
-    int num_runs = int(parser.getValue_int("num-test-runs"));
 
     for (int i = 0; i < num_runs; ++i)
     {
