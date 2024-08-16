@@ -226,9 +226,9 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
         {
             if (prev_peak_val < 0.8 * curr_peak_value)
             {
-                LOG_DEBUG_FMT("*PeakDet* : Update previous peak. "
-                              "Last peak val '%1%' is less than 80\% of current val '%2%'.",
-                              prev_peak_val, curr_peak_value);
+                LOG_DEBUG("*PeakDet* : Update previous peak.");
+                //   "Last peak val '%1%' is less than 80\% of current val '%2%'.",
+                //   prev_peak_val, curr_peak_value);
                 updatePrevPeak();
                 if (peaks_count > 2)
                     LOG_WARN("This should not happen at the in-between peaks! Only first peak might show this artifact! ");
