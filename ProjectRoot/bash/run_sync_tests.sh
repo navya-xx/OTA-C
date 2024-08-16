@@ -35,7 +35,7 @@ do
     # tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} '${command_pre}'" C-m
     # sleep 3
 
-    command_run="mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs/ && cd \$HOME/OTA-C/ProjectRoot/build/ && ./CA_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/ProjectRoot/storage/logs/leaf_output.log"
+    command_run="mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs/ && cd \$HOME/OTA-C/ProjectRoot/build/ && gdb --ex run --args ./CA_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/ProjectRoot/storage/logs/leaf_output.log"
 
     tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} '${command_run}'" C-m
 
