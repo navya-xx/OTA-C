@@ -87,7 +87,6 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     try
     {
-
         while (not stop_signal_called)
         {
             LOG_INFO_FMT("-------------- Round %1% ------------", round);
