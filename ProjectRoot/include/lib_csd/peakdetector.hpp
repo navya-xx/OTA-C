@@ -26,6 +26,8 @@ private:
     float max_peak_mul;
     size_t sync_with_peak_from_last;
 
+    size_t reset_counter, max_reset_count;
+
     bool is_update_pnr_threshold;
 
     void insertPeak(const std::complex<float> &corr_sample, float &peak_val, const uhd::time_spec_t &peak_time);

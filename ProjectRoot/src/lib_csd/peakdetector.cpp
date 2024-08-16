@@ -31,6 +31,9 @@ PeakDetectionClass::PeakDetectionClass(
     peaks_count = 0;
     noise_counter = 0;
     noise_level = init_noise_level;
+
+    reset_counter = 0;
+    max_reset_count = parser.getValue_int("max-reset-count");
 };
 
 std::complex<float> *PeakDetectionClass::get_corr_samples_at_peaks()
@@ -85,6 +88,13 @@ void PeakDetectionClass::update_pnr_threshold()
 
 void PeakDetectionClass::reset()
 {
+    reset_counter++;
+
+    if (reset_counter > max_reset_count)
+    {
+        throw std::runtime_error("Reached max reset count for peak detection algorithm. Restarting the program!");
+    }
+
     peaks_count = 0;
     samples_from_first_peak = 0;
     prev_peak_index = 0;
@@ -156,7 +166,7 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, floa
     if (detection_flag)
     {
         LOG_INFO("*PeaksDet* : Successful detection!");
-        print_peaks_data();
+        reset_counter = 0;
         return;
     }
 
@@ -314,6 +324,7 @@ int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_v
     {
         peak_vals[i] = abs_corr_vals[final_fpi + i * ref_seq_len] / ref_seq_len / noise_level;
         peak_times[i] = new_timer[final_fpi + i * ref_seq_len];
+        peak_indices[i] = i * ref_seq_len;
     }
 
     int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);

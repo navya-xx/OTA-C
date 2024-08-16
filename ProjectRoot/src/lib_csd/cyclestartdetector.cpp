@@ -101,6 +101,7 @@ void CycleStartDetector::post_peak_det()
 
     // updating peaks after CFO correction
     update_peaks_info(new_cfo);
+    peak_det_obj_ref.print_peaks_data();
 
     // get wait time before transmission
     csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
