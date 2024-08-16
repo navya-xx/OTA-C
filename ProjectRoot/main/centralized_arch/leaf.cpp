@@ -156,19 +156,22 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     }
     catch (const std::exception &e)
     {
-        LOG_WARN_FMT("Caught exception : %1%", e.what());
+        LOG_WARN_FMT("Caught exception in usrp_obj.initialize() : %1%", e.what());
         std::string processName = "CA_leaf";
-        LOG_INFO_FMT("Failed to start USRP. Kill previous running process %1% to free USRP.", processName);
+        LOG_INFO_FMT("Failed to start USRP via usrp_obj.initialize(). Try to kill previous running process %1% to free USRP.", processName);
         std::string command = "pkill -f " + processName;
         int result = system(command.c_str());
 
         if (result == -1)
         {
-            LOG_WARN("Failed to execute command.");
+            LOG_WARN("Failed to execute command. Existing!");
+            return EXIT_FAILURE;
         }
         else
         {
-            LOG_INFO_FMT("Command executed with result: %1%", result);
+            LOG_INFO_FMT("Command executed with result: %1%.", result);
+            LOG_INFO("Restart USRP initialization.");
+            usrp_obj.initialize();
         }
     }
 
