@@ -6,12 +6,46 @@
 #include "usrp_class.hpp"
 #include "waveforms.hpp"
 #include "cyclestartdetector.hpp"
+#include <cstdlib>  // For system(), getenv()
+#include <unistd.h> // For getpid(), getppid()
 
 #define LOG_LEVEL LogLevel::DEBUG
 static bool stop_signal_called = false;
 void sig_int_handler(int)
 {
     stop_signal_called = true;
+}
+pid_t getCurrentProcessID()
+{
+    return getpid();
+}
+std::string getProcessName()
+{
+    std::string processName;
+    std::ifstream("/proc/self/comm") >> processName;
+    return processName;
+}
+// Function to kill all other instances of this program
+void killOtherInstances()
+{
+    std::string processName = getProcessName();
+    pid_t currentPID = getCurrentProcessID();
+
+    // Build the command to list and kill other instances
+    std::ostringstream command;
+    command << "pgrep -f " << processName << " | grep -v " << currentPID;
+
+    std::string line;
+    std::ifstream cmd(command.str().c_str());
+    while (std::getline(cmd, line))
+    {
+        pid_t pid = std::stoi(line);
+        if (pid != currentPID)
+        {
+            std::cout << "Killing process " << pid << std::endl;
+            kill(pid, SIGKILL);
+        }
+    }
 }
 
 void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, std::string homeDirStr)
@@ -157,24 +191,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     catch (const std::exception &e)
     {
         LOG_WARN_FMT("Caught exception in usrp_obj.initialize() : %1%", e.what());
-        std::string processName = "CA_leaf";
-        LOG_INFO_FMT("Failed to start USRP via usrp_obj.initialize(). Try to kill previous running process %1% to free USRP.", processName);
-        std::string command = "pkill -9 " + processName + " && sleep 1";
-        LOG_INFO_FMT("Command to execute: %1%", command);
-        int result = system(command.c_str());
+        killOtherInstances();
         std::this_thread::sleep_for(std::chrono::seconds(1));
-
-        if (result == -1)
-        {
-            LOG_WARN("Failed to execute command. Existing!");
-            return EXIT_FAILURE;
-        }
-        else
-        {
-            LOG_INFO("Command executed successfully.");
-            LOG_INFO("Restart USRP initialization.");
-            usrp_obj.initialize();
-        }
+        LOG_INFO("Restart USRP initialization.");
+        usrp_obj.initialize();
     }
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
