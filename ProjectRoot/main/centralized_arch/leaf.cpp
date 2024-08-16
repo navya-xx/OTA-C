@@ -111,6 +111,11 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             }
         }
 
+        if (rx_retry_count >= 5)
+        {
+            usrp_obj.initialize();
+        }
+
         if (stop_signal_called)
             break;
 
