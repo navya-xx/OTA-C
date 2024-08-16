@@ -11,6 +11,9 @@ while true; do
 
     exit_status=$?
 
+    sleep 1
+    pkill -9 CA_leaf
+
     if [ $exit_status -eq 130 ]; then
         echo "Program stopped by Ctrl+C. Exiting loop."
         break

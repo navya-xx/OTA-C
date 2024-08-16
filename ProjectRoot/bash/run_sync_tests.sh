@@ -39,7 +39,7 @@ do
     
     # command_run="mkdir -p \$HOME/OTA-C/ProjectRoot/storage/logs/ && cd \$HOME/OTA-C/ProjectRoot/build/ && ./CA_leaf ${node_serial} ${node_id} | tee \$HOME/OTA-C/ProjectRoot/storage/logs/leaf_output.log"
 
-    tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} 'bash \$HOME/OTA-C/ProjectRoot/bash/CA_leaf_run.sh'" C-m
+    tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} 'bash \$HOME/OTA-C/ProjectRoot/bash/CA_leaf_run.sh ${node_serial} ${node_id}'" C-m
 
 done
 

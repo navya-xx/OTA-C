@@ -186,21 +186,23 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // external reference
     usrp_obj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
-    while (true)
-    {
-        try
-        {
-            usrp_obj.initialize();
-            break;
-        }
-        catch (const std::exception &e)
-        {
-            LOG_WARN_FMT("Caught exception in usrp_obj.initialize() : %1%", e.what());
-            killOtherInstances();
-            std::this_thread::sleep_for(std::chrono::seconds(5));
-            LOG_INFO("Restart USRP initialization.");
-        }
-    }
+    usrp_obj.initialize();
+
+    // while (true)
+    // {
+    //     try
+    //     {
+    //         usrp_obj.initialize();
+    //         break;
+    //     }
+    //     catch (const std::exception &e)
+    //     {
+    //         LOG_WARN_FMT("Caught exception in usrp_obj.initialize() : %1%", e.what());
+    //         killOtherInstances();
+    //         std::this_thread::sleep_for(std::chrono::seconds(5));
+    //         LOG_INFO("Restart USRP initialization.");
+    //     }
+    // }
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
 
