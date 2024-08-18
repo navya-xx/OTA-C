@@ -47,7 +47,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     std::ofstream calib_file;
 
-    float rx_duration = is_cent ? 6.0 : 0.0; // fix duration for cent node
+    float rx_duration = is_cent ? 3.0 : 0.0; // fix duration for cent node
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -87,15 +87,12 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // LOG_INFO_FMT("Corrected Clock Drift -> New sampling rate = %1% samples/sec.", usrp_obj.rx_rate);
 
         if (csd_success_signal)
-        {
             append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
-            LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
-            ++round;
-        }
         else
-        {
             LOG_INFO_FMT("No calibration signal received in Round %1%. Re-transmitting...", round);
-        }
+
+        ++round;
+        LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
 
         // Transmission after cyclestartdetector
         float fix_wait_time = 2.0; // generateRandomFloat(1.1, 3.0);
