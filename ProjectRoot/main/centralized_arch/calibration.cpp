@@ -98,8 +98,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         }
 
         // Transmission after cyclestartdetector
-        float rand_wait_time = generateRandomFloat(1.1, 3.0);
-        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(rand_wait_time);
+        float fix_wait_time = 2.0; // generateRandomFloat(1.1, 3.0);
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(fix_wait_time);
         LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
 
         // adjust for CFO
@@ -120,7 +120,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         else
             LOG_INFO("Transmission Sucessful!");
 
-        std::this_thread::sleep_for(std::chrono::microseconds(int((rand_wait_time - 1.0 + 0.1) * 1e6)));
+        std::this_thread::sleep_for(std::chrono::microseconds(int((fix_wait_time - 1.0 + 0.1) * 1e6)));
 
         // move to next round
         csd_success_signal = false;
