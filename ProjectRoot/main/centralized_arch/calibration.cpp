@@ -229,6 +229,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     csd_obj.tx_wait_microsec = 0.3 * 1e6;
+    if (is_central_server)
+        csd_obj.is_correct_cfo = false;
 
     /*------ Threads - Consumer / Producer --------*/
     std::atomic<bool> csd_success_signal(false);
