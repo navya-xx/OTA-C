@@ -137,14 +137,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::string homeDirStr(homeDir);
     std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
     std::string curr_time_str = currentDateTimeFilename();
-    bool is_central_server;
+    bool is_central_server = false;
 
     if (argc < 2)
         throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
 
     if (argc > 2)
-        is_central_server = false;
-    else
         is_central_server = true;
 
     std::string device_id = argv[1];
