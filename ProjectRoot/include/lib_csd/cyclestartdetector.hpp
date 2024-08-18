@@ -19,10 +19,10 @@ public:
 
     void consume(std::atomic<bool> &csd_success_signal, bool &stop_signal_called);
 
-    uhd::time_spec_t get_wait_time(float tx_wait_microsec);
+    uhd::time_spec_t get_wait_time();
 
     uhd::time_spec_t csd_tx_start_timer;
-    float est_ref_sig_amp;
+    float est_ref_sig_amp, tx_wait_microsec;
     double cfo;
     size_t cfo_counter, cfo_count_max = std::numeric_limits<size_t>::max();
     size_t save_ref_len;

@@ -19,6 +19,8 @@ CycleStartDetector::CycleStartDetector(
     m_zfc = parser.getValue_int("Ref-m-zfc");
     R_zfc = parser.getValue_int("Ref-R-zfc");
 
+    tx_wait_microsec = parser.getValue_float("start-tx-wait-microsec");
+
     // capture entire ref signal and more
     save_ref_len = N_zfc * (R_zfc + 2);
     saved_ref.resize(save_ref_len);
@@ -104,7 +106,7 @@ void CycleStartDetector::post_peak_det()
     peak_det_obj_ref.print_peaks_data();
 
     // get wait time before transmission
-    csd_tx_start_timer = get_wait_time(parser.getValue_float("start-tx-wait-microsec"));
+    csd_tx_start_timer = get_wait_time();
     LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
 }
 
@@ -317,7 +319,7 @@ float CycleStartDetector::est_e2e_ref_sig_amp()
     return e2e_ref_sig_ampl;
 }
 
-uhd::time_spec_t CycleStartDetector::get_wait_time(float tx_wait_microsec)
+uhd::time_spec_t CycleStartDetector::get_wait_time()
 {
     float peak_to_last_sample_duration = rx_sample_duration.get_real_secs() * N_zfc * parser.getValue_int("sync-with-peak-from-last");
     return peak_det_obj_ref.get_sync_time() + uhd::time_spec_t(peak_to_last_sample_duration + tx_wait_microsec / 1e6);

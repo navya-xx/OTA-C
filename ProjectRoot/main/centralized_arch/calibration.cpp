@@ -186,6 +186,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     PeakDetectionClass peakDet_obj(parser, init_noise_level);
     CycleStartDetector csd_obj(parser, capacity, rx_sample_duration, peakDet_obj);
 
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    csd_obj.tx_wait_microsec = 0.2 * 1e6;
+
     /*------ Threads - Consumer / Producer --------*/
     std::atomic<bool> csd_success_signal(false);
 
