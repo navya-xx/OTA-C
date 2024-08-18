@@ -102,14 +102,17 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(fix_wait_time);
         LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
 
-        // adjust for CFO
-        if (csd_obj.cfo != 0.0)
+        if (!is_cent)
         {
-            int counter = 0;
-            for (auto &samp : tx_waveform)
+            // adjust for CFO
+            if (csd_obj.cfo != 0.0)
             {
-                samp *= std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
-                counter++;
+                int counter = 0;
+                for (auto &samp : tx_waveform)
+                {
+                    samp *= std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
+                    counter++;
+                }
             }
         }
 
