@@ -99,7 +99,7 @@ void CycleStartDetector::post_peak_det()
     float new_cfo = peak_det_obj_ref.estimate_phase_drift();
     cfo += new_cfo; // radians/sample
     // cfo_count_max = rational_number_approximation(cfo / (2 * M_PI));
-    LOG_INFO_FMT("Estimated CFO %1% radians/sample.", cfo);
+    LOG_INFO_FMT("Estimated new CFO = %1% and current CFO = %2% radians/sample.", new_cfo, cfo);
 
     // updating peaks after CFO correction
     update_peaks_info(new_cfo);

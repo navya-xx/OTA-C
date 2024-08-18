@@ -134,7 +134,6 @@ void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, floa
         if (reg_peaks_spacing > ref_seq_len + peak_det_tol or reg_peaks_spacing < ref_seq_len - peak_det_tol)
         {
             LOG_DEBUG("*PeaksDet* : Peaks spacing incorrect -> Remove all peaks except last.");
-            print_peaks_data();
             peak_indices[0] = 0;
             corr_samples[0] = corr_samples[peaks_count - 1];
             peak_vals[0] = peak_vals[peaks_count - 1];
@@ -300,37 +299,37 @@ float PeakDetectionClass::estimate_phase_drift()
 int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::deque<uhd::time_spec_t> &new_timer)
 {
     // find index of first possible peak
-    int first_peak_index = std::floor(ref_seq_len / 2), final_fpi = 0;
+    int fpi = 0, final_fpi = 0;
     float max_peak_avg = 0.0;
-    for (int i = 0; i < ref_seq_len + std::floor(ref_seq_len / 2); ++i)
+    for (int i = 0; i < 2 * ref_seq_len; ++i)
     {
         float tmp = 0.0;
         for (int j = 0; j < total_num_peaks; ++j)
         {
-            size_t c_ind = first_peak_index + i + j * ref_seq_len;
+            size_t c_ind = fpi + i + j * ref_seq_len;
             if (c_ind > abs_corr_vals.size())
                 LOG_WARN("PeakDetectionClass::updatePeaksAfterCFO -> Index out of range!");
-            tmp += abs_corr_vals[first_peak_index + i + j * ref_seq_len];
+            tmp += abs_corr_vals[fpi + i + j * ref_seq_len];
         }
         tmp /= total_num_peaks;
         if (tmp > max_peak_avg)
         {
             max_peak_avg = tmp;
             LOG_INFO_FMT("Current Max peak avg est = %1%", max_peak_avg);
-            final_fpi = first_peak_index + i;
+            final_fpi = fpi + i;
         }
     }
 
     for (int i = 0; i < total_num_peaks; ++i)
     {
-        peak_vals[i] = abs_corr_vals[final_fpi + i * ref_seq_len] / ref_seq_len / noise_level;
-        peak_times[i] = new_timer[final_fpi + i * ref_seq_len];
+        peak_vals[i] = abs_corr_vals[final_fpi + (i * ref_seq_len)] / ref_seq_len / noise_level;
+        peak_times[i] = new_timer[final_fpi + (i * ref_seq_len)];
         peak_indices[i] = i * ref_seq_len;
     }
 
-    int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);
+    // int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);
 
-    return ref_start_index;
+    return final_fpi;
 }
 
 void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)
