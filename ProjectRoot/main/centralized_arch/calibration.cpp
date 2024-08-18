@@ -34,7 +34,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::string device_id = parser.getValue_str("device-id");
     std::string curr_time_str = currentDateTimeFilename();
 
-    float rx_duration = is_cent ? 6.0 : 0.0; // fix duration for cent node
+    float rx_duration = is_cent ? 20.0 : 0.0; // fix duration for cent node
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
