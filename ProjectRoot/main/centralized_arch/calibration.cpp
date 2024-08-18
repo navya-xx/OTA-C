@@ -210,7 +210,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     parser.print_values();
 
     size_t calib_seq_len = usrp_obj.max_rx_packet_size;
-    size_t calib_rounds = 100;
+    size_t max_calib_rounds = 100;
 
     WaveformGenerator wf_gen = WaveformGenerator();
     wf_gen.initialize(wf_gen.UNIT_RAND, calib_seq_len, 1.0, 0, 0, 0, 1.0, 0);
@@ -239,7 +239,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     boost::thread_group thread_group;
 
     auto my_producer_thread = thread_group.create_thread([=, &usrp_obj, &csd_obj, &peakDet_obj, &parser, &csd_success_signal]()
-                                                         { producer_thread(usrp_obj, peakDet_obj, csd_obj, parser, csd_success_signal, homeDirStr, is_central_server, calib_rounds); });
+                                                         { producer_thread(usrp_obj, peakDet_obj, csd_obj, parser, csd_success_signal, homeDirStr, is_central_server, max_calib_rounds); });
 
     uhd::set_thread_name(my_producer_thread, "producer_thread");
 
