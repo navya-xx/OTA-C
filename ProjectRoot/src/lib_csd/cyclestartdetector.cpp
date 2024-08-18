@@ -56,6 +56,7 @@ CycleStartDetector::CycleStartDetector(
     }
 
     update_noise_level = (parser.getValue_str("update-noise-level") == "true") ? true : false;
+    is_correct_cfo = true;
 
     if (capacity < corr_seq_len)
     {
@@ -115,8 +116,16 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
     // correct CFO
     std::deque<std::complex<float>> cfo_corrected_ref(save_ref_len);
 
-    for (size_t n = 0; n < save_ref_len; ++n)
-        cfo_corrected_ref[n] = saved_ref[n] * std::complex<float>(std::cos(new_cfo * n), -std::sin(new_cfo * n));
+    if (is_correct_cfo)
+    {
+        for (size_t n = 0; n < save_ref_len; ++n)
+            cfo_corrected_ref[n] = saved_ref[n] * std::complex<float>(std::cos(new_cfo * n), -std::sin(new_cfo * n));
+    }
+    else
+    {
+        for (size_t n = 0; n < save_ref_len; ++n)
+            cfo_corrected_ref[n] = saved_ref[n];
+    }
 
     // Calculate cross-corr again
     std::vector<std::complex<float>> cfo_corr_results = fft_cross_correlate_LL(cfo_corrected_ref);
