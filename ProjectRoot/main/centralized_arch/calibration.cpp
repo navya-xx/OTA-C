@@ -34,7 +34,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::string device_id = parser.getValue_str("device-id");
     std::string curr_time_str = currentDateTimeFilename();
 
-    float rx_duration = is_cent ? 3.0 : 0.0; // fix duration for cent node
+    float rx_duration = is_cent ? 6.0 : 0.0; // fix duration for cent node
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -142,7 +142,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (argc < 2)
         throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
 
-    if (argc < 2)
+    if (argc > 2)
         is_central_server = false;
     else
         is_central_server = true;
@@ -154,7 +154,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     Logger::getInstance().initialize(logFileName);
     Logger::getInstance().setLogLevel(LOG_LEVEL);
 
-    LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEFT");
+    LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEAF");
 
     /*------ Parse Config -------------*/
     ConfigParser parser(projectDir + "/config/config.conf");
