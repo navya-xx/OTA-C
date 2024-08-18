@@ -3,6 +3,7 @@
 
 #include "pch.hpp"
 #include "log_macros.hpp"
+#include "json.hpp"
 
 std::string currentDateTime();
 std::string currentDateTimeFilename();

@@ -88,7 +88,7 @@ bool USRP_class::check_locked_sensor_tx(float setup_time)
     return true;
 }
 
-void USRP_class::initialize()
+void USRP_class::initialize(bool perform_rxtx_tests)
 {
     // Entire routine to setup USRP, streamers, testing Rx/Tx capabilities, etc.
     std::string device_id = parser.getValue_str("device-id");
@@ -245,7 +245,7 @@ void USRP_class::initialize()
     tx_sample_duration = 1 / tx_rate;
 
     //_____________________ TEST TX - RX _____________________
-    if (intialize_with_dummy_txrx)
+    if (perform_rxtx_tests)
     {
         std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
         bool dont_stop = false;

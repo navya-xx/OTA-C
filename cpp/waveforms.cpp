@@ -52,6 +52,20 @@ std::vector<std::complex<float>> WaveformGenerator::generateImpulse(size_t wf_le
     return sequence;
 }
 
+std::vector<std::complex<float>> WaveformGenerator::generateDFTseq(size_t N, size_t q, float scale)
+{
+    std::vector<std::complex<float>> seq(N);
+    float scale_down = scale / sqrt(N);
+
+    for (int n = 0; n < N; ++n)
+    {
+        float angle = 2 * M_PI * q * n / N;
+        seq[n] = std::polar(scale_down, angle);
+    }
+
+    return seq;
+}
+
 std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_TYPE wf_type, size_t wf_len, size_t wf_reps, size_t wf_gap, size_t zfc_q, float scale, size_t rand_seed, bool is_pad_ends)
 {
 
@@ -62,17 +76,18 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
     {
     case WAVEFORM_TYPE::ZFC:
         sequence = generateZadoffChuSequence(wf_len, zfc_q, scale);
-        // std::cout << "\t\t generating ZFC seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::UNIT_RAND:
         sequence = generateUnitCircleRandom(rand_seed, wf_len, scale);
-        // std::cout << "\t\t generating RANDOM seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::IMPULSE:
         sequence = generateImpulse(wf_len, scale);
-        // std::cout << "\t\t generating IMPULSE seq" << std::endl;
+        break;
+
+    case WAVEFORM_TYPE::DFT:
+        sequence = generateDFTseq(wf_len, zfc_q, scale);
         break;
 
     default:
@@ -104,8 +119,8 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform(WAVEFORM_T
     // add zero at the beginning and end
     if (is_pad_ends)
     {
-        final_sequence.insert(final_sequence.begin(), 5 * wf_len, std::complex<float>(0.0, 0.0));
-        final_sequence.insert(final_sequence.end(), 5 * wf_len, std::complex<float>(0.0, 0.0));
+        final_sequence.insert(final_sequence.begin(), wf_len, std::complex<float>(0.0, 0.0));
+        final_sequence.insert(final_sequence.end(), wf_len, std::complex<float>(0.0, 0.0));
     }
 
     return final_sequence;

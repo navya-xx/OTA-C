@@ -13,6 +13,7 @@ public:
         ZFC,
         UNIT_RAND,
         IMPULSE,
+        DFT,
     };
 
     WaveformGenerator();
@@ -32,6 +33,8 @@ private:
     std::vector<std::complex<float>> generateUnitCircleRandom();
 
     std::vector<std::complex<float>> generateImpulseSignal();
+
+    std::vector<std::complex<float>> generateDFTseq();
 };
 
 #endif // WAVEFORMS

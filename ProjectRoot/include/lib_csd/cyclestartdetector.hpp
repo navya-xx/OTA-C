@@ -30,6 +30,8 @@ public:
     // debug
     std::string saved_ref_filename;
 
+    size_t num_samples_without_peak = 0;
+
 private:
     SyncedBufferManager<std::complex<float>, uhd::time_spec_t> synced_buffer; // contains both samples_buffer and timer_buffer
     // SyncedBufferManager<std::complex<float>, uhd::time_spec_t> saved_ref;
@@ -65,8 +67,6 @@ private:
     std::vector<std::complex<float>> fft_cross_correlate(const std::deque<std::complex<float>> &samples);
     std::vector<std::complex<float>> fft_cross_correlate_LL(const std::deque<std::complex<float>> &samples);
     void peak_detector(const std::vector<std::complex<float>> &corr_results, const std::vector<uhd::time_spec_t> &timer);
-
-    size_t num_samples_without_peak = 0;
 
     bool update_noise_level = false;
 

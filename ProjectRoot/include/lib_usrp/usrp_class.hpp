@@ -14,7 +14,7 @@ class USRP_class
 public:
     USRP_class(const ConfigParser &parser);
 
-    void initialize();
+    void initialize(bool perform_rxtx_test = true);
 
     bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
 

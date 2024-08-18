@@ -67,6 +67,20 @@ std::vector<std::complex<float>> WaveformGenerator::generateImpulseSignal()
     return sequence;
 }
 
+std::vector<std::complex<float>> WaveformGenerator::generateDFTseq()
+{
+    std::vector<std::complex<float>> sequence(wf_len);
+    float scale_down = scale / sqrt(wf_len);
+
+    for (int n = 0; n < wf_len; ++n)
+    {
+        float angle = 2 * M_PI * zfc_q * n / wf_len;
+        sequence[n] = std::polar(scale_down, angle);
+    }
+
+    return sequence;
+}
+
 std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
 {
 
@@ -77,17 +91,18 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
     {
     case WAVEFORM_TYPE::ZFC:
         sequence = generateZadoffChuSequence();
-        // std::cout << "\t\t generating ZFC seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::UNIT_RAND:
         sequence = generateUnitCircleRandom();
-        // std::cout << "\t\t generating RANDOM seq" << std::endl;
         break;
 
     case WAVEFORM_TYPE::IMPULSE:
         sequence = generateImpulseSignal();
-        // std::cout << "\t\t generating IMPULSE seq" << std::endl;
+        break;
+
+    case WAVEFORM_TYPE::DFT:
+        sequence = generateImpulseSignal();
         break;
 
     default:
