@@ -34,7 +34,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::string device_id = parser.getValue_str("device-id");
     std::string curr_time_str = currentDateTimeFilename();
 
-    float rx_duration = is_cent ? 20.0 : 0.0; // fix duration for cent node
+    float rx_duration = is_cent ? 5.0 : 0.0; // fix duration for cent node
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -89,7 +89,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         }
 
         // Transmission after cyclestartdetector
-        uhd::time_spec_t tx_start_timer = csd_obj.csd_tx_start_timer;
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now().get_real_secs() + 2.0;
         LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
 
         // adjust for CFO
@@ -102,6 +102,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
                 counter++;
             }
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1800));
         bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, false);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
