@@ -47,7 +47,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     std::ofstream calib_file;
 
-    float rx_duration = is_cent ? 5.0 : 0.0; // fix duration for cent node
+    float rx_duration = is_cent ? 6.0 : 0.0; // fix duration for cent node
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -98,7 +98,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         }
 
         // Transmission after cyclestartdetector
-        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now().get_real_secs() + generateRandomFloat(2.1, 4.0);
+        float rand_wait_time = generateRandomFloat(1.1, 3.0);
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(rand_wait_time);
         LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
 
         // adjust for CFO
@@ -112,14 +113,14 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, false);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
         else
             LOG_INFO("Transmission Sucessful!");
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::microseconds(int((rand_wait_time - 1.0 + 0.1) * 1e6)));
 
         // move to next round
         csd_success_signal = false;
@@ -224,7 +225,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     CycleStartDetector csd_obj(parser, capacity, rx_sample_duration, peakDet_obj);
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    csd_obj.tx_wait_microsec = 0.1 * 1e6;
+    csd_obj.tx_wait_microsec = 0.3 * 1e6;
 
     /*------ Threads - Consumer / Producer --------*/
     std::atomic<bool> csd_success_signal(false);
