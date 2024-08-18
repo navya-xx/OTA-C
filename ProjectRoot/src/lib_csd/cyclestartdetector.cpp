@@ -138,9 +138,14 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
 
     // // debug -- save data to a file for later analysis
     std::ofstream outfile;
-    std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
+    // std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
+    // vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
+    // vec_saved_ref.insert(vec_saved_ref.end(), cfo_corrected_ref.begin(), cfo_corrected_ref.end());
+    std::vector<std::complex<float>> vec_saved_ref(cfo_corrected_ref.begin(), cfo_corrected_ref.end());
     vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
-    vec_saved_ref.insert(vec_saved_ref.end(), cfo_corrected_ref.begin(), cfo_corrected_ref.end());
+    vec_saved_ref.insert(vec_saved_ref.end(), cfo_corr_results.begin(), cfo_corr_results.end());
+    vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
+    LOG_DEBUG_FMT("Saving %1% samples of corrected ref signal and its correlation values to file %2%", vec_saved_ref.size(), saved_ref_filename);
     save_stream_to_file(saved_ref_filename, outfile, vec_saved_ref);
 }
 

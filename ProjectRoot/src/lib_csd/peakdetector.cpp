@@ -299,24 +299,23 @@ float PeakDetectionClass::estimate_phase_drift()
 int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::deque<uhd::time_spec_t> &new_timer)
 {
     // find index of first possible peak
-    int fpi = 0, final_fpi = 0;
-    float max_peak_avg = 0.0;
+    int init_fpi = 0, final_fpi = 0;
+    float max_peak_val = 0.0;
     for (int i = 0; i < 2 * ref_seq_len; ++i)
     {
         float tmp = 0.0;
         for (int j = 0; j < total_num_peaks; ++j)
         {
-            size_t c_ind = fpi + i + j * ref_seq_len;
+            size_t c_ind = init_fpi + i + (j * ref_seq_len);
             if (c_ind > abs_corr_vals.size())
                 LOG_WARN("PeakDetectionClass::updatePeaksAfterCFO -> Index out of range!");
-            tmp += abs_corr_vals[fpi + i + j * ref_seq_len];
+            tmp += abs_corr_vals[c_ind];
         }
-        tmp /= total_num_peaks;
-        if (tmp > max_peak_avg)
+        if (tmp > max_peak_val)
         {
-            max_peak_avg = tmp;
-            LOG_INFO_FMT("Current Max peak avg est = %1%", max_peak_avg);
-            final_fpi = fpi + i;
+            max_peak_val = tmp;
+            // LOG_INFO_FMT("Current Max peak avg est = %1%", max_peak_val);
+            final_fpi = init_fpi + i;
         }
     }
 

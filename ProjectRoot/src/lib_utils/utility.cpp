@@ -147,13 +147,6 @@ std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector
     return phase;
 }
 
-void remove_freq_offset(std::vector<std::complex<float>> &samples, const float &freq_offset, const float &phase_offset, const float &sampling_time)
-{
-    for (size_t i = 0; i < samples.size(); ++i)
-    {
-    }
-}
-
 size_t rational_number_approximation(double a, double e, size_t max_iter)
 {
     size_t N = static_cast<size_t>(std::ceil(1.0 / (2 * e)));
@@ -167,4 +160,17 @@ size_t rational_number_approximation(double a, double e, size_t max_iter)
         iter++;
     }
     return N;
+}
+
+float generateRandomFloat(float a, float b)
+{
+    // Random number generator
+    std::random_device rd;  // Seed generator
+    std::mt19937 gen(rd()); // Mersenne Twister RNG
+
+    // Create a distribution for the range [a, b]
+    std::uniform_real_distribution<float> dis(a, b);
+
+    // Generate and return the random number
+    return dis(gen);
 }
