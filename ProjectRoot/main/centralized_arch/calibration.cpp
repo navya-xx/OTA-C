@@ -6,6 +6,7 @@
 #include "usrp_class.hpp"
 #include "waveforms.hpp"
 #include "cyclestartdetector.hpp"
+#include <filesystem>
 
 #define LOG_LEVEL LogLevel::DEBUG
 static bool stop_signal_called = false;
@@ -32,7 +33,19 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     std::string storage_dir = parser.getValue_str("storage-folder");
     std::string device_id = parser.getValue_str("device-id");
-    std::string curr_time_str = currentDateTimeFilename();
+    std::string ref_calib_file;
+    if (is_cent)
+    {
+        std::string leaf_id = parser.getValue_str("leaf-id");
+        ref_calib_file = storage_dir + "/calibration/calib_" + device_id + "_" + leaf_id + ".dat";
+    }
+    else
+    {
+        std::string cent_id = parser.getValue_str("cent-id");
+        ref_calib_file = storage_dir + "/calibration/calib_" + device_id + "_" + cent_id + ".dat";
+    }
+
+    std::ofstream calib_file;
 
     float rx_duration = is_cent ? 5.0 : 0.0; // fix duration for cent node
 
@@ -63,11 +76,6 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
         // CycleStartDetector - producer loop
-        // debug
-        std::string curr_time_str = currentDateTimeFilename();
-
-        std::string ref_datfile = storage_dir + "/logs/saved_ref_leaf_" + device_id + "_" + curr_time_str + ".dat";
-        csd_obj.saved_ref_filename = ref_datfile;
 
         auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, uhd::time_spec_t(0.0), false, producer_wrapper);
 
@@ -80,6 +88,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         if (csd_success_signal)
         {
+            append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
             LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
             ++round;
         }
@@ -139,27 +148,55 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::string homeDirStr(homeDir);
     std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
     std::string curr_time_str = currentDateTimeFilename();
+    std::string leaf_id = ";";
     bool is_central_server = false;
 
-    if (argc < 2)
-        throw std::invalid_argument("ERROR : device address missing! Pass it as first argument to the function call.");
+    if (argc < 4)
+        throw std::invalid_argument("ERROR : Calibration requires 3 mandatory arguments -> (device_type <cent, leaf> | this_device_serial | counterpart_device_serial)");
 
-    if (argc > 2)
-        is_central_server = true;
-
-    std::string device_id = argv[1];
+    std::string device_type = argv[1];
+    std::string device_id = argv[2];
+    std::string counterpart_id = argv[3];
 
     /*----- LOG ------------------------*/
     std::string logFileName = projectDir + "/storage/logs/leaf_" + device_id + "_" + curr_time_str + ".log";
     Logger::getInstance().initialize(logFileName);
     Logger::getInstance().setLogLevel(LOG_LEVEL);
 
-    LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEAF");
-
     /*------ Parse Config -------------*/
     ConfigParser parser(projectDir + "/config/config.conf");
     parser.set_value("device-id", device_id, "str", "USRP device number");
     parser.set_value("storage-folder", projectDir + "/storage", "str", "Location of storage director");
+    if (device_type == "cent")
+    {
+        parser.set_value("leaf-id", counterpart_id, "str", "leaf node serial number as identifier");
+        is_central_server = true;
+    }
+    else if (device_type == "leaf")
+        parser.set_value("cent-id", counterpart_id, "str", "cent node serial number as identifier");
+    else
+        throw std::invalid_argument("Incorrect device type! Valid options are (cent or leaf).");
+
+    LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEAF");
+
+    // Check if the directory exists
+    std::string folderPath = projectDir + "/storage/calibration";
+    if (!std::filesystem::exists(folderPath))
+    {
+        // Attempt to create the directory
+        if (std::filesystem::create_directory(folderPath))
+        {
+            LOG_INFO_FMT("Directory created successfully: %1%", folderPath);
+        }
+        else
+        {
+            LOG_WARN_FMT("Failed to create directory: %1%", folderPath);
+        }
+    }
+    else
+    {
+        LOG_INFO_FMT("Directory already exists: %1%", folderPath);
+    }
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
@@ -172,7 +209,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     parser.print_values();
 
     size_t calib_seq_len = usrp_obj.max_rx_packet_size;
-    size_t calib_rounds = 10;
+    size_t calib_rounds = 100;
 
     WaveformGenerator wf_gen = WaveformGenerator();
     wf_gen.initialize(wf_gen.UNIT_RAND, calib_seq_len, 1.0, 0, 0, 0, 1.0, 0);
@@ -187,7 +224,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     CycleStartDetector csd_obj(parser, capacity, rx_sample_duration, peakDet_obj);
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    csd_obj.tx_wait_microsec = 0.2 * 1e6;
+    csd_obj.tx_wait_microsec = 0.1 * 1e6;
 
     /*------ Threads - Consumer / Producer --------*/
     std::atomic<bool> csd_success_signal(false);

@@ -6,8 +6,8 @@
 #include "usrp_class.hpp"
 #include "waveforms.hpp"
 #include "cyclestartdetector.hpp"
-#include <cstdlib>  // For system(), getenv()
-#include <unistd.h> // For getpid(), getppid()
+// #include <cstdlib>  // For system(), getenv()
+// #include <unistd.h> // For getpid(), getppid()
 
 #define LOG_LEVEL LogLevel::DEBUG
 static bool stop_signal_called = false;
@@ -15,38 +15,38 @@ void sig_int_handler(int)
 {
     stop_signal_called = true;
 }
-pid_t getCurrentProcessID()
-{
-    return getpid();
-}
-std::string getProcessName()
-{
-    std::string processName;
-    std::ifstream("/proc/self/comm") >> processName;
-    return processName;
-}
-// Function to kill all other instances of this program
-void killOtherInstances()
-{
-    std::string processName = getProcessName();
-    pid_t currentPID = getCurrentProcessID();
+// pid_t getCurrentProcessID()
+// {
+//     return getpid();
+// }
+// std::string getProcessName()
+// {
+//     std::string processName;
+//     std::ifstream("/proc/self/comm") >> processName;
+//     return processName;
+// }
+// // Function to kill all other instances of this program
+// void killOtherInstances()
+// {
+//     std::string processName = getProcessName();
+//     pid_t currentPID = getCurrentProcessID();
 
-    // Build the command to list and kill other instances
-    std::ostringstream command;
-    command << "pgrep -f " << processName << " | grep -v " << currentPID;
+//     // Build the command to list and kill other instances
+//     std::ostringstream command;
+//     command << "pgrep -f " << processName << " | grep -v " << currentPID;
 
-    std::string line;
-    std::ifstream cmd(command.str().c_str());
-    while (std::getline(cmd, line))
-    {
-        pid_t pid = std::stoi(line);
-        if (pid != currentPID)
-        {
-            std::cout << "Killing process " << pid << std::endl;
-            kill(pid, SIGKILL);
-        }
-    }
-}
+//     std::string line;
+//     std::ifstream cmd(command.str().c_str());
+//     while (std::getline(cmd, line))
+//     {
+//         pid_t pid = std::stoi(line);
+//         if (pid != currentPID)
+//         {
+//             std::cout << "Killing process " << pid << std::endl;
+//             kill(pid, SIGKILL);
+//         }
+//     }
+// }
 
 void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, std::string homeDirStr)
 {

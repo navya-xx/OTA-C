@@ -22,6 +22,25 @@ std::string currentDateTimeFilename()
     return oss.str();
 }
 
+void append_value_with_timestamp(const std::string &filename, std::ofstream &outfile, std::string value)
+{
+    // Open the file in append mode (if not already open)
+    if (!outfile.is_open())
+    {
+        outfile.open(filename, std::ios::app);
+        if (!outfile.is_open())
+        {
+            LOG_WARN("Error: Could not open file for writing.");
+            return;
+        }
+    }
+
+    std::string curr_time = currentDateTime();
+
+    outfile << curr_time << "\t" << value << "\n";
+    outfile.close();
+}
+
 void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream)
 {
     // Open the file in append mode (if not already open)
@@ -173,4 +192,11 @@ float generateRandomFloat(float a, float b)
 
     // Generate and return the random number
     return dis(gen);
+}
+
+std::string floatToStringWithPrecision(float value, int precision)
+{
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(precision) << value;
+    return out.str();
 }

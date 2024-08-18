@@ -28,7 +28,7 @@ public:
     size_t save_ref_len;
 
     // debug
-    std::string saved_ref_filename;
+    std::string saved_ref_filename = "";
 
     size_t num_samples_without_peak = 0;
 
