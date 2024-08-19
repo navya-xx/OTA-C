@@ -200,3 +200,37 @@ std::string floatToStringWithPrecision(float value, int precision)
     out << std::fixed << std::setprecision(precision) << value;
     return out.str();
 }
+
+float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length)
+{
+    float sig_ampl = 0.0;
+    size_t L;
+    if (length == 0)
+        L = signal.size() - start_index;
+    else
+        L = length;
+
+    for (int i = 0; i < L; ++i)
+        sig_ampl += std::pow(std::abs(signal[start_index + i]), 2);
+
+    sig_ampl = sig_ampl / L;
+
+    return sig_ampl;
+}
+
+float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length)
+{
+    float sig_ampl = 0.0;
+    size_t L;
+    if (length == 0)
+        L = signal.size() - start_index;
+    else
+        L = length;
+
+    for (int i = 0; i < L; ++i)
+        sig_ampl += std::pow(std::abs(signal[start_index + i]), 2);
+
+    sig_ampl = sig_ampl / L;
+
+    return sig_ampl;
+}

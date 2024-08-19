@@ -142,10 +142,9 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
     LOG_INFO_FMT("ref_start_index %1%", ref_start_index);
     if (ref_start_index + N_zfc * R_zfc > save_ref_len)
         LOG_WARN("detected ref_start_index is incorrect");
-    float sig_ampl = 0.0;
-    for (int i = 0; i < N_zfc * R_zfc; ++i)
-        sig_ampl += std::abs(cfo_corrected_ref[ref_start_index + i]);
-    est_ref_sig_amp = sig_ampl / (N_zfc * R_zfc);
+
+    float sig_power = calc_signal_power(cfo_corrected_ref, ref_start_index, N_zfc * R_zfc);
+    est_ref_sig_amp = std::sqrt(sig_power - (peak_det_obj_ref.noise_ampl * peak_det_obj_ref.noise_ampl));
     LOG_INFO_FMT("Estimated channel power is %1%.", est_ref_sig_amp);
 
     // // debug -- save data to a file for later analysis
@@ -279,7 +278,7 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
     {
         std::complex<float> corr = corr_results[i];
         corr_abs_val = std::abs(corr) / N_zfc;
-        curr_pnr = corr_abs_val / peak_det_obj_ref.noise_level;
+        curr_pnr = corr_abs_val / peak_det_obj_ref.noise_ampl;
 
         // debug
         if (curr_pnr > max_pnr)

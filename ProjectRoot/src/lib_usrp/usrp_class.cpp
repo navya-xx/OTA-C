@@ -272,8 +272,9 @@ void USRP_class::initialize(bool perform_rxtx_tests)
             LOG_WARN("Reception test Failed!");
         }
 
-        init_background_noise = averageAbsoluteValue(rx_samples);
-        LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_background_noise);
+        float noise_power = calc_signal_power(rx_samples);
+        init_noise_ampl = std::sqrt(noise_power);
+        LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
     }
 
     // set current clock to zero

@@ -19,7 +19,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 {
     // reception/producer params
     size_t max_rx_packet_size = usrp_obj.max_rx_packet_size;
-    size_t round = 1;
+    size_t round = 1, calib_retry = 0, max_calib_retry = 10;
     std::vector<std::complex<float>> buff(max_rx_packet_size);
 
     WaveformGenerator wf_gen = WaveformGenerator();
@@ -88,12 +88,20 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // LOG_INFO_FMT("Corrected Clock Drift -> New sampling rate = %1% samples/sec.", usrp_obj.rx_rate);
 
         if (csd_success_signal)
+        {
+            LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
             append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
+            ++round;
+        }
         else
+        {
             LOG_INFO_FMT("No calibration signal received in Round %1%. Re-transmitting...", round);
-
-        ++round;
-        LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
+            if (++calib_retry < max_calib_retry)
+            {
+                round = max_num_rounds + 1; // end it here
+                LOG_INFO_FMT("Ending calibration! No calibration signal received by counterpart for %1% rounds.", calib_retry);
+            }
+        }
 
         // Transmission after cyclestartdetector
         float fix_wait_time = 2.0; // generateRandomFloat(1.1, 3.0);
@@ -223,9 +231,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------ Run CycleStartDetector -------------*/
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
     uhd::time_spec_t rx_sample_duration = uhd::time_spec_t(rx_sample_duration_float);
-    float init_noise_level = usrp_obj.init_background_noise;
+    float init_noise_ampl = usrp_obj.init_noise_ampl;
     size_t capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
-    PeakDetectionClass peakDet_obj(parser, init_noise_level);
+    PeakDetectionClass peakDet_obj(parser, init_noise_ampl);
     CycleStartDetector csd_obj(parser, capacity, rx_sample_duration, peakDet_obj);
 
     std::this_thread::sleep_for(std::chrono::seconds(1));

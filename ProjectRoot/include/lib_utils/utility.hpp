@@ -16,5 +16,7 @@ std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector
 size_t rational_number_approximation(double a, double e = 1e-10, size_t max_iter = 100);
 float generateRandomFloat(float a, float b);
 std::string floatToStringWithPrecision(float value, int precision);
+float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0);
+float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0);
 
 #endif // UTILITY_FUNCS

@@ -211,9 +211,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------ Run CycleStartDetector -------------*/
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
     uhd::time_spec_t rx_sample_duration = uhd::time_spec_t(rx_sample_duration_float);
-    float init_noise_level = usrp_obj.init_background_noise;
+    float init_noise_ampl = usrp_obj.init_noise_ampl;
     size_t capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
-    PeakDetectionClass peakDet_obj(parser, init_noise_level);
+    PeakDetectionClass peakDet_obj(parser, init_noise_ampl);
     CycleStartDetector csd_obj(parser, capacity, rx_sample_duration, peakDet_obj);
 
     /*------ Threads - Consumer / Producer --------*/

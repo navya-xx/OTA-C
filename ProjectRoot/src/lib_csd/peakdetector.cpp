@@ -2,9 +2,9 @@
 
 PeakDetectionClass::PeakDetectionClass(
     ConfigParser &parser,
-    const float &init_noise_level) : parser(parser),
-                                     detection_flag(false),
-                                     init_noise_level(init_noise_level)
+    const float &init_noise_ampl) : parser(parser),
+                                    detection_flag(false),
+                                    init_noise_ampl(init_noise_ampl)
 {
 
     ref_seq_len = parser.getValue_int("Ref-N-zfc");
@@ -30,7 +30,7 @@ PeakDetectionClass::PeakDetectionClass(
     prev_peak_index = 0;
     peaks_count = 0;
     noise_counter = 0;
-    noise_level = init_noise_level;
+    noise_ampl = init_noise_ampl;
 
     reset_counter = 0;
     max_reset_count = parser.getValue_int("max-reset-count");
@@ -102,7 +102,7 @@ void PeakDetectionClass::reset()
     prev_peak_val = 0;
     curr_pnr_threshold = pnr_threshold;
     detection_flag = false;
-    noise_level = init_noise_level;
+    noise_ampl = init_noise_ampl;
     noise_counter = 0;
 
     // reset pointers
@@ -193,7 +193,7 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
 {
     const size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
 
-    float curr_peak_value = std::abs(corr_sample) / ref_seq_len / noise_level;
+    float curr_peak_value = std::abs(corr_sample) / ref_seq_len / noise_ampl;
 
     // First peak
     if (peaks_count == 0)
@@ -321,7 +321,7 @@ int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_v
 
     for (int i = 0; i < total_num_peaks; ++i)
     {
-        peak_vals[i] = abs_corr_vals[final_fpi + (i * ref_seq_len)] / ref_seq_len / noise_level;
+        peak_vals[i] = abs_corr_vals[final_fpi + (i * ref_seq_len)] / ref_seq_len / noise_ampl;
         peak_times[i] = new_timer[final_fpi + (i * ref_seq_len)];
         peak_indices[i] = i * ref_seq_len;
     }
@@ -333,10 +333,10 @@ int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_v
 
 void PeakDetectionClass::updateNoiseLevel(const float &avg_ampl, const size_t &num_samps)
 {
-    if (std::abs(avg_ampl - noise_level) / noise_level < 0.1)
+    if (std::abs(avg_ampl - noise_ampl) / noise_ampl < 0.1)
     {
         // update noise level by iteratively averaging
-        noise_level = (noise_counter * noise_level + avg_ampl * num_samps) / (noise_counter + num_samps);
+        noise_ampl = (noise_counter * noise_ampl + avg_ampl * num_samps) / (noise_counter + num_samps);
 
         if (noise_counter < std::numeric_limits<long>::max())
             noise_counter = noise_counter + num_samps;

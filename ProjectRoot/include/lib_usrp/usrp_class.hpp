@@ -32,7 +32,7 @@ public:
     void adjust_for_freq_offset(const float &freq_offset);
 
     std::ofstream rx_save_stream;
-    float init_background_noise = 0.0;
+    float init_noise_ampl = 0.0;
     size_t max_rx_packet_size, max_tx_packet_size;
 
     uhd::usrp::multi_usrp::sptr usrp;

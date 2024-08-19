@@ -20,7 +20,7 @@ private:
 
     size_t ref_seq_len;
     float pnr_threshold, max_pnr;
-    float init_noise_level;
+    float init_noise_ampl;
 
     size_t peak_det_tol;
     float max_peak_mul;
@@ -38,7 +38,7 @@ private:
     bool check_peaks();
 
 public:
-    PeakDetectionClass(ConfigParser &parser, const float &init_noise_level);
+    PeakDetectionClass(ConfigParser &parser, const float &init_noise_ampl);
 
     size_t peaks_count;
     size_t prev_peak_index;
@@ -46,7 +46,7 @@ public:
     size_t samples_from_first_peak;
     bool detection_flag;
 
-    float noise_level;
+    float noise_ampl;
     long int noise_counter;
 
     std::complex<float> *get_corr_samples_at_peaks();
