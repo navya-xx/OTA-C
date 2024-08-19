@@ -218,8 +218,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     parser.print_values();
 
-    size_t calib_seq_len = usrp_obj.max_rx_packet_size;
-    size_t max_calib_rounds = 100;
+    size_t max_calib_rounds = parser.getValue_int("max-calib-rounds");
 
     /*------ Run CycleStartDetector -------------*/
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
