@@ -124,21 +124,6 @@ std::vector<std::complex<float>> read_from_file(const std::string &filename)
     return data;
 }
 
-float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const float threshold)
-{
-    float sum = 0.0;
-    float abs_val = 0.0;
-    for (const auto &num : vec)
-    {
-        abs_val = std::abs(num);
-        if (threshold > 0.0 and abs_val > threshold)
-            continue;
-
-        sum += abs_val;
-    }
-    return vec.empty() ? 0.0 : sum / vec.size();
-}
-
 std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector)
 {
     const double pi = M_PI;
@@ -203,34 +188,43 @@ std::string floatToStringWithPrecision(float value, int precision)
 
 float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length)
 {
-    float sig_ampl = 0.0;
     size_t L;
     if (length == 0)
         L = signal.size() - start_index;
     else
         L = length;
 
+    float sig_pow = 0.0, s_amp = 0.0;
     for (int i = 0; i < L; ++i)
-        sig_ampl += std::pow(std::abs(signal[start_index + i]), 2);
+    {
+        s_amp = std::abs(signal[start_index + i]);
+        sig_pow += (s_amp * s_amp);
+    }
 
-    sig_ampl = sig_ampl / L;
+    sig_pow = sig_pow / L;
 
-    return sig_ampl;
+    return sig_pow;
 }
 
 float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length)
 {
-    float sig_ampl = 0.0;
-    size_t L;
-    if (length == 0)
-        L = signal.size() - start_index;
-    else
-        L = length;
+    std::vector<std::complex<float>> vector(signal.begin(), signal.end());
+    return calc_signal_power(vector, start_index, length);
+}
 
-    for (int i = 0; i < L; ++i)
-        sig_ampl += std::pow(std::abs(signal[start_index + i]), 2);
+float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const float lower_bound)
+{
+    float sum = 0.0;
+    float abs_val = 0.0;
+    size_t counter = 0;
+    for (const auto &num : vec)
+    {
+        abs_val = std::abs(num);
+        if (lower_bound > 0.0 and abs_val > lower_bound)
+            continue;
 
-    sig_ampl = sig_ampl / L;
-
-    return sig_ampl;
+        sum += abs_val;
+        counter++;
+    }
+    return counter == 0 ? 0.0 : sum / counter;
 }

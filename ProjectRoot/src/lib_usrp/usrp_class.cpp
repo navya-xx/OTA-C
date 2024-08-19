@@ -274,6 +274,7 @@ void USRP_class::initialize(bool perform_rxtx_tests)
 
         float noise_power = calc_signal_power(rx_samples);
         init_noise_ampl = std::sqrt(noise_power);
+        // float tmp_noise_ampl = averageAbsoluteValue(rx_samples);
         LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
     }
 

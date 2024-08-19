@@ -11,7 +11,7 @@ void append_value_with_timestamp(const std::string &filename, std::ofstream &out
 void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream);
 void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std::vector<double> stream);
 std::vector<std::complex<float>> read_from_file(const std::string &filename);
-float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const float threshold = 0.0);
+float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const float lower_bound = 0.0);
 std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector);
 size_t rational_number_approximation(double a, double e = 1e-10, size_t max_iter = 100);
 float generateRandomFloat(float a, float b);

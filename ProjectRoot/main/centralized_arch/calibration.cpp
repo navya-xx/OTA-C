@@ -96,7 +96,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         else
         {
             LOG_INFO_FMT("No calibration signal received in Round %1%. Re-transmitting...", round);
-            if (++calib_retry < max_calib_retry)
+            if (++calib_retry > max_calib_retry)
             {
                 round = max_num_rounds + 1; // end it here
                 LOG_INFO_FMT("Ending calibration! No calibration signal received by counterpart for %1% rounds.", calib_retry);
