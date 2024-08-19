@@ -18,9 +18,11 @@ do
     # Start two commands in detached screen sessions
     ssh ${node_name} "bash -c 'pkill -9 CA_calib'"
     sleep 1
-    screen -dmL -Logfile "$HOME/OTA-C/ProjectRoot/storage/session_leaf_${node_serial}.log" -S session_leaf_${node_serial} bash -c "ssh ${node_name} 'cd \$HOME/OTA-C/ProjectRoot/build && ./CA_calib leaf ${node_serial} ${cent_node}'"
+    ssh ${node_name} "bash -c 'rm -rf \$HOME/OTA-C/ProjectRoot/storage/calibration/*'"
     sleep 1
-    screen -dmL -Logfile "$HOME/OTA-C/ProjectRoot/storage/session_cent_${node_serial}.log" -S session_cent_${node_serial} bash -c "cd $HOME/OTA-C/ProjectRoot/build/ && ./CA_calib cent ${cent_node} ${node_serial}"
+    screen -dmL -Logfile "$HOME/OTA-C/ProjectRoot/storage/calibration/session_leaf_${node_serial}.log" -S session_leaf_${node_serial} bash -c "ssh ${node_name} 'cd \$HOME/OTA-C/ProjectRoot/build && ./CA_calib leaf ${node_serial} ${cent_node}'"
+    sleep 1
+    screen -dmL -Logfile "$HOME/OTA-C/ProjectRoot/storage/calibration/session_cent_${node_serial}.log" -S session_cent_${node_serial} bash -c "cd $HOME/OTA-C/ProjectRoot/build/ && ./CA_calib cent ${cent_node} ${node_serial}"
 
     start_time=$(date +%s)
     while true; do

@@ -92,6 +92,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
             append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
             ++round;
+            calib_retry = 0;
         }
         else
         {
