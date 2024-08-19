@@ -27,22 +27,23 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
+    float scale = 0.5;
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, scale, 0);
     // wf_gen.initialize(wf_gen.IMPULSE, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     auto tx_waveform = wf_gen.generate_waveform();
 
-    std::string storage_dir = parser.getValue_str("storage-folder");
+    std::string calib_dir = parser.getValue_str("calib-folder");
     std::string device_id = parser.getValue_str("device-id");
     std::string ref_calib_file;
     if (is_cent)
     {
         std::string leaf_id = parser.getValue_str("leaf-id");
-        ref_calib_file = storage_dir + "/calibration/calib_" + device_id + "_" + leaf_id + ".dat";
+        ref_calib_file = calib_dir + "/calib_" + device_id + "_" + leaf_id + ".dat";
     }
     else
     {
         std::string cent_id = parser.getValue_str("cent-id");
-        ref_calib_file = storage_dir + "/calibration/calib_" + device_id + "_" + cent_id + ".dat";
+        ref_calib_file = calib_dir + "/calib_" + device_id + "_" + cent_id + ".dat";
     }
 
     std::ofstream calib_file;
@@ -71,7 +72,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
-    while (not stop_signal_called && round < max_num_rounds)
+    while (not stop_signal_called)
     {
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
@@ -127,6 +128,12 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // stop here (only one round for now)
         // stop_signal_called = true;
+
+        if (round > max_num_rounds)
+        {
+            stop_signal_called = true;
+            break;
+        }
     }
 }
 
@@ -180,25 +187,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEAF");
 
-    // Check if the directory exists
-    std::string folderPath = projectDir + "/storage/calibration";
-    if (!std::filesystem::exists(folderPath))
-    {
-        // Attempt to create the directory
-        if (std::filesystem::create_directory(folderPath))
-        {
-            LOG_INFO_FMT("Directory created successfully: %1%", folderPath);
-        }
-        else
-        {
-            LOG_WARN_FMT("Failed to create directory: %1%", folderPath);
-        }
-    }
-    else
-    {
-        LOG_INFO_FMT("Directory already exists: %1%", folderPath);
-    }
-
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
 
@@ -207,14 +195,31 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
 
+    // Check if the directory exists
+    std::string calib_folderPath = projectDir + "/storage/calibration/" + "gains_rx" + floatToStringWithPrecision(usrp_obj.rx_gain, 1) + "_tx" + floatToStringWithPrecision(usrp_obj.tx_gain, 1);
+    if (!std::filesystem::exists(calib_folderPath))
+    {
+        // Attempt to create the directory
+        if (std::filesystem::create_directory(calib_folderPath))
+        {
+            LOG_INFO_FMT("Directory created successfully: %1%", calib_folderPath);
+        }
+        else
+        {
+            LOG_WARN_FMT("Failed to create directory: %1%", calib_folderPath);
+        }
+    }
+    else
+    {
+        LOG_INFO_FMT("Directory already exists: %1%", calib_folderPath);
+    }
+
+    parser.set_value("calib-folder", calib_folderPath, "str", "Folder for calibration results");
+
     parser.print_values();
 
     size_t calib_seq_len = usrp_obj.max_rx_packet_size;
     size_t max_calib_rounds = 100;
-
-    WaveformGenerator wf_gen = WaveformGenerator();
-    wf_gen.initialize(wf_gen.UNIT_RAND, calib_seq_len, 1.0, 0, 0, 0, 1.0, 0);
-    const auto tx_waveform = wf_gen.generate_waveform();
 
     /*------ Run CycleStartDetector -------------*/
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");

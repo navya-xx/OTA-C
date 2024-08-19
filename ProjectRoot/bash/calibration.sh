@@ -16,9 +16,9 @@ do
     echo "Iteration $i for leaf node ${node_serial}: Starting..."
 
     # Start two commands in detached screen sessions
-    screen -dmS session_leaf_${node_serial} "ssh ${node_name} 'bash \$HOME/OTA-C/ProjectRoot/build/CA_calib leaf ${node_serial} ${cent_node}'"
+    screen -dmL -Logfile "$HOME/OTA-C/ProjectRoot/storage/session_leaf_${node_serial}.log" -S session_leaf_${node_serial} bash -c "ssh ${node_name} 'cd \$HOME/OTA-C/ProjectRoot/build && ./CA_calib leaf ${node_serial} ${cent_node}'"
     sleep 1
-    screen -dmS session_cent_${node_serial} "bash $HOME/OTA-C/ProjectRoot/build/CA_calib cent ${cent_node} ${node_serial}"
+    screen -dmL -Logfile "$HOME/OTA-C/ProjectRoot/storage/session_cent_${node_serial}.log" -S session_cent_${node_serial} bash -c "cd $HOME/OTA-C/ProjectRoot/build/ && ./CA_calib cent ${cent_node} ${node_serial}"
 
     start_time=$(date +%s)
     while true; do
