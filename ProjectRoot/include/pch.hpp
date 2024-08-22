@@ -34,5 +34,9 @@
 #include <random>
 #include <cmath>
 #include <limits>
+#include <mqtt/async_client.h>
+#include <json.hpp>
+
+using json = nlohmann::json;
 
 #endif // PCH_HPP

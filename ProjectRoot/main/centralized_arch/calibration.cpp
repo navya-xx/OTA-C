@@ -6,6 +6,7 @@
 #include "usrp_class.hpp"
 #include "waveforms.hpp"
 #include "cyclestartdetector.hpp"
+#include "MQTTClient.hpp"
 #include <filesystem>
 
 #define LOG_LEVEL LogLevel::DEBUG
@@ -13,6 +14,13 @@ static bool stop_signal_called = false;
 void sig_int_handler(int)
 {
     stop_signal_called = true;
+}
+
+std::string create_calib_data_str(const float &amplitude)
+{
+    json jdata;
+    jdata["amplitude"] = amplitude;
+    return jdata.dump(4);
 }
 
 void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, std::string homeDirStr, const bool &is_cent, const size_t &max_num_rounds)
@@ -47,6 +55,9 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     }
 
     std::ofstream calib_file;
+
+    MQTTClient &mqttClient = MQTTClient::getInstance();
+    std::string calib_topic = "calibration/data/" + device_id;
 
     float rx_duration = is_cent ? 3.0 : 0.0; // fix duration for cent node
 
@@ -91,6 +102,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         {
             LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
             append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
+            std::string json_data = create_calib_data_str(csd_obj.est_ref_sig_amp);
+            mqttClient.publish(calib_topic, json_data);
             ++round;
             calib_retry = 0;
         }
@@ -195,6 +208,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         throw std::invalid_argument("Incorrect device type! Valid options are (cent or leaf).");
 
     LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEAF");
+
+    /*------- MQTT Client setup -------*/
+    MQTTClient &mqttClient = MQTTClient::getInstance();
+    mqttClient.publish("config/run_config_info", parser.print_json());
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);

@@ -1,8 +1,12 @@
 #!/bin/bash
 
-CLEAN_SLATE="true"
+CLEAN_SLATE=false
 
-if ["$CLEAN_SLATE" = "true"]; then
+if [ $# -gt 0 ] && [ "$1" -eq 1 ]; then
+    CLEAN_SLATE=true
+fi
+
+if $CLEAN_SLATE; then
     rm -rf $HOME/OTA-C/ProjectRoot/storage/calibration/*
     sleep 1
 fi
@@ -27,7 +31,7 @@ do
     # Start two commands in detached screen sessions
     ssh ${node_name} "bash -c 'pkill -9 CA_calib'"
     sleep 1
-    if ["$CLEAN_SLATE" = "true"]; then
+    if $CLEAN_SLATE; then
         ssh ${node_name} "bash -c 'rm -rf \$HOME/OTA-C/ProjectRoot/storage/calibration/*'"
         sleep 1
     fi

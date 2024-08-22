@@ -2,8 +2,10 @@
 #define CONFIG_PARSER
 
 #include "pch.hpp"
-
 #include "log_macros.hpp"
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 // Class to parse config file and store values in a dictionary-like structure
 class ConfigParser
@@ -22,6 +24,7 @@ public:
 
     // Print a list of configs in the parser
     void print_values();
+    std::string print_json();
 
 private:
     // states to keep record of parsed information

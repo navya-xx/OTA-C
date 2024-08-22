@@ -1,0 +1,14 @@
+2024-08-22T11:52:52: mosquitto version 2.0.18 starting
+2024-08-22T11:52:52: Config loaded from /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.conf.
+2024-08-22T11:52:52: Opening ipv4 listen socket on port 1883.
+2024-08-22T11:52:52: Opening ipv6 listen socket on port 1883.
+2024-08-22T11:52:52: mosquitto version 2.0.18 running
+2024-08-22T11:53:42: mosquitto version 2.0.18 terminating
+2024-08-22T11:53:42: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.
+2024-08-22T12:02:21: mosquitto version 2.0.18 starting
+2024-08-22T12:02:21: Config loaded from /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.conf.
+2024-08-22T12:02:21: Opening ipv4 listen socket on port 1883.
+2024-08-22T12:02:21: Opening ipv6 listen socket on port 1883.
+2024-08-22T12:02:21: mosquitto version 2.0.18 running
+2024-08-22T12:02:41: mosquitto version 2.0.18 terminating
+2024-08-22T12:02:41: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.

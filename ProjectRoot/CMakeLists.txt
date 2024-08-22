@@ -102,7 +102,7 @@ SET(counter 0)
 ### Make the executable #######################################################
 foreach(executable ${executables_list})
     list(GET files_list ${counter} file_loc)
-    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_fft/FFTWrapper.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp)
+    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_fft/FFTWrapper.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp src/lib_mqtt/MQTTClient.cpp)
     target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} PkgConfig::FFTW ${FFTW_DOUBLE_THREADS_LIB})
     math(EXPR counter "${counter} + 1")
     enable_precompiled_headers(${executable})

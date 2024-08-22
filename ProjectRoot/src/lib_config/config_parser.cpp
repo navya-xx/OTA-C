@@ -144,3 +144,32 @@ void ConfigParser::print_values()
     for (const auto &pair : float_data)
         LOG_INFO(boost::str(boost::format("%1% %2% %3%") % boost::io::group(std::left, std::setw(30), pair.first) % boost::io::group(std::left, std::setw(10), pair.second) % boost::io::group(std::left, std::setw(80), desc_data[pair.first])));
 }
+
+std::string ConfigParser::print_json()
+{
+    json json_data;
+
+    for (const auto &pair : string_data)
+    {
+        json_data["varname"] = pair.first;
+        json_data["vartype"] = pair.second;
+        json_data["desc"] = desc_data[pair.first];
+    }
+
+    for (const auto &pair : int_data)
+    {
+        json_data["varname"] = pair.first;
+        json_data["vartype"] = pair.second;
+        json_data["desc"] = desc_data[pair.first];
+    }
+
+    for (const auto &pair : float_data)
+    {
+        json_data["varname"] = pair.first;
+        json_data["vartype"] = pair.second;
+        json_data["desc"] = desc_data[pair.first];
+    }
+
+    std::string jsonString = json_data.dump(4);
+    return jsonString;
+}
