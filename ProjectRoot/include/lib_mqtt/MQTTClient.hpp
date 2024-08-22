@@ -3,12 +3,13 @@
 
 #include "pch.hpp"
 #include "log_macros.hpp"
+#include <sstream>
 
 class MQTTClient : public mqtt::callback
 {
 public:
     // Singleton access method
-    static MQTTClient &getInstance();
+    static MQTTClient &getInstance(const std::string &clientId = "nuc");
 
     // Callback management
     void setMessageCallback(const std::string &topic, std::function<void(const std::string &)> callback);
@@ -18,13 +19,18 @@ public:
     void publish(const std::string &topic, const std::string &payload);
     void subscribe(const std::string &topic);
 
-private:
     MQTTClient(const std::string &serverAddress, const std::string &clientId);
     ~MQTTClient();
 
+private:
     // MQTT Client
     mqtt::async_client client;
     mqtt::connect_options connectOptions;
+    std::string clientId;
+
+    // Static map to hold instances by client ID
+    static std::map<std::string, std::unique_ptr<MQTTClient>> instances;
+    static std::string currentClientId; // Store the current client ID
 
     void connect();
     void disconnect();

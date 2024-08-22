@@ -222,7 +222,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEAF");
 
     /*------- MQTT Client setup -------*/
-    MQTTClient &mqttClient = MQTTClient::getInstance();
+    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
     mqttClient.publish("config/run_config_info", parser.print_json());
 
     /*------- USRP setup --------------*/

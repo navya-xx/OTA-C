@@ -2,18 +2,42 @@
 
 // Define fixed server address and client ID
 static const std::string SERVER_ADDRESS = "tcp://192.168.5.247:1883";
-static const std::string CLIENT_ID = "test_nuc";
+// static const std::string CLIENT_ID = "test_nuc";
+
+// Static map to hold instances by client ID
+std::map<std::string, std::unique_ptr<MQTTClient>> MQTTClient::instances;
+std::string MQTTClient::currentClientId = ""; // Store the current client ID
 
 // Singleton access method
-MQTTClient &MQTTClient::getInstance()
+MQTTClient &MQTTClient::getInstance(const std::string &clientId)
 {
-    static MQTTClient instance(SERVER_ADDRESS, CLIENT_ID);
-    return instance;
+    if (clientId.empty())
+    {
+        if (currentClientId.empty() || instances.find(currentClientId) == instances.end())
+        {
+            throw std::runtime_error("No client ID specified and no existing instance found.");
+        }
+        return *instances.at(currentClientId);
+    }
+
+    auto it = instances.find(clientId);
+    if (it == instances.end())
+    {
+        // Create a new instance if it doesn't exist
+        instances[clientId] = std::unique_ptr<MQTTClient>(new MQTTClient(SERVER_ADDRESS, clientId));
+        currentClientId = clientId; // Update the current client ID
+        it = instances.find(clientId);
+    }
+    else
+    {
+        currentClientId = clientId; // Update the current client ID
+    }
+    return *it->second;
 }
 
 // Private Constructor
 MQTTClient::MQTTClient(const std::string &serverAddress, const std::string &clientId)
-    : client(serverAddress, clientId)
+    : client(serverAddress, clientId), clientId(clientId)
 {
     connectOptions.set_clean_session(true);
     connectOptions.set_keep_alive_interval(20);
