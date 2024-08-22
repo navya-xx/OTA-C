@@ -2,70 +2,50 @@
 
 CycleStartDetector::CycleStartDetector(
     ConfigParser &parser,
+    PeakDetectionClass &peak_det_obj,
     size_t &capacity,
-    const uhd::time_spec_t &rx_sample_duration,
-    PeakDetectionClass &peak_det_obj) : parser(parser),
-                                        synced_buffer(capacity),
-                                        rx_sample_duration(rx_sample_duration),
-                                        peak_det_obj_ref(peak_det_obj),
-                                        samples_buffer(),
-                                        timer(),
-                                        fftw_wrapper(),
-                                        cfo(0.0),
-                                        cfo_counter(0)
+    const float &rx_sample_duration) : parser(parser),
+                                       packet_buffer(capacity),
+                                       rx_sample_duration(rx_sample_duration),
+                                       peak_det_obj_ref(peak_det_obj),
+                                       samples_buffer(),
+                                       cfo(0.0),
+                                       cfo_counter(0)
 {
-    prev_timer = uhd::time_spec_t(0.0);
     N_zfc = parser.getValue_int("Ref-N-zfc");
     m_zfc = parser.getValue_int("Ref-m-zfc");
     R_zfc = parser.getValue_int("Ref-R-zfc");
-
     tx_wait_microsec = parser.getValue_float("start-tx-wait-microsec");
+    size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
+    size_t num_FFT_threads = parser.getValue_int("num-FFT-threads");
 
     // capture entire ref signal and more
     save_ref_len = N_zfc * (R_zfc + 2);
     saved_ref.resize(save_ref_len);
-    saved_ref_timer.resize(save_ref_len);
 
-    size_t max_rx_packet_size = parser.getValue_int("max-rx-packet-size");
-    // capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
-    if (capacity <= max_rx_packet_size)
-        LOG_ERROR("Buffer capacity must be greater than maximum receive buffer size.");
-
-    corr_seq_len = N_zfc * parser.getValue_int("corr-seq-len-mul");
-
+    corr_seq_len = max_rx_packet_size;
     samples_buffer.resize(corr_seq_len + N_zfc - 1);
-    timer.resize(corr_seq_len);
 
     WaveformGenerator wf_gen = WaveformGenerator();
     wf_gen.initialize(wf_gen.ZFC, N_zfc, 1, 0, 0, m_zfc, 1.0, 0);
     zfc_seq = wf_gen.generate_waveform();
 
-    // FFT length
+    update_noise_level = (parser.getValue_str("update-noise-level") == "true") ? true : false;
+    is_correct_cfo = true;
+
+    // FFT wrapper for correlating entire packet with ZFC seq
     while (fft_L < corr_seq_len + N_zfc - 1)
     {
         fft_L *= 2;
     }
-    int num_FFT_threads = int(parser.getValue_int("num-FFT-threads"));
     fftw_wrapper.initialize(fft_L, num_FFT_threads);
     std::vector<std::complex<float>> padded_zfc;
     fftw_wrapper.zeroPad(zfc_seq, padded_zfc, fft_L);
     fftw_wrapper.fft(padded_zfc, zfc_seq_fft_conj);
     for (auto &val : zfc_seq_fft_conj)
-    {
         val = std::conj(val);
-    }
 
-    update_noise_level = (parser.getValue_str("update-noise-level") == "true") ? true : false;
-    is_correct_cfo = true;
-
-    if (capacity < corr_seq_len)
-    {
-        LOG_WARN_FMT("Capacity '%1%' < consumed data length '%2%'!"
-                     "Consider increasing 'capacity_mul' in config, or reducing 'N_zfc'.",
-                     capacity, corr_seq_len);
-    }
-
-    // FFT length
+    // FFT wrapper for correlating detected reference signal for final corrections
     while (fft_LL < save_ref_len + N_zfc - 1)
     {
         fft_LL *= 2;
@@ -76,22 +56,20 @@ CycleStartDetector::CycleStartDetector(
     fftw_wrapper_LL.zeroPad(zfc_seq, padded_zfc_LL, fft_LL);
     fftw_wrapper_LL.fft(padded_zfc_LL, zfc_seq_fft_conj_LL);
     for (auto &val : zfc_seq_fft_conj_LL)
-    {
         val = std::conj(val);
-    }
 };
 
 void CycleStartDetector::reset()
 {
-    synced_buffer.clear();
-    prev_timer = uhd::time_spec_t(0.0);
+    packet_buffer.clear();
+    samples_buffer.clear();
     peak_det_obj_ref.reset();
-    cfo_counter = 0;
-
     saved_ref.clear();
     saved_ref.resize(save_ref_len);
-    saved_ref_timer.clear();
-    saved_ref_timer.resize(save_ref_len);
+
+    cfo_counter = 0;
+    num_samples_without_peak = 0;
+    current_packet_timer = last_packet_timer = uhd::time_spec_t(0.0);
 }
 
 void CycleStartDetector::post_peak_det()
@@ -163,22 +141,19 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
     }
 }
 
-void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &packet_start_time, bool &stop_signal_called)
+void CycleStartDetector::produce(std::vector<std::complex<float>> &packet, const size_t &packet_true_size, const uhd::time_spec_t &packet_start_time, bool &stop_signal_called)
 {
-    // insert first timer
-    uhd::time_spec_t next_time = packet_start_time; // USRP time of first packet
-
-    // insert samples into the buffer
-    for (size_t i = 0; i < samples_size; ++i)
+    // insert packet
+    if (packet.size() != packet_true_size)
     {
-        while (!synced_buffer.push(samples[i], next_time))
-        {
-            if (stop_signal_called)
-                break;
-            // LOG_DEBUG("Yield Producer");
-            std::this_thread::yield();
-        }
-        next_time += rx_sample_duration;
+        packet.erase(packet.begin() + packet_true_size, packet.end());
+    }
+
+    while (!packet_buffer.push(packet, packet_start_time))
+    {
+        if (stop_signal_called)
+            break;
+        std::this_thread::yield();
     }
 }
 
@@ -197,31 +172,12 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
     else
     {
         // auto start = std::chrono::high_resolution_clock::now();
-        for (int i = 0; i < corr_seq_len; ++i)
-        {
-            std::complex<float> sample;
-            while (!synced_buffer.pop(sample, timer[i]))
-            {
-                if (stop_signal_called)
-                    break;
-                // LOG_DEBUG("Yield Consumer");
-                std::this_thread::yield();
-            }
-            // adjust for CFO
-            if (cfo != 0.0)
-            {
-                sample *= std::complex<float>(std::cos(cfo * cfo_counter), -std::sin(cfo * cfo_counter));
-                cfo_counter++;
-                if (cfo_counter == cfo_count_max)
-                    cfo_counter = 0;
-            }
-            // insert data into deque buffer
-            samples_buffer.pop_front();
-            samples_buffer.push_back(sample);
-        }
+        // consume packet
+        unload_packet(stop_signal_called);
 
+        // Cross-correlation and PeakDetector
         std::vector<std::complex<float>> corr_results = fft_cross_correlate(samples_buffer);
-        peak_detector(corr_results, timer);
+        peak_detector(corr_results);
 
         // correlation_operation(samples_buffer, timer);
 
@@ -232,20 +188,59 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
     }
 }
 
-std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate(const std::deque<std::complex<float>> &samples)
+void CycleStartDetector::unload_packet(bool &stop_signal_called)
+{
+    std::vector<std::complex<float>> consumed_packet;
+    auto tmp_timer_ = current_packet_timer;
+
+    while (!packet_buffer.pop(consumed_packet, current_packet_timer))
+    {
+        if (stop_signal_called)
+            break;
+        // LOG_DEBUG("Yield Consumer");
+        std::this_thread::yield();
+    }
+
+    // update last packet timer
+    last_packet_timer = tmp_timer_;
+
+    packet_size = consumed_packet.size();
+
+    std::vector<std::complex<float>> tmp_buffer(samples_buffer.end() - N_zfc + 1, samples_buffer.end());
+    samples_buffer.clear();
+    samples_buffer.resize(consumed_packet.size() + tmp_buffer.size());
+
+    for (int i = 0; i < samples_buffer.size(); ++i)
+    {
+        if (i < tmp_buffer.size())
+            samples_buffer[i] = tmp_buffer[i];
+        else
+        {
+            samples_buffer[i] = consumed_packet[i];
+            // adjust for CFO
+            if (cfo != 0.0)
+            {
+                samples_buffer[i] *= std::complex<float>(std::cos(cfo * cfo_counter), -std::sin(cfo * cfo_counter));
+                cfo_counter++;
+                if (cfo_counter == cfo_count_max)
+                    cfo_counter = 0;
+            }
+        }
+    }
+}
+
+std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate(const std::vector<std::complex<float>> &samples)
 {
     std::vector<std::complex<float>> padded_samples, fft_samples, product(fft_L), ifft_result;
     fftw_wrapper.zeroPad(samples, padded_samples, fft_L);
     fftw_wrapper.fft(padded_samples, fft_samples);
 
     for (int i = 0; i < fft_L; ++i)
-    {
         product[i] = fft_samples[i] * zfc_seq_fft_conj[i];
-    }
 
     fftw_wrapper.ifft(product, ifft_result);
 
-    std::vector<std::complex<float>> result(ifft_result.begin(), ifft_result.begin() + corr_seq_len);
+    std::vector<std::complex<float>> result(ifft_result.begin(), ifft_result.begin() + packet_size);
     return result;
 }
 
@@ -266,28 +261,24 @@ std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate_LL(cons
     return result;
 }
 
-void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &corr_results, const std::vector<uhd::time_spec_t> &timer)
+void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &corr_results)
 {
     // Perform cross-correlation
     bool found_peak = false;
     float sum_ampl = 0.0;
     float corr_abs_val = 0.0;
     float curr_pnr = 0.0;
+    size_t L = corr_results.size();
 
-    for (int i = 0; i < corr_seq_len; ++i)
+    for (int i = 0; i < L; ++i)
     {
         std::complex<float> corr = corr_results[i];
         corr_abs_val = std::abs(corr) / N_zfc;
         curr_pnr = corr_abs_val / peak_det_obj_ref.noise_ampl;
 
-        // debug
-        if (curr_pnr > max_pnr)
-            max_pnr = curr_pnr;
-
-        if (curr_pnr >= peak_det_obj_ref.curr_pnr_threshold)
+        if (peak_det_obj_ref.process_corr(corr_abs_val, i))
         {
             found_peak = true;
-            peak_det_obj_ref.process_corr(corr, timer[i]);
             num_samples_without_peak = 0;
         }
         else
@@ -303,6 +294,8 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
 
         if (peak_det_obj_ref.detection_flag)
         {
+            // TODO: Here, check for last peak index and save ref signal
+            // TODO: Check if previous packet required to be stored to capture the entire ref signal
             // add N_zfc more samples to the end
             size_t M = 0;
             while ((M + i < corr_seq_len) & (M < N_zfc))

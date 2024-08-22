@@ -121,8 +121,9 @@ void PeakDetectionClass::reset_peaks_counter()
     peaks_count = 0; // insertPeaks takes care of other variables
 }
 
-void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, float &peak_val, const uhd::time_spec_t &peak_time)
+void PeakDetectionClass::insertPeak(const float &corr_abs, const size_t &sample_index)
 {
+    // TODO: save sample_index corresponding to the most recent peak
     if (peaks_count == 0) // First peak starts with index 0
         samples_from_first_peak = 0;
     // when more than 2 peaks, check previous registered peaks for correct spacing
@@ -189,15 +190,15 @@ void PeakDetectionClass::updatePrevPeak()
         removeLastPeak();
 }
 
-void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, const uhd::time_spec_t &samp_time)
+bool PeakDetectionClass::process_corr(const float &corr_abs, const size_t &sample_index)
 {
     const size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
 
-    float curr_peak_value = std::abs(corr_sample) / ref_seq_len / noise_ampl;
+    float curr_peak_value = corr_abs / noise_ampl;
 
     // First peak
     if (peaks_count == 0)
-        insertPeak(corr_sample, curr_peak_value, samp_time);
+        insertPeak(curr_peak_value, sample_index);
     else
     {
         // distance of current peak from last
@@ -235,15 +236,15 @@ void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, co
         // insert as a new peak and wait till its updated to the right spot
         else
         {
-            if (prev_peak_val < 0.8 * curr_peak_value)
-            {
-                LOG_DEBUG("*PeakDet* : Update previous peak.");
-                //   "Last peak val '%1%' is less than 80\% of current val '%2%'.",
-                //   prev_peak_val, curr_peak_value);
-                updatePrevPeak();
-                if (peaks_count > 2)
-                    LOG_WARN("This should not happen at the in-between peaks! Only first peak might show this artifact! ");
-            }
+            // if (prev_peak_val < 0.8 * curr_peak_value)
+            // {
+            //     LOG_DEBUG("*PeakDet* : Update previous peak.");
+            //     //   "Last peak val '%1%' is less than 80\% of current val '%2%'.",
+            //     //   prev_peak_val, curr_peak_value);
+            //     updatePrevPeak();
+            //     if (peaks_count > 2)
+            //         LOG_WARN("This should not happen at the in-between peaks! Only first peak might show this artifact! ");
+            // }
             insertPeak(corr_sample, curr_peak_value, samp_time);
         }
     }

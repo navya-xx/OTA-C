@@ -20,7 +20,7 @@ public:
     bool is_empty() const;
 
 private:
-    std::vector<BUFF_DATA_TYPE> buffer_;
+    std::vector<BUFF_DATA_TYPE> buffer;
     size_t capacity_;
     std::atomic<size_t> head_;
     std::atomic<size_t> tail_;
@@ -47,7 +47,7 @@ private:
 };
 
 template <typename BUFF_DATA_TYPE>
-CircularBuffer<BUFF_DATA_TYPE>::CircularBuffer(size_t &capacity) : buffer_(capacity), capacity_(capacity), head_(0), tail_(0)
+CircularBuffer<BUFF_DATA_TYPE>::CircularBuffer(size_t &capacity) : buffer(capacity), capacity_(capacity), head_(0), tail_(0)
 {
     // Ensure that the capacity is power of 2
     if (capacity & (capacity - 1))
@@ -60,7 +60,7 @@ template <typename BUFF_DATA_TYPE>
 void CircularBuffer<BUFF_DATA_TYPE>::resize(const size_t &capacity)
 {
     capacity_ = capacity;
-    buffer_.resize(capacity);
+    buffer.resize(capacity);
 }
 
 template <typename BUFF_DATA_TYPE>
@@ -72,7 +72,7 @@ bool CircularBuffer<BUFF_DATA_TYPE>::push(const BUFF_DATA_TYPE &item)
     {
         return false; // Buffer is full
     }
-    buffer_[current_head] = item;
+    buffer[current_head] = item;
     head_.store(next_head, std::memory_order_release);
     return true;
 }
@@ -85,7 +85,7 @@ bool CircularBuffer<BUFF_DATA_TYPE>::pop(BUFF_DATA_TYPE &item)
     {
         return false; // Buffer is empty
     }
-    item = buffer_[current_tail];
+    item = buffer[current_tail];
     tail_.store((current_tail + 1) & (capacity_ - 1), std::memory_order_release);
     return true;
 }
@@ -99,7 +99,7 @@ bool CircularBuffer<BUFF_DATA_TYPE>::pop(BUFF_DATA_TYPE &item)
 //     {
 //         return false; // Buffer is full
 //     }
-//     buffer_[current_tail] = item;
+//     buffer[current_tail] = item;
 //     tail_.store(next_tail, std::memory_order_release);
 //     return true;
 // }
@@ -126,7 +126,7 @@ void CircularBuffer<BUFF_DATA_TYPE>::reset()
 template <typename BUFF_DATA_TYPE>
 void CircularBuffer<BUFF_DATA_TYPE>::clear()
 {
-    buffer_.clear();
+    buffer.clear();
     head_.store(0, std::memory_order_relaxed);
     tail_.store(0, std::memory_order_relaxed);
 }
