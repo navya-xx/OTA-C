@@ -16,9 +16,11 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
-std::string create_calib_data_str(const float &amplitude)
+std::string create_calib_data_str(const std::string tx_dev, const std::string rx_dev, const float &amplitude)
 {
     json jdata;
+    jdata["tx_dev"] = tx_dev;
+    jdata["rx_dev"] = rx_dev;
     jdata["amplitude"] = amplitude;
     return jdata.dump(4);
 }
@@ -57,7 +59,9 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::ofstream calib_file;
 
     MQTTClient &mqttClient = MQTTClient::getInstance();
-    std::string calib_topic = "calibration/data/" + device_id;
+    std::ostringstream calib_topic_oss;
+    calib_topic_oss << "calibration/data/gains_rx" << std::fixed << std::setprecision(1) << usrp_obj.rx_gain << "tx" << std::fixed << std::setprecision(1) << usrp_obj.tx_gain;
+    std::string calib_topic = calib_topic_oss.str();
 
     float rx_duration = is_cent ? 3.0 : 0.0; // fix duration for cent node
 
@@ -102,7 +106,15 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         {
             LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
             append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
-            std::string json_data = create_calib_data_str(csd_obj.est_ref_sig_amp);
+            std::string json_data;
+            if (is_cent)
+            {
+                json_data = create_calib_data_str(parser.getValue_str("leaf-id"), device_id, csd_obj.est_ref_sig_amp);
+            }
+            else
+            {
+                json_data = create_calib_data_str(device_id, parser.getValue_str("cent-id"), csd_obj.est_ref_sig_amp);
+            }
             mqttClient.publish(calib_topic, json_data);
             ++round;
             calib_retry = 0;
