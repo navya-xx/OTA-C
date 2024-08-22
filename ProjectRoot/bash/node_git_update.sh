@@ -32,7 +32,7 @@ do
     # cmd="ssh ${node_name} screen -dmS git_pull_n_make bash -c 'cd \$HOME/OTA-C && git stash && git pull && mkdir -p \$HOME/OTA-C/ProjectRoot/build/ && cd \$HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j8 && echo \"Success\"'"
     # echo $cmd
 
-    tmux send-keys -t $SESSION_NAME:0.$i  "ssh ${node_name} 'cd \$HOME/OTA-C && git stash && git pull && mkdir -p \$HOME/OTA-C/ProjectRoot/build/ && cd \$HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j8 && echo \"Success\"'" C-m
+    tmux send-keys -t $SESSION_NAME:0.$i  "ssh ${node_name} 'cd \$HOME/OTA-C && git stash && git checkout main && git pull && mkdir -p \$HOME/OTA-C/ProjectRoot/build/ && cd \$HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j8 && echo \"Success\"'" C-m
     # echo "Git update on $node_name complete!"
     # eval "ssh ${node_name} 'cd \$HOME/OTA-C/cpp/build/; cmake ../; make -j4'"
 done
