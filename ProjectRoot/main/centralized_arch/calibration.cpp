@@ -114,7 +114,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             }
             else
             {
-                json_data = create_calib_data_str(device_id, parser.getValue_str("cent-id"), usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
+                json_data = create_calib_data_str(parser.getValue_str("cent-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
             }
             mqttClient.publish(calib_topic, json_data);
             ++round;
