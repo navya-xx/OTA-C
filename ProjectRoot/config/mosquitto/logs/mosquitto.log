@@ -704,3 +704,6 @@
 2024-08-23T06:26:37: Sending PINGRESP to TelemetryDb_client
 2024-08-23T06:27:37: Received PINGREQ from TelemetryDb_client
 2024-08-23T06:27:37: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:28:05: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.
+2024-08-23T06:28:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:28:37: Sending PINGRESP to TelemetryDb_client
