@@ -98,7 +98,8 @@ void MQTTClient::setMessageCallback(const std::string &topic, std::function<void
 // Publish a message to a topic with a timestamp
 void MQTTClient::publish(const std::string &topic, const std::string &payload)
 {
-    connect(); // Ensure connection before publishing
+    if (!isConnected())
+        connect(); // Ensure connection before publishing
 
     std::string timestampedPayload;
     std::string timestamp = getCurrentTimeString(); // Get the current time
@@ -137,7 +138,9 @@ void MQTTClient::publish(const std::string &topic, const std::string &payload)
 // Subscribe to a topic
 void MQTTClient::subscribe(const std::string &topic)
 {
-    connect();
+    if (!isConnected())
+        connect();
+
     try
     {
         client.subscribe(topic, 1);

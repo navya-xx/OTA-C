@@ -536,3 +536,171 @@
 2024-08-23T03:58:00: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.
 2024-08-23T04:28:01: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.
 2024-08-23T04:58:02: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.
+2024-08-23T05:21:11: New connection from 192.168.5.241:47822 on port 1883.
+2024-08-23T05:21:11: New client connected from 192.168.5.241:47822 as 32B172B (p2, c1, k20).
+2024-08-23T05:21:11: No will message specified.
+2024-08-23T05:21:11: Sending CONNACK to 32B172B (0, 0)
+2024-08-23T05:21:12: New connection from 192.168.5.247:38746 on port 1883.
+2024-08-23T05:21:12: New client connected from 192.168.5.247:38746 as 32B1728 (p2, c1, k20).
+2024-08-23T05:21:12: No will message specified.
+2024-08-23T05:21:12: Sending CONNACK to 32B1728 (0, 0)
+2024-08-23T05:21:34: Received PINGREQ from 32B172B
+2024-08-23T05:21:34: Sending PINGRESP to 32B172B
+2024-08-23T05:21:34: Received PINGREQ from 32B1728
+2024-08-23T05:21:34: Sending PINGRESP to 32B1728
+2024-08-23T05:21:47: Client 32B1728 closed its connection.
+2024-08-23T05:21:56: Received PINGREQ from 32B172B
+2024-08-23T05:21:56: Sending PINGRESP to 32B172B
+2024-08-23T05:22:18: Received PINGREQ from 32B172B
+2024-08-23T05:22:18: Sending PINGRESP to 32B172B
+2024-08-23T05:22:40: Received PINGREQ from 32B172B
+2024-08-23T05:22:40: Sending PINGRESP to 32B172B
+2024-08-23T05:23:02: Received PINGREQ from 32B172B
+2024-08-23T05:23:02: Sending PINGRESP to 32B172B
+2024-08-23T05:23:24: Received PINGREQ from 32B172B
+2024-08-23T05:23:24: Sending PINGRESP to 32B172B
+2024-08-23T05:23:46: Received PINGREQ from 32B172B
+2024-08-23T05:23:46: Sending PINGRESP to 32B172B
+2024-08-23T05:24:08: Received PINGREQ from 32B172B
+2024-08-23T05:24:08: Sending PINGRESP to 32B172B
+2024-08-23T05:24:30: Received PINGREQ from 32B172B
+2024-08-23T05:24:30: Sending PINGRESP to 32B172B
+2024-08-23T05:24:52: Received PINGREQ from 32B172B
+2024-08-23T05:24:52: Sending PINGRESP to 32B172B
+2024-08-23T05:25:14: Received PINGREQ from 32B172B
+2024-08-23T05:25:14: Sending PINGRESP to 32B172B
+2024-08-23T05:25:36: Received PINGREQ from 32B172B
+2024-08-23T05:25:36: Sending PINGRESP to 32B172B
+2024-08-23T05:25:58: Received PINGREQ from 32B172B
+2024-08-23T05:25:58: Sending PINGRESP to 32B172B
+2024-08-23T05:26:20: Received PINGREQ from 32B172B
+2024-08-23T05:26:20: Sending PINGRESP to 32B172B
+2024-08-23T05:26:42: Received PINGREQ from 32B172B
+2024-08-23T05:26:42: Sending PINGRESP to 32B172B
+2024-08-23T05:27:04: Received PINGREQ from 32B172B
+2024-08-23T05:27:04: Sending PINGRESP to 32B172B
+2024-08-23T05:27:26: Received PINGREQ from 32B172B
+2024-08-23T05:27:26: Sending PINGRESP to 32B172B
+2024-08-23T05:27:43: New connection from 192.168.5.247:45762 on port 1883.
+2024-08-23T05:27:43: New client connected from 192.168.5.247:45762 as cent_32B1728 (p2, c1, k20).
+2024-08-23T05:27:43: No will message specified.
+2024-08-23T05:27:43: Sending CONNACK to cent_32B1728 (0, 0)
+2024-08-23T05:27:43: Received PUBLISH from cent_32B1728 (d0, q1, r0, m1, 'config/run_config_info', ... (146 bytes))
+2024-08-23T05:27:43: Sending PUBACK to cent_32B1728 (m1, rc0)
+2024-08-23T05:27:45: Client cent_32B1728 closed its connection.
+2024-08-23T05:27:48: Received PINGREQ from 32B172B
+2024-08-23T05:27:48: Sending PINGRESP to 32B172B
+2024-08-23T05:28:03: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.
+2024-08-23T05:28:10: Received PINGREQ from 32B172B
+2024-08-23T05:28:10: Sending PINGRESP to 32B172B
+2024-08-23T05:28:32: Received PINGREQ from 32B172B
+2024-08-23T05:28:32: Sending PINGRESP to 32B172B
+2024-08-23T05:28:40: New connection from 127.0.0.1:50912 on port 1883.
+2024-08-23T05:28:40: New client connected from 127.0.0.1:50912 as auto-C32A57E1-17C8-3E11-0F98-3650EDE52D7E (p2, c1, k60).
+2024-08-23T05:28:40: No will message specified.
+2024-08-23T05:28:40: Sending CONNACK to auto-C32A57E1-17C8-3E11-0F98-3650EDE52D7E (0, 0)
+2024-08-23T05:28:40: Received SUBSCRIBE from auto-C32A57E1-17C8-3E11-0F98-3650EDE52D7E
+2024-08-23T05:28:40: 	config (QoS 0)
+2024-08-23T05:28:40: auto-C32A57E1-17C8-3E11-0F98-3650EDE52D7E 0 config
+2024-08-23T05:28:40: Sending SUBACK to auto-C32A57E1-17C8-3E11-0F98-3650EDE52D7E
+2024-08-23T05:28:54: Received PINGREQ from 32B172B
+2024-08-23T05:28:54: Sending PINGRESP to 32B172B
+2024-08-23T05:29:16: Received PINGREQ from 32B172B
+2024-08-23T05:29:16: Sending PINGRESP to 32B172B
+2024-08-23T05:29:38: Received PINGREQ from 32B172B
+2024-08-23T05:29:38: Sending PINGRESP to 32B172B
+2024-08-23T05:29:39: Received DISCONNECT from auto-C32A57E1-17C8-3E11-0F98-3650EDE52D7E
+2024-08-23T05:29:39: Client auto-C32A57E1-17C8-3E11-0F98-3650EDE52D7E disconnected.
+2024-08-23T05:29:44: New connection from 127.0.0.1:44296 on port 1883.
+2024-08-23T05:29:44: New client connected from 127.0.0.1:44296 as auto-728928A8-D70C-1F55-F73E-1B631B1D0D01 (p2, c1, k60).
+2024-08-23T05:29:44: No will message specified.
+2024-08-23T05:29:44: Sending CONNACK to auto-728928A8-D70C-1F55-F73E-1B631B1D0D01 (0, 0)
+2024-08-23T05:29:44: Received SUBSCRIBE from auto-728928A8-D70C-1F55-F73E-1B631B1D0D01
+2024-08-23T05:29:44: 	config/run_config_info (QoS 0)
+2024-08-23T05:29:44: auto-728928A8-D70C-1F55-F73E-1B631B1D0D01 0 config/run_config_info
+2024-08-23T05:29:44: Sending SUBACK to auto-728928A8-D70C-1F55-F73E-1B631B1D0D01
+2024-08-23T05:29:50: Received DISCONNECT from auto-728928A8-D70C-1F55-F73E-1B631B1D0D01
+2024-08-23T05:29:50: Client auto-728928A8-D70C-1F55-F73E-1B631B1D0D01 disconnected.
+2024-08-23T05:30:00: Received PINGREQ from 32B172B
+2024-08-23T05:30:00: Sending PINGRESP to 32B172B
+2024-08-23T05:30:22: Received PINGREQ from 32B172B
+2024-08-23T05:30:22: Sending PINGRESP to 32B172B
+2024-08-23T05:30:44: Received PINGREQ from 32B172B
+2024-08-23T05:30:44: Sending PINGRESP to 32B172B
+2024-08-23T05:31:06: Received PINGREQ from 32B172B
+2024-08-23T05:31:06: Sending PINGRESP to 32B172B
+2024-08-23T05:31:28: Received PINGREQ from 32B172B
+2024-08-23T05:31:28: Sending PINGRESP to 32B172B
+2024-08-23T05:31:47: Client 32B172B closed its connection.
+2024-08-23T05:58:04: Saving in-memory database to /home/nuc/OTA-C/ProjectRoot/config/mosquitto/mosquitto.db.
+2024-08-23T06:09:35: New connection from 127.0.0.1:40797 on port 1883.
+2024-08-23T06:09:35: New client connected from 127.0.0.1:40797 as TelemetryDb_client (p2, c1, k60).
+2024-08-23T06:09:35: No will message specified.
+2024-08-23T06:09:35: Sending CONNACK to TelemetryDb_client (0, 0)
+2024-08-23T06:09:35: Received SUBSCRIBE from TelemetryDb_client
+2024-08-23T06:09:35: 	calibration/data/+ (QoS 0)
+2024-08-23T06:09:35: TelemetryDb_client 0 calibration/data/+
+2024-08-23T06:09:35: Sending SUBACK to TelemetryDb_client
+2024-08-23T06:09:35: Received SUBSCRIBE from TelemetryDb_client
+2024-08-23T06:09:35: 	config/run_config_info (QoS 0)
+2024-08-23T06:09:35: TelemetryDb_client 0 config/run_config_info
+2024-08-23T06:09:35: Sending SUBACK to TelemetryDb_client
+2024-08-23T06:10:35: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:10:35: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:11:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:11:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:12:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:12:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:13:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:13:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:14:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:14:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:15:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:15:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:16:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:16:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:17:32: New connection from 192.168.5.247:48666 on port 1883.
+2024-08-23T06:17:32: New client connected from 192.168.5.247:48666 as cent_32B1728 (p2, c1, k20).
+2024-08-23T06:17:32: No will message specified.
+2024-08-23T06:17:32: Sending CONNACK to cent_32B1728 (0, 0)
+2024-08-23T06:17:32: Received PUBLISH from cent_32B1728 (d0, q1, r0, m1, 'config/run_config_info', ... (4598 bytes))
+2024-08-23T06:17:32: Sending PUBLISH to TelemetryDb_client (d0, q0, r0, m0, 'config/run_config_info', ... (4598 bytes))
+2024-08-23T06:17:32: Sending PUBACK to cent_32B1728 (m1, rc0)
+2024-08-23T06:17:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:17:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:17:39: New connection from 192.168.5.247:46126 on port 1883.
+2024-08-23T06:17:40: New client connected from 192.168.5.247:46126 as nuc (p2, c1, k20).
+2024-08-23T06:17:40: No will message specified.
+2024-08-23T06:17:40: Sending CONNACK to nuc (0, 0)
+2024-08-23T06:17:54: Received PINGREQ from cent_32B1728
+2024-08-23T06:17:54: Sending PINGRESP to cent_32B1728
+2024-08-23T06:18:01: Received PINGREQ from nuc
+2024-08-23T06:18:01: Sending PINGRESP to nuc
+2024-08-23T06:18:16: Received PINGREQ from cent_32B1728
+2024-08-23T06:18:16: Sending PINGRESP to cent_32B1728
+2024-08-23T06:18:23: Received PINGREQ from nuc
+2024-08-23T06:18:23: Sending PINGRESP to nuc
+2024-08-23T06:18:34: Received DISCONNECT from nuc
+2024-08-23T06:18:34: Client nuc disconnected.
+2024-08-23T06:18:34: Received DISCONNECT from cent_32B1728
+2024-08-23T06:18:34: Client cent_32B1728 disconnected.
+2024-08-23T06:18:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:18:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:19:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:19:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:20:36: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:20:36: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:21:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:21:37: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:22:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:22:37: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:23:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:23:37: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:24:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:24:37: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:25:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:25:37: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:26:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:26:37: Sending PINGRESP to TelemetryDb_client
+2024-08-23T06:27:37: Received PINGREQ from TelemetryDb_client
+2024-08-23T06:27:37: Sending PINGRESP to TelemetryDb_client

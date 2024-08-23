@@ -147,29 +147,26 @@ void ConfigParser::print_values()
 
 std::string ConfigParser::print_json()
 {
-    json json_data;
+    json json_data = json::array();
 
     for (const auto &pair : string_data)
     {
-        json_data["varname"] = pair.first;
-        json_data["vartype"] = pair.second;
-        json_data["desc"] = desc_data[pair.first];
+        json_data.push_back({{"name", pair.first}, {"value", pair.second}, {"desc", desc_data[pair.first]}});
     }
 
     for (const auto &pair : int_data)
     {
-        json_data["varname"] = pair.first;
-        json_data["vartype"] = pair.second;
-        json_data["desc"] = desc_data[pair.first];
+        json_data.push_back({{"name", pair.first}, {"value", pair.second}, {"desc", desc_data[pair.first]}});
     }
 
     for (const auto &pair : float_data)
     {
-        json_data["varname"] = pair.first;
-        json_data["vartype"] = pair.second;
-        json_data["desc"] = desc_data[pair.first];
+        json_data.push_back({{"name", pair.first}, {"value", pair.second}, {"desc", desc_data[pair.first]}});
     }
 
-    std::string jsonString = json_data.dump(4);
+    json final_config;
+    final_config["config"] = json_data;
+
+    std::string jsonString = final_config.dump(4);
     return jsonString;
 }

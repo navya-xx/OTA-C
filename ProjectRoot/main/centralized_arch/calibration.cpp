@@ -16,11 +16,13 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
-std::string create_calib_data_str(const std::string tx_dev, const std::string rx_dev, const float &amplitude)
+std::string create_calib_data_str(const std::string tx_dev, const std::string rx_dev, const float tx_gain, const float rx_gain, const float &amplitude)
 {
     json jdata;
     jdata["tx_dev"] = tx_dev;
     jdata["rx_dev"] = rx_dev;
+    jdata["tx_gain"] = tx_gain;
+    jdata["rx_gain"] = rx_gain;
     jdata["amplitude"] = amplitude;
     return jdata.dump(4);
 }
@@ -59,9 +61,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::ofstream calib_file;
 
     MQTTClient &mqttClient = MQTTClient::getInstance();
-    std::ostringstream calib_topic_oss;
-    calib_topic_oss << "calibration/data/gains_rx" << std::fixed << std::setprecision(1) << usrp_obj.rx_gain << "tx" << std::fixed << std::setprecision(1) << usrp_obj.tx_gain;
-    std::string calib_topic = calib_topic_oss.str();
+    std::string calib_topic = "calibration/results";
 
     float rx_duration = is_cent ? 3.0 : 0.0; // fix duration for cent node
 
@@ -109,11 +109,11 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             std::string json_data;
             if (is_cent)
             {
-                json_data = create_calib_data_str(parser.getValue_str("leaf-id"), device_id, csd_obj.est_ref_sig_amp);
+                json_data = create_calib_data_str(parser.getValue_str("leaf-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
             }
             else
             {
-                json_data = create_calib_data_str(device_id, parser.getValue_str("cent-id"), csd_obj.est_ref_sig_amp);
+                json_data = create_calib_data_str(device_id, parser.getValue_str("cent-id"), usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
             }
             mqttClient.publish(calib_topic, json_data);
             ++round;
@@ -222,8 +222,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     LOG_INFO_FMT("Starting Calibration routine at %1% ...", is_central_server ? "CENT" : "LEAF");
 
     /*------- MQTT Client setup -------*/
-    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-    mqttClient.publish("config/run_config_info", parser.print_json());
+    std::string client_id = device_type + "_" + device_id;
+    MQTTClient &mqttClient = MQTTClient::getInstance(client_id);
+    if (device_type == "cent")
+    {
+        LOG_INFO(parser.print_json());
+        mqttClient.publish("config/run_config_info", parser.print_json());
+    }
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
