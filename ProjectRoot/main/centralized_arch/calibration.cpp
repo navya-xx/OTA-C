@@ -16,6 +16,8 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
+static std::string calib_topic = "calibration/results";
+
 std::string create_calib_data_str(const std::string tx_dev, const std::string rx_dev, const float tx_gain, const float rx_gain, const float &amplitude)
 {
     json jdata;
@@ -61,7 +63,6 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::ofstream calib_file;
 
     MQTTClient &mqttClient = MQTTClient::getInstance();
-    std::string calib_topic = "calibration/results";
 
     float rx_duration = is_cent ? 3.0 : 0.0; // fix duration for cent node
 

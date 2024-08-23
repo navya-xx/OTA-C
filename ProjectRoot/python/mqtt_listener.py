@@ -6,7 +6,7 @@ import json
 import time
 
 list_of_topics = [
-    "calibration/data/+",
+    "calibration/results",
     "config/run_config_info"
 ]
 
