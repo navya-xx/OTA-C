@@ -4,6 +4,7 @@ import sqlite3
 import paho.mqtt.client as mqtt
 import json
 import pandas as pd
+from datetime import datetime
 
 # MQTT settings
 MQTT_BROKER = 'localhost'
@@ -61,7 +62,12 @@ def process_calibration_data(dataframe):
         amp_mean = store_df['amp_ratio'].mean()
         amp_var = store_df['amp_ratio'].var()
         total_runs = store_df.shape[0]
-        calib_results = pd.concat([calib_results, pd.DataFrame([{'total_runs':total_runs, 'cent':cent, 'leaf':leaf, 'cent_tx_gain':store_df['cent_tx_gain'].values[0], 'leaf_rx_gain':store_df['leaf_rx_gain'].values[0], 'amp_ratio_mean':amp_mean, 'amp_ratio_var':amp_var, 'time':store_df['time'].min().strftime('%Y-%m-%d %H:%M:%S')}])], ignore_index=True)
+        if total_runs == 0:
+            print("%s : no calibration data available!")
+            continue
+        
+        new_df = pd.DataFrame([{'total_runs':total_runs, 'cent':cent, 'leaf':leaf, 'cent_tx_gain':store_df['cent_tx_gain'].values[0], 'leaf_rx_gain':store_df['leaf_rx_gain'].values[0], 'amp_ratio_mean':amp_mean, 'amp_ratio_var':amp_var, 'time':store_df['time'].min().strftime('%Y-%m-%d %H:%M:%S')}])
+        calib_results = pd.concat([calib_results, new_df], ignore_index=True)
 
     return calib_results
 
@@ -82,26 +88,36 @@ def main():
     calibration_data = pd.DataFrame()
 
     mqtt_publish_list = []
+    database_update_queries = []
+
+    # last_timestamp = datetime.strptime("2024-08-26 14:00:00", '%Y-%m-%d %H:%M:%S')
+    last_timestamp = datetime.now()
 
     try:
         # Query to select all messages from the table
         cursor.execute("SELECT id, topic, payload, timestamp, is_processed FROM mqtt_messages")
-        
+
         for row in cursor.fetchall():
             id, topic, payload, timestamp, is_processed = row
+            row_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
             
-            if (topic == CALIB_TOPIC and is_processed == 0):
+            if (topic == CALIB_TOPIC and (is_processed == 0 or row_time > last_timestamp)):
                 payload = eval(payload)
                 new_data_df = pd.DataFrame([payload])
                 new_data_df['time'] = pd.to_datetime(new_data_df['time'], format='%Y-%m-%d %H:%M:%S')
                 calibration_data = pd.concat([calibration_data, new_data_df], ignore_index=True)
-                cursor.execute('''
+                if (is_processed == 0):
+                    database_update_queries.append('''
                                     UPDATE mqtt_messages
                                     SET is_processed = 1
                                     WHERE id = ?
                                 ''', (id,))
+            
+        if calibration_data.shape[0] == 0:
+            raise Exception("No calibration data available at the moment.")
+            
         
-        conn.commit()
+        # conn.commit()
 
         # Process calibration data
         calib_res = process_calibration_data(calibration_data)
@@ -133,6 +149,13 @@ def main():
             mqtt_publish_list.append({'topic':topic, 'payload':json.dumps(cdict)})
 
         conn.commit()
+
+        # update database
+        if len(database_update_queries) > 0:
+            for q in database_update_queries:
+                cursor.execute(q)
+            
+            conn.commit()
         
     except sqlite3.Error as e:
         print(f"SQLite error: {e}")
@@ -143,16 +166,17 @@ def main():
     
     
     # Connect to MQTT broker
-    mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, client_id="calib_result_publisher")
-    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    for mdata in mqtt_publish_list:
-        result = mqtt_client.publish(mdata['topic'], mdata['payload'], retain=True)
-        if result.rc == 0:
-            print(f"Message '{mdata['payload']}' sent successfully to topic '{mdata['topic']}'")
-        else:
-            print(f"Failed to send message to topic '{mdata['topic']}', return code: {result.rc}")
-    # Stop MQTT loop and disconnect
-    mqtt_client.disconnect()
+    if len(mqtt_publish_list) > 0:
+        mqtt_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, client_id="calib_result_publisher")
+        mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        for mdata in mqtt_publish_list:
+            result = mqtt_client.publish(mdata['topic'], mdata['payload'], retain=True)
+            if result.rc == 0:
+                print(f"Message '{mdata['payload']}' sent successfully to topic '{mdata['topic']}'")
+            else:
+                print(f"Failed to send message to topic '{mdata['topic']}', return code: {result.rc}")
+        # Stop MQTT loop and disconnect
+        mqtt_client.disconnect()
 
 
 if __name__ == '__main__':
