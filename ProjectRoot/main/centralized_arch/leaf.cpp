@@ -7,6 +7,7 @@
 #include "waveforms.hpp"
 #include "cyclestartdetector.hpp"
 #include "MQTTClient.hpp"
+
 // #include <cstdlib>  // For system(), getenv()
 // #include <unistd.h> // For getpid(), getppid()
 
@@ -158,7 +159,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // -> register message callback
     float last_cfo = 0.0, calibration_ratio = 1.0;
     bool got_calib_ratio = false;
-    std::function<void(const std::string &)> CFO_callback = [&](const std::string &payload)
+    std::function<void(const std::string &)> CFO_callback = [&last_cfo](const std::string &payload)
     {
         try
         {
@@ -179,8 +180,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
     };
 
-    std::function<void(const std::string &)> calib_ratio_callback = [&](const std::string &payload)
+    std::function<void(const std::string &)> calib_ratio_callback = [&calibration_ratio, &got_calib_ratio](const std::string &payload)
     {
+        LOG_DEBUG("calib_ratio_callback");
         try
         {
             // Parse the JSON payload
@@ -201,9 +203,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
     };
 
-    mqttClient.setMessageCallback("calibration/CFO/" + device_id, CFO_callback);
+    mqttClient.setCallback("calibration/CFO/" + device_id, CFO_callback);
     std::string cent_serial = parser.getValue_str("cent-serial");
-    mqttClient.setMessageCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
+    mqttClient.setCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
 
     while (got_calib_ratio == false)
     {

@@ -1,184 +1,100 @@
 #include "MQTTClient.hpp"
 
-// Define fixed server address and client ID
-static const std::string SERVER_ADDRESS = "tcp://192.168.5.247:1883";
-// static const std::string CLIENT_ID = "test_nuc";
+// Initialize the static instance pointer to nullptr
+MQTTClient *MQTTClient::instance = nullptr;
 
-// Static map to hold instances by client ID
-std::map<std::string, std::unique_ptr<MQTTClient>> MQTTClient::instances;
-std::string MQTTClient::currentClientId = ""; // Store the current client ID
+// Define the fixed server address
+const std::string MQTTClient::serverAddress = "tcp://192.168.5.247:1883";
 
-// Singleton access method
+static const int qos_level = 1;
+
+// Public method to get the single instance of the class
 MQTTClient &MQTTClient::getInstance(const std::string &clientId)
 {
-    if (clientId.empty())
+    if (!instance)
     {
-        if (currentClientId.empty() || instances.find(currentClientId) == instances.end())
-        {
-            throw std::runtime_error("No client ID specified and no existing instance found.");
-        }
-        return *instances.at(currentClientId);
+        instance = new MQTTClient(clientId);
     }
-
-    auto it = instances.find(clientId);
-    if (it == instances.end())
-    {
-        // Create a new instance if it doesn't exist
-        instances[clientId] = std::unique_ptr<MQTTClient>(new MQTTClient(SERVER_ADDRESS, clientId));
-        currentClientId = clientId; // Update the current client ID
-        it = instances.find(clientId);
-    }
-    else
-    {
-        currentClientId = clientId; // Update the current client ID
-    }
-    return *it->second;
+    return *instance;
 }
 
-// Private Constructor
-MQTTClient::MQTTClient(const std::string &serverAddress, const std::string &clientId)
-    : client(serverAddress, clientId), clientId(clientId)
+// Private constructor with fixed server address
+MQTTClient::MQTTClient(const std::string &clientId)
+    : client(serverAddress, clientId)
 {
     connectOptions.set_clean_session(true);
     connectOptions.set_keep_alive_interval(20);
-    client.set_callback(*this);
+    client.set_message_callback([this](mqtt::const_message_ptr msg)
+                                { onMessage(msg->get_topic(), msg->to_string()); });
     connect();
 }
 
-// Private Destructor
-MQTTClient::~MQTTClient()
-{
-    if (client.is_connected())
-    {
-        disconnect();
-    }
-}
-
 // Connect to the MQTT broker
-void MQTTClient::connect()
+bool MQTTClient::connect()
 {
     try
     {
         client.connect(connectOptions)->wait();
-        LOG_DEBUG("Connected to MQTT broker.");
+        LOG_INFO_FMT("Connected to MQTT broker at  %1%", serverAddress);
+        return true;
     }
-    catch (const mqtt::exception &exc)
+    catch (const mqtt::exception &e)
     {
-        LOG_WARN_FMT("Connection error: %1%", exc.what());
+        LOG_WARN_FMT("Error connecting to MQTT broker:  %1%", e.what());
+        return false;
     }
 }
 
-// Disconnect from the MQTT broker
-void MQTTClient::disconnect()
+// Publish a message to a topic
+bool MQTTClient::publish(const std::string &topic, const std::string &message, bool retained)
 {
     try
     {
-        client.disconnect()->wait();
-        LOG_DEBUG_FMT("Disconnected from MQTT broker.");
+        client.publish(topic, message, qos_level, retained)->wait();
+        LOG_INFO_FMT("Message published to topic:  %1%", topic);
+        return true;
     }
-    catch (const mqtt::exception &exc)
+    catch (const mqtt::exception &e)
     {
-        LOG_WARN_FMT("Disconnection error: ", exc.what());
-    }
-}
-
-// Check if connected
-bool MQTTClient::isConnected() const
-{
-    return client.is_connected();
-}
-
-// Set message callback for a specific topic
-void MQTTClient::setMessageCallback(const std::string &topic, std::function<void(const std::string &)> callback)
-{
-    messageCallbacks[topic] = callback;
-    subscribe(topic);
-}
-
-// Publish a message to a topic with a timestamp
-void MQTTClient::publish(const std::string &topic, const std::string &payload)
-{
-    if (!isConnected())
-        connect(); // Ensure connection before publishing
-
-    std::string timestampedPayload;
-    std::string timestamp = getCurrentTimeString(); // Get the current time
-
-    try
-    {
-        // Parse the input payload into JSON
-        json jsonPayload = json::parse(payload);
-
-        // Add the timestamp to the JSON object
-        jsonPayload["time"] = timestamp;
-
-        // Convert the JSON object back to a string
-        timestampedPayload = jsonPayload.dump();
-    }
-    catch (const json::parse_error &e)
-    {
-        // Handle JSON parsing error
-        LOG_WARN_FMT("JSON parse error: %1%", e.what());
-
-        // Optionally, you could publish the original payload with a basic error structure
-        timestampedPayload = R"({"error": "Invalid JSON", "original_payload": ")" + payload + R"(", "time": ")" + timestamp + R"("})";
-    }
-
-    try
-    {
-        client.publish(topic, timestampedPayload, 1, false);
-        LOG_DEBUG_FMT("Published message to %1% : %2%", topic, timestampedPayload);
-    }
-    catch (const mqtt::exception &exc)
-    {
-        LOG_WARN_FMT("Publish error: %1%", exc.what());
+        LOG_WARN_FMT("Error publishing message:  %1%", e.what());
+        return false;
     }
 }
 
 // Subscribe to a topic
-void MQTTClient::subscribe(const std::string &topic)
+bool MQTTClient::subscribe(const std::string &topic)
 {
-    if (!isConnected())
-        connect();
-
     try
     {
-        client.subscribe(topic, 1)->wait();
-        LOG_DEBUG_FMT("Subscribed to topic %1%", topic);
+        client.subscribe(topic, qos_level)->wait();
+        LOG_INFO_FMT("Subscribed to topic:  %1%", topic);
+        return true;
     }
-    catch (const mqtt::exception &exc)
+    catch (const mqtt::exception &e)
     {
-        LOG_WARN_FMT("Subscribe error: %1%", exc.what());
+        LOG_WARN_FMT("Error subscribing to topic:  %1%", e.what());
+        return false;
     }
 }
 
-// Handle messages arriving on subscribed topics
-void MQTTClient::onMessageArrived(mqtt::const_message_ptr msg)
+// Set a callback for incoming messages
+void MQTTClient::setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback)
 {
-    std::string topic = msg->get_topic();
-    std::string payload = msg->get_payload_str();
+    callbacks[topic] = callback;
+}
 
-    auto it = messageCallbacks.find(topic);
-    if (it != messageCallbacks.end())
+// Internal callback function that processes incoming messages
+void MQTTClient::onMessage(const std::string &topic, const std::string &payload)
+{
+    auto it = callbacks.find(topic);
+    if (it != callbacks.end())
     {
-        it->second(payload);
+        it->second(payload); // Call the stored callback function
     }
     else
     {
-        LOG_WARN_FMT("Received message on unknown topic %1% : %2%", topic, payload);
+        LOG_WARN_FMT("No callback set for topic:  %1%", topic);
     }
-}
-
-// Connection callback
-void MQTTClient::onConnect(const mqtt::token &tok)
-{
-    LOG_DEBUG("Connected with MQTT broker.");
-}
-
-// Disconnection callback
-void MQTTClient::onDisconnect(const mqtt::token &tok)
-{
-    LOG_DEBUG("Disconnected from MQTT broker.");
 }
 
 // Function to get the current time as a string
