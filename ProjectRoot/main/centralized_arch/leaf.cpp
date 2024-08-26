@@ -92,7 +92,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             counter++;
         }
 
-        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, unit_rand_samples.size());
+        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp, unit_rand_samples.size());
         bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, false);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
@@ -168,6 +168,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             if (jsonData.contains("cfo"))
             {
                 last_cfo = jsonData["cfo"].get<float>();
+                LOG_DEBUG_FMT("Last CFO : %1%", last_cfo);
                 // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
             }
         }
@@ -188,6 +189,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             if (jsonData.contains("amp_ratio_mean"))
             {
                 calibration_ratio = jsonData["amp_ratio_mean"].get<float>();
+                LOG_DEBUG_FMT("Calib ratio : %1%", calibration_ratio);
                 // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
             }
         }
