@@ -157,6 +157,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // subscribe to CFO topic
     // -> register message callback
     float last_cfo = 0.0, calibration_ratio = 1.0;
+    bool got_calib_ratio = false;
     std::function<void(const std::string &)> CFO_callback = [&](const std::string &payload)
     {
         try
@@ -190,6 +191,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             {
                 calibration_ratio = jsonData["amp_ratio_mean"].get<float>();
                 LOG_DEBUG_FMT("Calib ratio : %1%", calibration_ratio);
+                got_calib_ratio = true;
                 // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
             }
         }
@@ -202,7 +204,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     mqttClient.setMessageCallback("calibration/CFO/" + device_id, CFO_callback);
     std::string cent_serial = parser.getValue_str("cent-serial");
     mqttClient.setMessageCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    while (got_calib_ratio == false)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);

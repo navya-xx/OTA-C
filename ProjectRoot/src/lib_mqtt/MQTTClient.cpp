@@ -143,7 +143,7 @@ void MQTTClient::subscribe(const std::string &topic)
 
     try
     {
-        client.subscribe(topic, 1);
+        client.subscribe(topic, 1)->wait();
         LOG_DEBUG_FMT("Subscribed to topic %1%", topic);
     }
     catch (const mqtt::exception &exc)
