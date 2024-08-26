@@ -81,6 +81,7 @@ bool MQTTClient::subscribe(const std::string &topic)
 void MQTTClient::setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback)
 {
     callbacks[topic] = callback;
+    subscribe(topic);
 }
 
 // Internal callback function that processes incoming messages
