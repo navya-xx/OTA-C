@@ -7,14 +7,22 @@ import time
 
 list_of_topics = [
     "calibration/results",
+    "calibration/ratio/#",
     "config/run_config_info"
 ]
 
 # SQLite setup
 conn = sqlite3.connect('../config/mosquitto/telemetry.db')
 c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS messages
-             (topic text, payload text, timestamp text)''')
+c.execute('''
+          CREATE TABLE IF NOT EXISTS mqtt_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            topic TEXT NOT NULL, 
+            payload TEXT, 
+            timestamp TEXT NOT NULL,
+            is_processed INTEGER DEFAULT 0
+          );
+          ''')
 conn.commit()
 
 # Callback when a message is received
@@ -24,7 +32,7 @@ def on_message(client, userdata, msg):
     print(f"Received message on {msg.topic}: {payload_str}")
 
     # Insert message into the database
-    c.execute("INSERT INTO messages (topic, payload, timestamp) VALUES (?, ?, ?)",
+    c.execute("INSERT INTO mqtt_messages (topic, payload, timestamp) VALUES (?, ?, ?)",
               (msg.topic, payload_str, timestamp))
     conn.commit()
 

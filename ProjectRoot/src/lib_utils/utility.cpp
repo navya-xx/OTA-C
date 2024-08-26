@@ -228,3 +228,64 @@ float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const fl
     }
     return counter == 0 ? 0.0 : sum / counter;
 }
+
+void update_device_config_cfo(const std::string &serial, const float &cfo)
+{
+    const char *homeDir = std::getenv("HOME");
+    std::string homeDirStr(homeDir);
+    std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
+    std::string file = projectDir + "/config/devices.json";
+    std::ifstream inputFile(file);
+    if (!inputFile.is_open())
+    {
+        LOG_WARN_FMT("Failed to open the file: %1%", file);
+    }
+    json device_config;
+    inputFile >> device_config;
+    inputFile.close();
+
+    for (auto &entry : device_config["leaf-nodes"])
+    {
+        if (entry.contains("serial") && entry["serial"] == serial)
+        {
+            entry["parameters"]["last_CFO"] = cfo;
+            break;
+        }
+    }
+
+    std::ofstream outputFile(file);
+    if (!outputFile.is_open())
+    {
+        LOG_WARN_FMT("Failed to open the file for writing: %1%", file);
+    }
+
+    outputFile << device_config.dump(4);
+    outputFile.close();
+}
+
+float obtain_last_cfo(const std::string &serial)
+{
+    const char *homeDir = std::getenv("HOME");
+    std::string homeDirStr(homeDir);
+    std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
+    std::string file = projectDir + "/config/devices.json";
+    std::ifstream inputFile(file);
+    if (!inputFile.is_open())
+    {
+        LOG_WARN_FMT("Failed to open the file: %1%", file);
+    }
+    json device_config;
+    inputFile >> device_config;
+    inputFile.close();
+
+    for (auto &entry : device_config["leaf-nodes"])
+    {
+        if (entry.contains("serial") && entry["serial"] == serial)
+        {
+            return entry["parameters"]["last_CFO"].get<float>();
+        }
+    }
+
+    LOG_WARN("CFO not found!!");
+    return 0.0;
+}

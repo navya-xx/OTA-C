@@ -12,7 +12,8 @@ CycleStartDetector::CycleStartDetector(
                                         timer(),
                                         fftw_wrapper(),
                                         cfo(0.0),
-                                        cfo_counter(0)
+                                        cfo_counter(0),
+                                        calibration_ratio(1.0)
 {
     prev_timer = uhd::time_spec_t(0.0);
     N_zfc = parser.getValue_int("Ref-N-zfc");

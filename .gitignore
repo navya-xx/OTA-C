@@ -15,4 +15,4 @@ plots
 ProjectRoot/build
 ProjectRoot/storage
 ProjectRoot/bkp_storage
-ProjectRoot/config/mosquitto/
+ProjectRoot/config/mosquitto/logs

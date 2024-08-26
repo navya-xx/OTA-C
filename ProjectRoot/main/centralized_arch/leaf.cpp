@@ -6,6 +6,7 @@
 #include "usrp_class.hpp"
 #include "waveforms.hpp"
 #include "cyclestartdetector.hpp"
+#include "MQTTClient.hpp"
 // #include <cstdlib>  // For system(), getenv()
 // #include <unistd.h> // For getpid(), getppid()
 
@@ -15,38 +16,6 @@ void sig_int_handler(int)
 {
     stop_signal_called = true;
 }
-// pid_t getCurrentProcessID()
-// {
-//     return getpid();
-// }
-// std::string getProcessName()
-// {
-//     std::string processName;
-//     std::ifstream("/proc/self/comm") >> processName;
-//     return processName;
-// }
-// // Function to kill all other instances of this program
-// void killOtherInstances()
-// {
-//     std::string processName = getProcessName();
-//     pid_t currentPID = getCurrentProcessID();
-
-//     // Build the command to list and kill other instances
-//     std::ostringstream command;
-//     command << "pgrep -f " << processName << " | grep -v " << currentPID;
-
-//     std::string line;
-//     std::ifstream cmd(command.str().c_str());
-//     while (std::getline(cmd, line))
-//     {
-//         pid_t pid = std::stoi(line);
-//         if (pid != currentPID)
-//         {
-//             std::cout << "Killing process " << pid << std::endl;
-//             kill(pid, SIGKILL);
-//         }
-//     }
-// }
 
 void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, CycleStartDetector &csd_obj, ConfigParser &parser, std::atomic<bool> &csd_success_signal, std::string homeDirStr)
 {
@@ -113,15 +82,16 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
 
         // adjust for CFO
-        if (csd_obj.cfo != 0.0)
+        int counter = 0;
+        for (auto &samp : unit_rand_samples)
         {
-            int counter = 0;
-            for (auto &samp : unit_rand_samples)
-            {
-                samp *= min_ch_scale / csd_obj.est_ref_sig_amp * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
-                counter++;
-            }
+            if (csd_obj.cfo != 0.0)
+                samp *= min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
+            else
+                samp *= min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp;
+            counter++;
         }
+
         LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, wf_gen.scale, unit_rand_samples.size());
         bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, false);
         if (!transmit_success)
@@ -181,28 +151,63 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         parser.set_value("test-zfc-m", std::to_string(41), "int", "ZFC param `m` for test signal.");
     parser.set_value("storage-folder", projectDir + "/storage", "str", "Location of storage director");
 
+    /*------- MQTT Client setup -------*/
+    std::string client_id = "leaf_" + device_id;
+    MQTTClient &mqttClient = MQTTClient::getInstance(client_id);
+    // subscribe to CFO topic
+    // -> register message callback
+    float last_cfo = 0.0, calibration_ratio = 1.0;
+    std::function<void(const std::string &)> CFO_callback = [&](const std::string &payload)
+    {
+        try
+        {
+            // Parse the JSON payload
+            json jsonData = json::parse(payload);
+
+            // Update the temperature variable if the key exists
+            if (jsonData.contains("cfo"))
+            {
+                last_cfo = jsonData["cfo"].get<float>();
+                // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
+            }
+        }
+        catch (const json::parse_error &e)
+        {
+            LOG_WARN_FMT("JSON parsing error: ", e.what());
+        }
+    };
+
+    std::function<void(const std::string &)> calib_ratio_callback = [&](const std::string &payload)
+    {
+        try
+        {
+            // Parse the JSON payload
+            json jsonData = json::parse(payload);
+
+            // Update the temperature variable if the key exists
+            if (jsonData.contains("amp_ratio_mean"))
+            {
+                calibration_ratio = jsonData["amp_ratio_mean"].get<float>();
+                // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
+            }
+        }
+        catch (const json::parse_error &e)
+        {
+            LOG_WARN_FMT("JSON parsing error: ", e.what());
+        }
+    };
+
+    mqttClient.setMessageCallback("calibration/CFO/" + device_id, CFO_callback);
+    std::string cent_serial = parser.getValue_str("cent-serial");
+    mqttClient.setMessageCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
 
     // external reference
     usrp_obj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
     usrp_obj.initialize();
-
-    // while (true)
-    // {
-    //     try
-    //     {
-    //         usrp_obj.initialize();
-    //         break;
-    //     }
-    //     catch (const std::exception &e)
-    //     {
-    //         LOG_WARN_FMT("Caught exception in usrp_obj.initialize() : %1%", e.what());
-    //         killOtherInstances();
-    //         std::this_thread::sleep_for(std::chrono::seconds(5));
-    //         LOG_INFO("Restart USRP initialization.");
-    //     }
-    // }
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
 
@@ -215,6 +220,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
     PeakDetectionClass peakDet_obj(parser, init_noise_ampl);
     CycleStartDetector csd_obj(parser, capacity, rx_sample_duration, peakDet_obj);
+    // float last_cfo = obtain_last_cfo(device_id);
+    csd_obj.cfo = last_cfo;
+    csd_obj.calibration_ratio = calibration_ratio;
 
     /*------ Threads - Consumer / Producer --------*/
     std::atomic<bool> csd_success_signal(false);
