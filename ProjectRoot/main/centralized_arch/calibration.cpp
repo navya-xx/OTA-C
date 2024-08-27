@@ -45,21 +45,11 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     auto tx_waveform = wf_gen.generate_waveform();
 
-    std::string calib_dir = parser.getValue_str("calib-folder");
     std::string device_id = parser.getValue_str("device-id");
-    std::string ref_calib_file;
     if (is_cent)
-    {
         std::string leaf_id = parser.getValue_str("leaf-id");
-        ref_calib_file = calib_dir + "/calib_" + device_id + "_" + leaf_id + ".dat";
-    }
     else
-    {
         std::string cent_id = parser.getValue_str("cent-id");
-        ref_calib_file = calib_dir + "/calib_" + device_id + "_" + cent_id + ".dat";
-    }
-
-    std::ofstream calib_file;
 
     MQTTClient &mqttClient = MQTTClient::getInstance();
 
