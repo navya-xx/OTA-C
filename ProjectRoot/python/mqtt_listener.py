@@ -6,9 +6,9 @@ import json
 import time
 
 list_of_topics = [
-    "calibration/results",
-    "calibration/ratio/#",
-    "config/run_config_info"
+    "calibration/#",
+    "config/run_config_info",
+    "otac/#"
 ]
 
 # SQLite setup
