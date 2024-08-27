@@ -171,6 +171,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // -> register message callback
     float last_cfo = 0.0, calibration_ratio = 1.0;
     bool got_calib_ratio = false, got_cfo = false;
+    std::string cent_serial = parser.getValue_str("cent-serial");
+    std::string CFO_topic = "calibration/CFO/" + device_id, calib_topic = "calibration/ratio/" + cent_serial + "/" + device_id;
     std::function<void(const std::string &)> CFO_callback = [&last_cfo, &got_cfo](const std::string &payload)
     {
         // Parse the JSON payload
@@ -202,20 +204,22 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     };
 
     size_t max_timer = 30, timer = 0;
-    mqttClient.setCallback("calibration/CFO/" + device_id, CFO_callback);
+    mqttClient.setCallback(CFO_topic, CFO_callback);
     while (got_cfo == false && timer < max_timer)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         timer++;
     }
+    mqttClient.unsubscribe(CFO_topic);
+
     timer = 0;
-    std::string cent_serial = parser.getValue_str("cent-serial");
-    mqttClient.setCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
+    mqttClient.setCallback(calib_topic, calib_ratio_callback);
     while (got_calib_ratio == false && timer < max_timer)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         timer++;
     }
+    mqttClient.unsubscribe(calib_topic);
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
