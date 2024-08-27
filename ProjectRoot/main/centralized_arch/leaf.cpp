@@ -39,10 +39,14 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::string storage_dir = parser.getValue_str("storage-folder");
     std::string device_id = parser.getValue_str("device-id");
     std::string curr_time_str = currentDateTimeFilename();
-    std::ofstream outfile;
-    save_stream_to_file(storage_dir + "/logs/transmit_unit_rand_" + device_id + "_" + curr_time_str + ".dat", outfile, unit_rand_samples);
-    if (outfile.is_open())
-        outfile.close();
+    // std::ofstream outfile;
+    // save_stream_to_file(storage_dir + "/logs/transmit_unit_rand_" + device_id + "_" + curr_time_str + ".dat", outfile, unit_rand_samples);
+    // if (outfile.is_open())
+    //     outfile.close();
+
+    std::string client_id = "leaf_" + device_id;
+    MQTTClient &mqttClient = MQTTClient::getInstance(client_id);
+    std::string CFO_topic = "calibration/CFO/" + device_id;
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -71,9 +75,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         if (stop_signal_called)
             break;
 
-        // LOG_INFO_FMT("Estimated Clock Drift = %.8f samples/sec.", csd_obj.estimated_sampling_rate_offset);
-        // usrp_obj.adjust_for_freq_offset(csd_obj.estimated_sampling_rate_offset);
-        // LOG_INFO_FMT("Corrected Clock Drift -> New sampling rate = %1% samples/sec.", usrp_obj.rx_rate);
+        // publish CFO value
+        mqttClient.publish(CFO_topic, floatToStringWithPrecision(csd_obj.cfo, 8), true);
 
         LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
         ++round;
@@ -158,8 +161,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // subscribe to CFO topic
     // -> register message callback
     float last_cfo = 0.0, calibration_ratio = 1.0;
-    bool got_calib_ratio = false;
-    std::function<void(const std::string &)> CFO_callback = [&last_cfo](const std::string &payload)
+    bool got_calib_ratio = false, got_cfo = false;
+    std::function<void(const std::string &)> CFO_callback = [&last_cfo, &got_cfo](const std::string &payload)
     {
         try
         {
@@ -170,7 +173,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             if (jsonData.contains("cfo"))
             {
                 last_cfo = jsonData["cfo"].get<float>();
-                LOG_DEBUG_FMT("Last CFO : %1%", last_cfo);
+                LOG_DEBUG_FMT("CFO value from MQTT broker : %1%", last_cfo);
+                got_cfo = true;
                 // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
             }
         }
@@ -206,10 +210,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     mqttClient.setCallback("calibration/CFO/" + device_id, CFO_callback);
     std::string cent_serial = parser.getValue_str("cent-serial");
     mqttClient.setCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
-
-    while (got_calib_ratio == false)
+    size_t max_timer = 30, timer = 0;
+    while (got_calib_ratio == false && timer < max_timer)
     {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        timer++;
+    }
+    timer = 0;
+    while (got_cfo == false && timer < max_timer)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        timer++;
     }
 
     /*------- USRP setup --------------*/

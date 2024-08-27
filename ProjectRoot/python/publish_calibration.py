@@ -4,7 +4,7 @@ import sqlite3
 import paho.mqtt.client as mqtt
 import json
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # MQTT settings
 MQTT_BROKER = 'localhost'
@@ -40,7 +40,7 @@ def process_calibration_data(dataframe):
             l_to_c_df.sort_values('time'),
             on='time',
             direction='nearest',
-            tolerance=pd.Timedelta(seconds=3)
+            tolerance=pd.Timedelta(seconds=1)
         ).dropna()
         
         store_df = pd.DataFrame(columns=['run_count', 'cent', 'leaf', 'cent_tx_gain', 'leaf_rx_gain', 'amp_c_to_l', 'amp_l_to_c', 'amp_ratio', 'time'])
@@ -63,7 +63,7 @@ def process_calibration_data(dataframe):
         amp_var = store_df['amp_ratio'].var()
         total_runs = store_df.shape[0]
         if total_runs == 0:
-            print("%s : no calibration data available!")
+            print("%s: No calibration data available!" %leaf)
             continue
         
         new_df = pd.DataFrame([{'total_runs':total_runs, 'cent':cent, 'leaf':leaf, 'cent_tx_gain':store_df['cent_tx_gain'].values[0], 'leaf_rx_gain':store_df['leaf_rx_gain'].values[0], 'amp_ratio_mean':amp_mean, 'amp_ratio_var':amp_var, 'time':store_df['time'].min().strftime('%Y-%m-%d %H:%M:%S')}])
@@ -91,7 +91,7 @@ def main():
     database_update_queries = []
 
     # last_timestamp = datetime.strptime("2024-08-26 14:00:00", '%Y-%m-%d %H:%M:%S')
-    last_timestamp = datetime.now() - datetime.minute(30)
+    last_timestamp = datetime.now() - timedelta(minutes=10)
 
     try:
         # Query to select all messages from the table
@@ -107,11 +107,7 @@ def main():
                 new_data_df['time'] = pd.to_datetime(new_data_df['time'], format='%Y-%m-%d %H:%M:%S')
                 calibration_data = pd.concat([calibration_data, new_data_df], ignore_index=True)
                 if (is_processed == 0):
-                    database_update_queries.append('''
-                                    UPDATE mqtt_messages
-                                    SET is_processed = 1
-                                    WHERE id = ?
-                                ''', (id,))
+                    database_update_queries.append("UPDATE mqtt_messages SET is_processed = 1 WHERE id = %d"%id)
             
         if calibration_data.shape[0] == 0:
             raise Exception("No calibration data available at the moment.")

@@ -54,25 +54,30 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     parser.print_values();
 
+    float tx_wait_microsec = parser.getValue_float("start-tx-wait-microsec");
+
     WaveformGenerator wf_gen = WaveformGenerator();
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
+
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     // wf_gen.initialize(wf_gen.IMPULSE, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     const auto tx_waveform = wf_gen.generate_waveform();
 
     for (int i = 0; i < num_runs; ++i)
     {
-        uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0);
-        usrp_obj.transmission(tx_waveform, transmit_time, stop_signal_called, true);
-
+        LOG_INFO_FMT("---------------- ROUND : %1% -----------------", i);
+        // uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0);
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        usrp_obj.transmission(tx_waveform, uhd::time_spec_t(0.0), stop_signal_called, true);
 
         // Receive samples for a fixed duration and return
         double rx_duration_secs = 1.0;
-        auto received_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration_secs, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(0.005), true);
+        auto received_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration_secs, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_wait_microsec / 1e6), true);
+
+        // LOG_INFO_FMT("--------------- FINISHED : %1% ----------------", i);
     }
 
     return EXIT_SUCCESS;

@@ -77,11 +77,26 @@ bool MQTTClient::subscribe(const std::string &topic)
     }
 }
 
+void MQTTClient::unsubscribe(const std::string &topic)
+{
+    try
+    {
+        client.unsubscribe(topic)->wait();
+        callbacks.erase(topic);
+        LOG_INFO_FMT("Unsubscribed from topic: %1%", topic);
+    }
+    catch (const mqtt::exception &e)
+    {
+        LOG_WARN_FMT("Error unsubscribing from topic: %1%", e.what());
+    }
+}
+
 // Set a callback for incoming messages
 void MQTTClient::setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback)
 {
     callbacks[topic] = callback;
-    subscribe(topic);
+    if (!subscribe(topic))
+        callbacks.erase(topic);
 }
 
 // Internal callback function that processes incoming messages

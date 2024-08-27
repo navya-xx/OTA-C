@@ -18,6 +18,7 @@ public:
 
     // Subscribe to a topic
     bool subscribe(const std::string &topic);
+    void unsubscribe(const std::string &topic);
 
     // Set a callback for incoming messages
     void setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback);
