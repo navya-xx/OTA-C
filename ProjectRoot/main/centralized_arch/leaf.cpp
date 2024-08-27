@@ -47,6 +47,12 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     std::string client_id = "leaf_" + device_id;
     MQTTClient &mqttClient = MQTTClient::getInstance(client_id);
     std::string CFO_topic = "calibration/CFO/" + device_id;
+    std::string scale_topic = "otac/simdata/scale/" + device_id;
+    auto format_scale_data = [](float scale) -> std::string
+    {
+        std::string text = "{'scale':" + floatToStringWithPrecision(scale, 8) + ", 'time': " + currentDateTime() + "}";
+        return text;
+    };
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -77,6 +83,9 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // publish CFO value
         mqttClient.publish(CFO_topic, floatToStringWithPrecision(csd_obj.cfo, 8), true);
+        // publish last scale factor used
+        float curr_scaling = min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp;
+        mqttClient.publish(scale_topic, format_scale_data(curr_scaling), true);
 
         LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
         ++round;
@@ -90,20 +99,20 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         for (auto &samp : unit_rand_samples)
         {
             if (csd_obj.cfo != 0.0)
-                samp *= min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
+                samp *= curr_scaling * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
             else
-                samp *= min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp;
+                samp *= curr_scaling;
             counter++;
         }
 
-        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp, unit_rand_samples.size());
+        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, curr_scaling, unit_rand_samples.size());
         bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, false);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
         else
             LOG_INFO("Transmission Sucessful!");
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 10000));
 
         // move to next round
         csd_success_signal = false;
