@@ -173,29 +173,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     bool got_calib_ratio = false, got_cfo = false;
     std::function<void(const std::string &)> CFO_callback = [&last_cfo, &got_cfo](const std::string &payload)
     {
-        try
-        {
-            // Parse the JSON payload
-            json jsonData = json::parse(payload);
-
-            // Update the temperature variable if the key exists
-            if (jsonData.contains("cfo"))
-            {
-                last_cfo = jsonData["cfo"].get<float>();
-                LOG_DEBUG_FMT("CFO value from MQTT broker : %1%", last_cfo);
-                got_cfo = true;
-                // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
-            }
-        }
-        catch (const json::parse_error &e)
-        {
-            LOG_WARN_FMT("JSON parsing error: ", e.what());
-        }
+        // Parse the JSON payload
+        last_cfo = std::stof(payload);
+        LOG_DEBUG_FMT("MQTT >> CFO : %1%", last_cfo);
+        got_cfo = true;
     };
 
     std::function<void(const std::string &)> calib_ratio_callback = [&calibration_ratio, &got_calib_ratio](const std::string &payload)
     {
-        LOG_DEBUG("calib_ratio_callback");
         try
         {
             // Parse the JSON payload
@@ -205,28 +190,28 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             if (jsonData.contains("amp_ratio_mean"))
             {
                 calibration_ratio = jsonData["amp_ratio_mean"].get<float>();
-                LOG_DEBUG_FMT("Calib ratio : %1%", calibration_ratio);
+                LOG_DEBUG_FMT("MQTT >> Calib ratio : %1%", calibration_ratio);
                 got_calib_ratio = true;
                 // update_device_config_cfo(device_id, jsonData["cfo"].get<float>());
             }
         }
         catch (const json::parse_error &e)
         {
-            LOG_WARN_FMT("JSON parsing error: ", e.what());
+            LOG_WARN_FMT("MQTT >> JSON parsing error: ", e.what());
         }
     };
 
-    mqttClient.setCallback("calibration/CFO/" + device_id, CFO_callback);
-    std::string cent_serial = parser.getValue_str("cent-serial");
-    mqttClient.setCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
     size_t max_timer = 30, timer = 0;
-    while (got_calib_ratio == false && timer < max_timer)
+    mqttClient.setCallback("calibration/CFO/" + device_id, CFO_callback);
+    while (got_cfo == false && timer < max_timer)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         timer++;
     }
     timer = 0;
-    while (got_cfo == false && timer < max_timer)
+    std::string cent_serial = parser.getValue_str("cent-serial");
+    mqttClient.setCallback("calibration/ratio/" + cent_serial + "/" + device_id, calib_ratio_callback);
+    while (got_calib_ratio == false && timer < max_timer)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         timer++;
