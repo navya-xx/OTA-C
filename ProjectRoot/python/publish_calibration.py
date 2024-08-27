@@ -40,7 +40,7 @@ def process_calibration_data(dataframe):
             l_to_c_df.sort_values('time'),
             on='time',
             direction='nearest',
-            tolerance=pd.Timedelta(seconds=1)
+            tolerance=pd.Timedelta(seconds=3)
         ).dropna()
         
         store_df = pd.DataFrame(columns=['run_count', 'cent', 'leaf', 'cent_tx_gain', 'leaf_rx_gain', 'amp_c_to_l', 'amp_l_to_c', 'amp_ratio', 'time'])
