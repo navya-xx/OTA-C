@@ -82,9 +82,11 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     {
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(int(sleep_sec * 1e3)));
+
         // CycleStartDetector - producer loop
 
-        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec), false, producer_wrapper);
+        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, uhd::time_spec_t(0.0), false, producer_wrapper);
 
         if (stop_signal_called)
             break;
