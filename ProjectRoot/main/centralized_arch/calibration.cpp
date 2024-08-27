@@ -26,6 +26,7 @@ std::string create_calib_data_str(const std::string tx_dev, const std::string rx
     jdata["tx_gain"] = tx_gain;
     jdata["rx_gain"] = rx_gain;
     jdata["amplitude"] = amplitude;
+    jdata["time"] = currentDateTime();
     return jdata.dump(4);
 }
 
@@ -41,9 +42,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
-    float scale = 0.5;
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, scale, 0);
-    // wf_gen.initialize(wf_gen.IMPULSE, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     auto tx_waveform = wf_gen.generate_waveform();
 
     std::string calib_dir = parser.getValue_str("calib-folder");
@@ -64,7 +63,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     MQTTClient &mqttClient = MQTTClient::getInstance();
 
-    float rx_duration = is_cent ? 3.0 : 0.0; // fix duration for cent node
+    float rx_duration = is_cent ? 1.0 : 0.0; // fix reception duration for cent node
+    double sleep_sec = 0.1;
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -85,7 +85,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         else
             LOG_INFO("Transmission Sucessful!");
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(sleep_millisec));
     }
 
     while (not stop_signal_called)
@@ -94,7 +94,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // CycleStartDetector - producer loop
 
-        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, uhd::time_spec_t(0.0), false, producer_wrapper);
+        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec), false, producer_wrapper);
 
         if (stop_signal_called)
             break;
@@ -102,33 +102,35 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         if (csd_success_signal)
         {
             LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);
-            append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
+            // append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
             std::string json_data;
             if (is_cent)
-            {
                 json_data = create_calib_data_str(parser.getValue_str("leaf-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
-            }
             else
-            {
                 json_data = create_calib_data_str(parser.getValue_str("cent-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
-            }
+
             mqttClient.publish(calib_topic, json_data);
             ++round;
             calib_retry = 0;
         }
-        else
+        else if (is_cent)
         {
             LOG_INFO_FMT("No calibration signal received in Round %1%. Re-transmitting...", round);
             if (++calib_retry > max_calib_retry)
             {
                 round = max_num_rounds + 1; // end it here
-                LOG_INFO_FMT("Ending calibration! No calibration signal received by counterpart for %1% rounds.", calib_retry);
+                LOG_INFO_FMT("Ending calibration! No calibration signal received from leaf-node for %1% rounds.", calib_retry);
             }
+        }
+        else
+        {
+            LOG_WARN("Reception ended without successful detection! Stopping...");
+            stop_signal_called = true;
+            break;
         }
 
         // Transmission after cyclestartdetector
-        float fix_wait_time = 2.0; // generateRandomFloat(1.1, 3.0);
-        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(fix_wait_time);
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec);
         LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
 
         if (!is_cent)
@@ -145,14 +147,14 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, false);
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, true);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
         else
             LOG_INFO("Transmission Sucessful!");
 
-        std::this_thread::sleep_for(std::chrono::microseconds(int((fix_wait_time - 1.0 + 0.1) * 1e6)));
+        // std::this_thread::sleep_for(std::chrono::microseconds(int((fix_wait_time - 1.0 + 0.1) * 1e6)));
 
         // move to next round
         csd_success_signal = false;
@@ -235,27 +237,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
 
-    // Check if the directory exists
-    std::string calib_folderPath = projectDir + "/storage/calibration/" + "gains_rx" + floatToStringWithPrecision(usrp_obj.rx_gain, 1) + "_tx" + floatToStringWithPrecision(usrp_obj.tx_gain, 1);
-    if (!std::filesystem::exists(calib_folderPath))
-    {
-        // Attempt to create the directory
-        if (std::filesystem::create_directory(calib_folderPath))
-        {
-            LOG_INFO_FMT("Directory created successfully: %1%", calib_folderPath);
-        }
-        else
-        {
-            LOG_WARN_FMT("Failed to create directory: %1%", calib_folderPath);
-        }
-    }
-    else
-    {
-        LOG_INFO_FMT("Directory already exists: %1%", calib_folderPath);
-    }
-
-    parser.set_value("calib-folder", calib_folderPath, "str", "Folder for calibration results");
-
     parser.print_values();
 
     size_t max_calib_rounds = parser.getValue_int("max-calib-rounds");
@@ -268,8 +249,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     PeakDetectionClass peakDet_obj(parser, init_noise_ampl);
     CycleStartDetector csd_obj(parser, capacity, rx_sample_duration, peakDet_obj);
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
     csd_obj.tx_wait_microsec = 0.3 * 1e6;
+
     if (is_central_server)
         csd_obj.is_correct_cfo = false;
 

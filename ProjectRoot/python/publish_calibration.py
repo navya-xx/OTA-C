@@ -91,7 +91,7 @@ def main():
     database_update_queries = []
 
     # last_timestamp = datetime.strptime("2024-08-26 14:00:00", '%Y-%m-%d %H:%M:%S')
-    last_timestamp = datetime.now()
+    last_timestamp = datetime.now() - datetime.minute(30)
 
     try:
         # Query to select all messages from the table
@@ -101,7 +101,7 @@ def main():
             id, topic, payload, timestamp, is_processed = row
             row_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
             
-            if (topic == CALIB_TOPIC and (is_processed == 0 or row_time > last_timestamp)):
+            if (topic == CALIB_TOPIC and (is_processed == 0 and row_time > last_timestamp)):
                 payload = eval(payload)
                 new_data_df = pd.DataFrame([payload])
                 new_data_df['time'] = pd.to_datetime(new_data_df['time'], format='%Y-%m-%d %H:%M:%S')
