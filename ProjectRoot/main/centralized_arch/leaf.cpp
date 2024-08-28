@@ -96,8 +96,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // adjust for CFO
         int counter = 0;
-        std::vector<std::complex<float>> tx_samples(unit_rand_samples.begin(), unit_rand_samples.end());
-        for (auto &samp : tx_samples)
+        std::vector<std::complex<float>> single_waveform(unit_rand_samples.begin(), unit_rand_samples.end());
+        for (auto &samp : single_waveform)
         {
             if (csd_obj.cfo != 0.0)
                 samp *= curr_scaling * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
@@ -106,22 +106,29 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             counter++;
         }
 
-        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, curr_scaling, tx_samples.size());
+        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, curr_scaling, single_waveform.size());
 
         // pad front and end --  check if this improves
-        tx_samples.insert(tx_samples.begin(), 1000, std::complex<float>(0.0, 0.0));
-        tx_samples.insert(tx_samples.end(), 1000, std::complex<float>(0.0, 0.0));
+        single_waveform.insert(single_waveform.begin(), 1000, std::complex<float>(0.0, 0.0));
+        single_waveform.insert(single_waveform.end(), 1000, std::complex<float>(0.0, 0.0));
+
+        std::vector<std::complex<float>> tx_waveform;
+        size_t tx_waveform_gap = int(usrp_obj.tx_rate * 10 / 1e3); // 10 millisec gap
 
         for (int i = 0; i < 10; ++i)
         {
-            bool transmit_success = usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, false);
-            if (!transmit_success)
-                LOG_WARN("Transmission Unsuccessful!");
-            else
-                LOG_INFO("Transmission Sucessful!");
-            std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 50000));
-            tx_start_timer += uhd::time_spec_t(100000 / 1e6);
+            tx_waveform.insert(tx_waveform.end(), single_waveform.begin(), single_waveform.end());
+            tx_waveform.insert(tx_waveform.end(), tx_waveform_gap, std::complex<float>(0.0, 0.0));
         }
+
+        bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, false);
+        if (!transmit_success)
+            LOG_WARN("Transmission Unsuccessful!");
+        else
+            LOG_INFO("Transmission Sucessful!");
+
+        std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 50000));
+        tx_start_timer += uhd::time_spec_t(10000 / 1e6);
 
         // move to next round
         csd_success_signal = false;
