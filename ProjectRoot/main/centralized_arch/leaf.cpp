@@ -109,8 +109,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, curr_scaling, single_waveform.size());
 
         // pad front and end --  check if this improves
-        single_waveform.insert(single_waveform.begin(), 1000, std::complex<float>(0.0, 0.0));
-        single_waveform.insert(single_waveform.end(), 1000, std::complex<float>(0.0, 0.0));
+        // single_waveform.insert(single_waveform.begin(), 1000, std::complex<float>(0.0, 0.0));
+        // single_waveform.insert(single_waveform.end(), 1000, std::complex<float>(0.0, 0.0));
 
         size_t tx_waveform_gap = int(usrp_obj.tx_rate * 1 / 1e3); // 1 millisec gap
 
@@ -129,8 +129,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             else
                 LOG_INFO("Transmission Sucessful!");
 
-            std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 10000));
-            tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(10000 / 1e6);
+            std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 30000));
+            tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(30000 / 1e6);
         }
 
         std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 100000));
