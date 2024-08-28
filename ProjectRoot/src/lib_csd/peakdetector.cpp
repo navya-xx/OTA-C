@@ -314,7 +314,6 @@ int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_v
         if (tmp > max_peak_val)
         {
             max_peak_val = tmp;
-            // LOG_INFO_FMT("Current Max peak avg est = %1%", max_peak_val);
             final_fpi = init_fpi + i;
         }
     }
