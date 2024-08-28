@@ -124,7 +124,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
                 tx_waveform.insert(tx_waveform.end(), tx_waveform_gap, std::complex<float>(0.0, 0.0));
             }
 
-            bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, true);
+            bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, false);
             if (!transmit_success)
                 LOG_WARN("Transmission Unsuccessful!");
             else
