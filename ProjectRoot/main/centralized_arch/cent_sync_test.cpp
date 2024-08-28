@@ -49,7 +49,7 @@ void transmit_thread(USRP_class &usrp_obj, ConfigParser &parser)
         usrp_obj.transmission(tx_waveform, uhd::time_spec_t(0.0), stop_signal_called, true);
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     stop_signal_called = true;
 }
 

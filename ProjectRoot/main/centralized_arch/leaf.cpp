@@ -65,7 +65,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             return false;
     };
 
-    size_t alt_wf_gap = 50000, inner_wf_gap = 5000, total_transmit_time = int(1e6); // microsecs
+    size_t alt_wf_gap = 50000, inner_wf_gap = 5000, total_transmit_time = int(4e6); // microsecs
     size_t tx_waveform_gap = int(usrp_obj.tx_rate * inner_wf_gap / 1e6);            // 10 millisec gap
 
     while (not stop_signal_called)
@@ -122,6 +122,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             tx_waveform.insert(tx_waveform.end(), tx_waveform_gap, std::complex<float>(0.0, 0.0));
         }
         size_t num_alt_rounds = total_transmit_time / ((tx_waveform.size() / usrp_obj.tx_rate) * 1e6 + alt_wf_gap);
+        LOG_INFO_FMT("Total number of TX rounds .... %1%", num_alt_rounds);
 
         for (int j = 0; j < num_alt_rounds; ++j)
         {
