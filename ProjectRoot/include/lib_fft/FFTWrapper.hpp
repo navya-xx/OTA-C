@@ -14,18 +14,18 @@ public:
     void initialize(size_t size, int num_threads = 1);
 
     // Perform FFT of input array
-    void fft(const std::vector<std::complex<float>> &input,
-             std::vector<std::complex<float>> &output);
+    void fft(const std::vector<samp_type> &input,
+             std::vector<samp_type> &output);
 
     // Perform iFFT of input array
-    void ifft(const std::vector<std::complex<float>> &input,
-              std::vector<std::complex<float>> &output);
+    void ifft(const std::vector<samp_type> &input,
+              std::vector<samp_type> &output);
 
     // Zero-pad the input data to a specified length
-    void zeroPad(const std::vector<std::complex<float>> &input,
-                 std::vector<std::complex<float>> &output, int paddedSize);
-    void zeroPad(const std::deque<std::complex<float>> &input,
-                 std::vector<std::complex<float>> &output, int paddedSize);
+    void zeroPad(const std::vector<samp_type> &input,
+                 std::vector<samp_type> &output, int paddedSize);
+    void zeroPad(const std::deque<samp_type> &input,
+                 std::vector<samp_type> &output, int paddedSize);
 
 private:
     size_t size_;

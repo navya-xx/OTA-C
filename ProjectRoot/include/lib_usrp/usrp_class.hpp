@@ -16,15 +16,15 @@ public:
 
     void initialize(bool perform_rxtx_test = true);
 
-    bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
+    bool transmission(const std::vector<samp_type> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
 
-    std::vector<std::complex<float>> reception(
+    std::vector<samp_type> reception(
         bool &stop_signal_called,
         const size_t &num_rx_samps = 0,
         const float &duration = 0.0,
         const uhd::time_spec_t &rx_time = uhd::time_spec_t(0.0),
         bool is_save_to_file = false,
-        const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)
+        const std::function<bool(const std::vector<samp_type> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<samp_type> &, const size_t &, const uhd::time_spec_t &)
         { return false; });
 
     void receive_save_with_timer(bool &stop_signal_called, const float &duration);

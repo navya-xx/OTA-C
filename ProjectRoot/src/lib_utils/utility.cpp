@@ -41,7 +41,7 @@ void append_value_with_timestamp(const std::string &filename, std::ofstream &out
     outfile.close();
 }
 
-void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream)
+void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<samp_type> stream)
 {
     // Open the file in append mode (if not already open)
     if (!outfile.is_open())
@@ -82,9 +82,9 @@ void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std
     }
 }
 
-std::vector<std::complex<float>> read_from_file(const std::string &filename)
+std::vector<samp_type> read_from_file(const std::string &filename)
 {
-    std::vector<std::complex<float>> data;
+    std::vector<samp_type> data;
 
     // Open the file in binary mode
     std::ifstream inputFile(filename, std::ios::binary);
@@ -99,15 +99,15 @@ std::vector<std::complex<float>> read_from_file(const std::string &filename)
     std::streamsize fileSize = inputFile.tellg();
     inputFile.seekg(0, std::ios::beg);
 
-    // Ensure the file size is a multiple of the size of std::complex<float>
-    if (fileSize % sizeof(std::complex<float>) != 0)
+    // Ensure the file size is a multiple of the size of samp_type
+    if (fileSize % sizeof(samp_type) != 0)
     {
-        LOG_ERROR("File size is not a multiple of std::complex<float>");
+        LOG_ERROR("File size is not a multiple of samp_type");
         return data;
     }
 
     // Calculate the number of complex numbers in the file
-    size_t numElements = fileSize / sizeof(std::complex<float>);
+    size_t numElements = fileSize / sizeof(samp_type);
 
     // Resize the vector to hold all complex numbers
     data.resize(numElements);
@@ -118,20 +118,20 @@ std::vector<std::complex<float>> read_from_file(const std::string &filename)
     if (!inputFile)
     {
         LOG_ERROR_FMT("Error reading file: ", filename);
-        return std::vector<std::complex<float>>(); // Return an empty vector on read error
+        return std::vector<samp_type>(); // Return an empty vector on read error
     }
 
     return data;
 }
 
-std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector)
+std::vector<double> unwrap(const std::vector<samp_type> &complexVector)
 {
     const double pi = M_PI;
     const double two_pi = 2 * M_PI;
 
     // Calculate the initial phase (angles) of the complex numbers
     std::vector<double> phase(complexVector.size());
-    std::transform(complexVector.begin(), complexVector.end(), phase.begin(), [](const std::complex<float> &c)
+    std::transform(complexVector.begin(), complexVector.end(), phase.begin(), [](const samp_type &c)
                    { return std::arg(c); });
 
     // Unwrap the phase
@@ -186,7 +186,7 @@ std::string floatToStringWithPrecision(float value, int precision)
     return out.str();
 }
 
-float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length)
+float calc_signal_power(const std::vector<samp_type> &signal, const size_t &start_index, const size_t &length)
 {
     size_t L;
     if (length == 0)
@@ -206,13 +206,13 @@ float calc_signal_power(const std::vector<std::complex<float>> &signal, const si
     return sig_pow;
 }
 
-float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length)
+float calc_signal_power(const std::deque<samp_type> &signal, const size_t &start_index, const size_t &length)
 {
-    std::vector<std::complex<float>> vector(signal.begin(), signal.end());
+    std::vector<samp_type> vector(signal.begin(), signal.end());
     return calc_signal_power(vector, start_index, length);
 }
 
-float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const float lower_bound)
+float averageAbsoluteValue(const std::vector<samp_type> &vec, const float lower_bound)
 {
     float sum = 0.0;
     float abs_val = 0.0;

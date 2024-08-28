@@ -12,13 +12,13 @@ public:
     void consumer();
 
 private:
-    std::vector<std::complex<float>> samples_buffer;
+    std::vector<samp_type> samples_buffer;
     std::vector<uhd::time_spec_t> timer;
 
     uhd::time_spec_t rx_sample_duration;
     ConfigParser parser;
 
-    void otac_post_processor(const std::vector<std::complex<float>> &samples);
+    void otac_post_processor(const std::vector<samp_type> &samples);
     void reset();
 
     size_t capacity;

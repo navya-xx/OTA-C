@@ -23,18 +23,18 @@ public:
     size_t wf_len, wf_reps, wf_gap, wf_pad, zfc_q, rand_seed;
     float scale = 1.0;
 
-    std::vector<std::complex<float>> generate_waveform();
+    std::vector<samp_type> generate_waveform();
 
 private:
     WAVEFORM_TYPE wf_type;
 
-    std::vector<std::complex<float>> generateZadoffChuSequence();
+    std::vector<samp_type> generateZadoffChuSequence();
 
-    std::vector<std::complex<float>> generateUnitCircleRandom();
+    std::vector<samp_type> generateUnitCircleRandom();
 
-    std::vector<std::complex<float>> generateImpulseSignal();
+    std::vector<samp_type> generateImpulseSignal();
 
-    std::vector<std::complex<float>> generateDFTseq();
+    std::vector<samp_type> generateDFTseq();
 };
 
 #endif // WAVEFORMS

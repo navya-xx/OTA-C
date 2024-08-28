@@ -12,7 +12,7 @@ private:
     ConfigParser parser;
 
     size_t *peak_indices;
-    std::complex<float> *corr_samples;
+    samp_type *corr_samples;
     float *peak_vals;
     uhd::time_spec_t *peak_times;
 
@@ -30,7 +30,7 @@ private:
 
     bool is_update_pnr_threshold;
 
-    void insertPeak(const std::complex<float> &corr_sample, float &peak_val, const uhd::time_spec_t &peak_time);
+    void insertPeak(const samp_type &corr_sample, float &peak_val, const uhd::time_spec_t &peak_time);
     void update_pnr_threshold();
     void updatePrevPeak();
     void removeLastPeak();
@@ -49,14 +49,14 @@ public:
     float noise_ampl;
     long int noise_counter;
 
-    std::complex<float> *get_corr_samples_at_peaks();
+    samp_type *get_corr_samples_at_peaks();
     uhd::time_spec_t *get_peak_times();
     void print_peaks_data();
 
     void reset_peaks_counter();
     void reset();
 
-    void process_corr(const std::complex<float> &abs_corr_val, const uhd::time_spec_t &samp_time);
+    void process_corr(const samp_type &abs_corr_val, const uhd::time_spec_t &samp_time);
     void increase_samples_counter();
 
     void updateNoiseLevel(const float &corr_val, const size_t &num_samps);

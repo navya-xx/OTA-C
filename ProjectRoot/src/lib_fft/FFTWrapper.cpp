@@ -29,8 +29,8 @@ FFTWrapper::~FFTWrapper()
     fftw_cleanup_threads();
 }
 
-void FFTWrapper::fft(const std::vector<std::complex<float>> &input,
-                     std::vector<std::complex<float>> &output)
+void FFTWrapper::fft(const std::vector<samp_type> &input,
+                     std::vector<samp_type> &output)
 {
     // Check input size
     if (input.size() != size_)
@@ -52,12 +52,12 @@ void FFTWrapper::fft(const std::vector<std::complex<float>> &input,
     output.resize(size_);
     for (int i = 0; i < size_; ++i)
     {
-        output[i] = std::complex<float>(fft_output_[i][0], fft_output_[i][1]);
+        output[i] = samp_type(fft_output_[i][0], fft_output_[i][1]);
     }
 }
 
-void FFTWrapper::ifft(const std::vector<std::complex<float>> &input,
-                      std::vector<std::complex<float>> &output)
+void FFTWrapper::ifft(const std::vector<samp_type> &input,
+                      std::vector<samp_type> &output)
 {
     // Check input size
     if (input.size() != size_)
@@ -80,12 +80,12 @@ void FFTWrapper::ifft(const std::vector<std::complex<float>> &input,
     output.resize(size_);
     for (int i = 0; i < size_; ++i)
     {
-        output[i] = std::complex<float>(fft_input_[i][0] * scale_factor, fft_input_[i][1] * scale_factor);
+        output[i] = samp_type(fft_input_[i][0] * scale_factor, fft_input_[i][1] * scale_factor);
     }
 }
 
-void FFTWrapper::zeroPad(const std::vector<std::complex<float>> &input,
-                         std::vector<std::complex<float>> &output, int paddedSize)
+void FFTWrapper::zeroPad(const std::vector<samp_type> &input,
+                         std::vector<samp_type> &output, int paddedSize)
 {
     if (paddedSize < input.size())
     {
@@ -102,12 +102,12 @@ void FFTWrapper::zeroPad(const std::vector<std::complex<float>> &input,
     }
     for (int i = input.size(); i < paddedSize; ++i)
     {
-        output[i] = std::complex<float>(0.0, 0.0);
+        output[i] = samp_type(0.0, 0.0);
     }
 }
 
-void FFTWrapper::zeroPad(const std::deque<std::complex<float>> &input,
-                         std::vector<std::complex<float>> &output, int paddedSize)
+void FFTWrapper::zeroPad(const std::deque<samp_type> &input,
+                         std::vector<samp_type> &output, int paddedSize)
 {
     if (paddedSize < input.size())
     {
@@ -124,6 +124,6 @@ void FFTWrapper::zeroPad(const std::deque<std::complex<float>> &input,
     }
     for (int i = input.size(); i < paddedSize; ++i)
     {
-        output[i] = std::complex<float>(0.0, 0.0);
+        output[i] = samp_type(0.0, 0.0);
     }
 }

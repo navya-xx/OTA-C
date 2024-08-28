@@ -38,5 +38,6 @@
 #include <json.hpp>
 
 using json = nlohmann::json;
+typedef std::complex<float> samp_type;
 
 #endif // PCH_HPP

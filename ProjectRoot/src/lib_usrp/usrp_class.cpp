@@ -247,7 +247,7 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     //_____________________ TEST TX - RX _____________________
     if (perform_rxtx_tests)
     {
-        std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
+        std::vector<samp_type> tx_buff(max_tx_packet_size, samp_type(0.1, 0.1));
         bool dont_stop = false;
         bool tx_success = transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop);
         if (tx_success)
@@ -285,7 +285,7 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     LOG_INFO("--------- USRP initilization finished -----------------");
 };
 
-bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
+bool USRP_class::transmission(const std::vector<samp_type> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
 {
     bool success = false;
     size_t total_num_samps = buff.size();
@@ -422,7 +422,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
-std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
+std::vector<samp_type> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<bool(const std::vector<samp_type> &, const size_t &, const uhd::time_spec_t &)> &callback)
 {
     std::string filename;
 
@@ -466,13 +466,13 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     double rx_delay = stream_cmd.stream_now ? 0.0 : time_diff;
     double timeout = burst_pkt_time + rx_delay;
 
-    std::vector<std::complex<float>> rx_samples;
+    std::vector<samp_type> rx_samples;
     bool reception_complete = false;
     size_t retry_rx = 0;
     size_t num_acc_samps = 0;
     bool callback_success = false;
     size_t num_curr_rx_samps;
-    std::vector<std::complex<float>> buff(max_rx_packet_size);
+    std::vector<samp_type> buff(max_rx_packet_size);
     int retry_count = 0;
 
     while (not reception_complete and not stop_signal_called)
@@ -527,7 +527,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         // process (save, update counters, etc...) received samples and continue
         if (is_save_to_file and req_num_rx_samps == 0) // continuous saving
         {
-            std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
+            std::vector<samp_type> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
             save_stream_to_file(filename, rx_save_stream, forward);
         }
         else if (req_num_rx_samps > 0) // fixed number of samples -- save in a separate vector to return
@@ -566,7 +566,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     if (success and req_num_rx_samps > 0)
         return rx_samples;
     else // do not return anything if total num rx samps not given
-        return std::vector<std::complex<float>>{};
+        return std::vector<samp_type>{};
 };
 
 void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &duration)
@@ -596,12 +596,12 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_rx_packet_size / rx_rate));
     double timeout = burst_pkt_time;
 
-    std::vector<std::complex<float>> rx_samples;
+    std::vector<samp_type> rx_samples;
     bool reception_complete = false;
     size_t retry_rx = 0;
     size_t num_acc_samps = 0;
     bool callback_success = false;
-    std::vector<std::complex<float>> buff(max_rx_packet_size);
+    std::vector<samp_type> buff(max_rx_packet_size);
 
     std::vector<double> timer_seq;
 
@@ -631,7 +631,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         if (not success)
             break;
 
-        std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
+        std::vector<samp_type> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
         save_stream_to_file(data_filename, rx_save_datastream, forward);
 
         double time_data = md.time_spec.get_real_secs();

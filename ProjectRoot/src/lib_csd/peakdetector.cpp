@@ -24,7 +24,7 @@ PeakDetectionClass::PeakDetectionClass(
 
     peak_indices = new size_t[total_num_peaks];
     peak_vals = new float[total_num_peaks];
-    corr_samples = new std::complex<float>[total_num_peaks];
+    corr_samples = new samp_type[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 
     prev_peak_index = 0;
@@ -36,7 +36,7 @@ PeakDetectionClass::PeakDetectionClass(
     max_reset_count = parser.getValue_int("max-reset-count");
 };
 
-std::complex<float> *PeakDetectionClass::get_corr_samples_at_peaks()
+samp_type *PeakDetectionClass::get_corr_samples_at_peaks()
 {
     return corr_samples;
 }
@@ -112,7 +112,7 @@ void PeakDetectionClass::reset()
     delete[] peak_times;
     peak_indices = new size_t[total_num_peaks];
     peak_vals = new float[total_num_peaks];
-    corr_samples = new std::complex<float>[total_num_peaks];
+    corr_samples = new samp_type[total_num_peaks];
     peak_times = new uhd::time_spec_t[total_num_peaks];
 }
 
@@ -121,7 +121,7 @@ void PeakDetectionClass::reset_peaks_counter()
     peaks_count = 0; // insertPeaks takes care of other variables
 }
 
-void PeakDetectionClass::insertPeak(const std::complex<float> &corr_sample, float &peak_val, const uhd::time_spec_t &peak_time)
+void PeakDetectionClass::insertPeak(const samp_type &corr_sample, float &peak_val, const uhd::time_spec_t &peak_time)
 {
     if (peaks_count == 0) // First peak starts with index 0
         samples_from_first_peak = 0;
@@ -189,7 +189,7 @@ void PeakDetectionClass::updatePrevPeak()
         removeLastPeak();
 }
 
-void PeakDetectionClass::process_corr(const std::complex<float> &corr_sample, const uhd::time_spec_t &samp_time)
+void PeakDetectionClass::process_corr(const samp_type &corr_sample, const uhd::time_spec_t &samp_time)
 {
     const size_t samples_from_last_peak = samples_from_first_peak - prev_peak_index;
 
@@ -280,7 +280,7 @@ uhd::time_spec_t PeakDetectionClass::get_sync_time()
 
 float PeakDetectionClass::estimate_phase_drift()
 {
-    std::vector<std::complex<float>> peak_corr_vals(corr_samples, corr_samples + peaks_count);
+    std::vector<samp_type> peak_corr_vals(corr_samples, corr_samples + peaks_count);
     std::vector<double> phases = unwrap(peak_corr_vals); // returns phases between [-pi, pi]
     // uhd::time_spec_t clock_offset = peak_times[0];
     double init_phase_shift = phases[0];

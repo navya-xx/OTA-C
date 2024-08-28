@@ -18,22 +18,22 @@ void WaveformGenerator::initialize(WAVEFORM_TYPE init_wf_type, size_t init_wf_le
 };
 
 // Function to generate Zadoff-Chu sequence
-std::vector<std::complex<float>> WaveformGenerator::generateZadoffChuSequence()
+std::vector<samp_type> WaveformGenerator::generateZadoffChuSequence()
 {
-    std::vector<std::complex<float>> sequence(wf_len);
+    std::vector<samp_type> sequence(wf_len);
 
     // Calculate sequence
     for (size_t n = 0; n < wf_len; ++n)
     {
         float phase = -M_PI * zfc_q * n * (n + 1) / wf_len;
-        sequence[n] = scale * std::exp(std::complex<float>(0, phase));
+        sequence[n] = scale * std::exp(samp_type(0, phase));
     }
 
     return sequence;
 }
 
 // Function to generate a vector of complex random variables on the unit circle
-std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom()
+std::vector<samp_type> WaveformGenerator::generateUnitCircleRandom()
 {
     // Seed for random number generation
     std::mt19937 generator(rand_seed);
@@ -42,7 +42,7 @@ std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom()
     std::uniform_real_distribution<> distribution(0.0, 2 * M_PI); // Uniform distribution for phase
 
     // Vector to store complex numbers
-    std::vector<std::complex<float>> sequence;
+    std::vector<samp_type> sequence;
 
     // Generate random phases and construct complex numbers
     for (int i = 0; i < wf_len; ++i)
@@ -54,9 +54,9 @@ std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom()
     return sequence;
 }
 
-std::vector<std::complex<float>> WaveformGenerator::generateImpulseSignal()
+std::vector<samp_type> WaveformGenerator::generateImpulseSignal()
 {
-    std::vector<std::complex<float>> sequence(wf_len);
+    std::vector<samp_type> sequence(wf_len);
 
     float phase = 0.71; // almost 45°
     size_t impulse_loc = wf_len / 2;
@@ -67,9 +67,9 @@ std::vector<std::complex<float>> WaveformGenerator::generateImpulseSignal()
     return sequence;
 }
 
-std::vector<std::complex<float>> WaveformGenerator::generateDFTseq()
+std::vector<samp_type> WaveformGenerator::generateDFTseq()
 {
-    std::vector<std::complex<float>> sequence(wf_len);
+    std::vector<samp_type> sequence(wf_len);
     float scale_down = scale / sqrt(wf_len);
 
     for (int n = 0; n < wf_len; ++n)
@@ -81,11 +81,11 @@ std::vector<std::complex<float>> WaveformGenerator::generateDFTseq()
     return sequence;
 }
 
-std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
+std::vector<samp_type> WaveformGenerator::generate_waveform()
 {
 
-    std::vector<std::complex<float>> final_sequence;
-    std::vector<std::complex<float>> sequence;
+    std::vector<samp_type> final_sequence;
+    std::vector<samp_type> sequence;
 
     switch (wf_type)
     {
@@ -114,14 +114,14 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
     {
         final_sequence.insert(final_sequence.end(), sequence.begin(), sequence.end());
         if ((wf_reps > 1) and (i < wf_reps - 1) and (wf_gap > 0))
-            final_sequence.insert(final_sequence.end(), wf_gap, std::complex<float>(0.0, 0.0));
+            final_sequence.insert(final_sequence.end(), wf_gap, samp_type(0.0, 0.0));
     }
 
     // add zero at the beginning and end
     if (wf_pad > 0)
     {
-        final_sequence.insert(final_sequence.begin(), wf_pad, std::complex<float>(0.0, 0.0));
-        final_sequence.insert(final_sequence.end(), wf_pad, std::complex<float>(0.0, 0.0));
+        final_sequence.insert(final_sequence.begin(), wf_pad, samp_type(0.0, 0.0));
+        final_sequence.insert(final_sequence.end(), wf_pad, samp_type(0.0, 0.0));
     }
 
     return final_sequence;
