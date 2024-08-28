@@ -281,10 +281,6 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
         corr_abs_val = std::abs(corr) / N_zfc;
         curr_pnr = corr_abs_val / peak_det_obj_ref.noise_ampl;
 
-        // debug
-        if (curr_pnr > max_pnr)
-            max_pnr = curr_pnr;
-
         if (curr_pnr >= peak_det_obj_ref.curr_pnr_threshold)
         {
             found_peak = true;
@@ -318,7 +314,7 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
             // break the for loop
             break;
         }
-        else // increase conuter
+        else // increase counter
         {
             saved_ref.pop_front();
             saved_ref.push_back(samples_buffer[i + N_zfc - 1]);
