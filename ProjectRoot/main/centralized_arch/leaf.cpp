@@ -123,14 +123,14 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
                 tx_waveform.insert(tx_waveform.end(), tx_waveform_gap, std::complex<float>(0.0, 0.0));
             }
 
-            bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, false);
+            bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, true);
             if (!transmit_success)
                 LOG_WARN("Transmission Unsuccessful!");
             else
                 LOG_INFO("Transmission Sucessful!");
 
-            tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(5000 / 1e6);
-            std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 4900));
+            // std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 4900));
+            tx_start_timer += uhd::time_spec_t(1000 / 1e6);
         }
 
         std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 100000));
