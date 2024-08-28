@@ -45,7 +45,7 @@ void transmit_thread(USRP_class &usrp_obj, ConfigParser &parser)
     {
         LOG_INFO_FMT("---------------- ROUND : %1% -----------------", i);
         // uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         usrp_obj.transmission(tx_waveform, uhd::time_spec_t(0.0), stop_signal_called, true);
     }
 
