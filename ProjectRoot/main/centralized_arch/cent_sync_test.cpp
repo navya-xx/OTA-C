@@ -14,6 +14,45 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
+void receive_thread(USRP_class &usrp_obj, ConfigParser &parser, std::string homeDirStr)
+{
+    std::string curr_datetime = currentDateTimeFilename();
+    std::string filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
+    usrp_obj.rx_save_stream.open(filename, std::ios::out | std::ios::binary | std::ios::app);
+    if (!usrp_obj.rx_save_stream.is_open())
+    {
+        LOG_WARN("Error: Could not open file for writing.");
+        return;
+    }
+    auto received_samples = usrp_obj.reception(stop_signal_called, 0, 0.0, uhd::time_spec_t(0.0), true);
+}
+
+void transmit_thread(USRP_class &usrp_obj, ConfigParser &parser)
+{
+    int num_runs = int(parser.getValue_int("num-test-runs"));
+
+    WaveformGenerator wf_gen = WaveformGenerator();
+    size_t N_zfc = parser.getValue_int("Ref-N-zfc");
+    size_t q_zfc = parser.getValue_int("Ref-m-zfc");
+    size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
+    size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
+
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
+    // wf_gen.initialize(wf_gen.IMPULSE, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
+    const auto tx_waveform = wf_gen.generate_waveform();
+
+    for (int i = 0; i < num_runs; ++i)
+    {
+        LOG_INFO_FMT("---------------- ROUND : %1% -----------------", i);
+        // uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        usrp_obj.transmission(tx_waveform, uhd::time_spec_t(0.0), stop_signal_called, true);
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    stop_signal_called = true;
+}
+
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     /*------ Initialize ---------------*/
@@ -35,13 +74,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------ Parse Config -------------*/
     ConfigParser parser(projectDir + "/config/config.conf");
     parser.set_value("device-id", device_id, "str", "USRP device number");
-    int num_runs = int(parser.getValue_int("num-test-runs"));
     if (argc > 2)
     {
-        num_runs = std::stoi(argv[2]);
+        int num_runs = std::stoi(argv[2]);
         parser.set_value("num-test-runs", std::to_string(num_runs), "int");
     }
-
     parser.set_value("storage-folder", projectDir + "/storage", "str", "Location of storage director");
 
     /*------- USRP setup --------------*/
@@ -54,32 +91,26 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     parser.print_values();
 
-    float tx_wait_microsec = parser.getValue_float("start-tx-wait-microsec");
+    /*------- Threads  ----------------*/
 
-    WaveformGenerator wf_gen = WaveformGenerator();
-    size_t N_zfc = parser.getValue_int("Ref-N-zfc");
-    size_t q_zfc = parser.getValue_int("Ref-m-zfc");
-    size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
-    size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
-    // wf_gen.initialize(wf_gen.IMPULSE, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
-    const auto tx_waveform = wf_gen.generate_waveform();
+    // setup thread_group
+    boost::thread_group thread_group;
 
-    for (int i = 0; i < num_runs; ++i)
-    {
-        LOG_INFO_FMT("---------------- ROUND : %1% -----------------", i);
-        // uhd::time_spec_t transmit_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(1.0);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        usrp_obj.transmission(tx_waveform, uhd::time_spec_t(0.0), stop_signal_called, true);
+    auto my_producer_thread = thread_group.create_thread([=, &usrp_obj, &parser]()
+                                                         { receive_thread(usrp_obj, parser, homeDirStr); });
 
-        // Receive samples for a fixed duration and return
-        double rx_duration_secs = 1.0;
-        std::this_thread::sleep_for(std::chrono::microseconds(int(tx_wait_microsec)));
-        auto received_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration_secs, uhd::time_spec_t(0.0), true);
+    uhd::set_thread_name(my_producer_thread, "receive_thread");
 
-        // LOG_INFO_FMT("--------------- FINISHED : %1% ----------------", i);
-    }
+    // consumer thread
+    auto my_consumer_thread = thread_group.create_thread([=, &usrp_obj, &parser]()
+                                                         { transmit_thread(usrp_obj, parser); });
+
+    uhd::set_thread_name(my_consumer_thread, "transmit_thread");
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    thread_group.join_all();
 
     return EXIT_SUCCESS;
 };
