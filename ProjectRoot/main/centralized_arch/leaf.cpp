@@ -65,8 +65,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             return false;
     };
 
-    size_t alt_wf_gap = 10000, inner_wf_gap = 1000;
-    size_t tx_waveform_gap = int(usrp_obj.tx_rate * inner_wf_gap / 1e6); // 10 millisec gap
+    size_t alt_wf_gap = 50000, inner_wf_gap = 5000, total_transmit_time = int(1e6); // microsecs
+    size_t tx_waveform_gap = int(usrp_obj.tx_rate * inner_wf_gap / 1e6);            // 10 millisec gap
 
     while (not stop_signal_called)
     {
@@ -115,15 +115,16 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // single_waveform.insert(single_waveform.begin(), 1000, std::complex<float>(0.0, 0.0));
         // single_waveform.insert(single_waveform.end(), 1000, std::complex<float>(0.0, 0.0));
 
-        for (int j = 0; j < 50; ++j)
+        std::vector<std::complex<float>> tx_waveform;
+        for (int i = 0; i < 10; ++i)
         {
-            std::vector<std::complex<float>> tx_waveform;
-            for (int i = 0; i < 10; ++i)
-            {
-                tx_waveform.insert(tx_waveform.end(), single_waveform.begin(), single_waveform.end());
-                tx_waveform.insert(tx_waveform.end(), tx_waveform_gap, std::complex<float>(0.0, 0.0));
-            }
+            tx_waveform.insert(tx_waveform.end(), single_waveform.begin(), single_waveform.end());
+            tx_waveform.insert(tx_waveform.end(), tx_waveform_gap, std::complex<float>(0.0, 0.0));
+        }
+        size_t num_alt_rounds = total_transmit_time / ((tx_waveform.size() / usrp_obj.tx_rate) * 1e6 + alt_wf_gap);
 
+        for (int j = 0; j < num_alt_rounds; ++j)
+        {
             bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, false);
             if (!transmit_success)
                 LOG_WARN("Transmission Unsuccessful!");
