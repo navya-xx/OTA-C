@@ -113,7 +113,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         single_waveform.insert(single_waveform.end(), 1000, std::complex<float>(0.0, 0.0));
 
         std::vector<std::complex<float>> tx_waveform;
-        size_t tx_waveform_gap = int(usrp_obj.tx_rate * 10 / 1e3); // 10 millisec gap
+        size_t tx_waveform_gap = int(usrp_obj.tx_rate * 1 / 1e3); // 1 millisec gap
 
         for (int i = 0; i < 10; ++i)
         {
