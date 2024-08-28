@@ -65,8 +65,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             return false;
     };
 
-    size_t alt_wf_gap = 10000;
-    size_t tx_waveform_gap = int(usrp_obj.tx_rate * 10 / 1e3); // 10 millisec gap
+    size_t alt_wf_gap = 10000, inner_wf_gap = 1000;
+    size_t tx_waveform_gap = int(usrp_obj.tx_rate * inner_wf_gap / 1e6); // 10 millisec gap
 
     while (not stop_signal_called)
     {
@@ -130,7 +130,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             else
                 LOG_INFO("Transmission Sucessful!");
 
-            std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + tx_waveform_gap + alt_wf_gap - 1000));
+            std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + inner_wf_gap + alt_wf_gap - 1000));
             tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(alt_wf_gap / 1e6);
         }
 
