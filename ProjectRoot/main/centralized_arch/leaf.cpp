@@ -129,8 +129,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             else
                 LOG_INFO("Transmission Sucessful!");
 
-            // std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 4900));
-            tx_start_timer += uhd::time_spec_t(1000 / 1e6);
+            std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 10000));
+            tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(10000 / 1e6);
         }
 
         std::this_thread::sleep_for(std::chrono::microseconds(int((tx_start_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6) + 100000));
