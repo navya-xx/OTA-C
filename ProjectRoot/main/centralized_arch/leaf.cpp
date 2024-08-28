@@ -96,7 +96,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // adjust for CFO
         int counter = 0;
-        for (auto &samp : unit_rand_samples)
+        std::vector<std::complex<float>> tx_samples(unit_rand_samples.begin(), unit_rand_samples.end());
+        for (auto &samp : tx_samples)
         {
             if (csd_obj.cfo != 0.0)
                 samp *= curr_scaling * std::complex<float>(std::cos(csd_obj.cfo * counter), std::sin(csd_obj.cfo * counter));
@@ -105,8 +106,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             counter++;
         }
 
-        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, curr_scaling, unit_rand_samples.size());
-        bool transmit_success = usrp_obj.transmission(unit_rand_samples, tx_start_timer, stop_signal_called, false);
+        LOG_DEBUG_FMT("Transmitting waveform UNIT_RAND (len=%6%, L=%1%, rand_seed=%2%, R=%3%, gap=%4%, scale=%5%)", wf_len, zfc_q, wf_reps, wf_gen.wf_gap, curr_scaling, tx_samples.size());
+        bool transmit_success = usrp_obj.transmission(tx_samples, tx_start_timer, stop_signal_called, false);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
         else
