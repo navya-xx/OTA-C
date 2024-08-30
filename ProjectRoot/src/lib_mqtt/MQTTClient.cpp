@@ -23,7 +23,7 @@ MQTTClient::MQTTClient(const std::string &clientId)
     : client(serverAddress, clientId)
 {
     connectOptions.set_clean_session(true);
-    connectOptions.set_keep_alive_interval(20);
+    connectOptions.set_keep_alive_interval(60);
     client.set_message_callback([this](mqtt::const_message_ptr msg)
                                 { onMessage(msg->get_topic(), msg->to_string()); });
     connect();

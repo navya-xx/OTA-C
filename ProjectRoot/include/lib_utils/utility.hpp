@@ -6,6 +6,8 @@
 #include "json.hpp"
 
 std::string currentDateTime();
+std::time_t convertStrToTime(const std::string &datetime);
+std::string convertTimeToStr(const std::time_t &datetime, const std::string &format = "%Y%m%d_%H_%M_%S");
 std::string currentDateTimeFilename();
 void append_value_with_timestamp(const std::string &filename, std::ofstream &outfile, std::string value);
 void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream);

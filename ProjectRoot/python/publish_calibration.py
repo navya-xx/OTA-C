@@ -59,6 +59,7 @@ def process_calibration_data(dataframe):
             store_df = pd.concat([store_df, pd.DataFrame([tmp_dict])], ignore_index=True)
         
         # compute mean and variance of the data
+        amp_c_to_l_mean = store_df['amp_c_to_l'].mean()
         amp_mean = store_df['amp_ratio'].mean()
         amp_var = store_df['amp_ratio'].var()
         total_runs = store_df.shape[0]
@@ -66,7 +67,16 @@ def process_calibration_data(dataframe):
             print("%s: No calibration data available!" %leaf)
             continue
         
-        new_df = pd.DataFrame([{'total_runs':total_runs, 'cent':cent, 'leaf':leaf, 'cent_tx_gain':store_df['cent_tx_gain'].values[0], 'leaf_rx_gain':store_df['leaf_rx_gain'].values[0], 'amp_ratio_mean':amp_mean, 'amp_ratio_var':amp_var, 'time':store_df['time'].min().strftime('%Y-%m-%d %H:%M:%S')}])
+        new_df = pd.DataFrame([{
+            'total_runs':total_runs, 
+            'cent':cent, 'leaf':leaf, 
+            'cent_tx_gain':store_df['cent_tx_gain'].values[0], 
+            'leaf_rx_gain':store_df['leaf_rx_gain'].values[0], 
+            'amp_c_to_l_mean': amp_c_to_l_mean, 
+            'amp_ratio_mean':amp_mean, 
+            'amp_ratio_var':amp_var, 
+            'time':store_df['time'].min().strftime('%Y-%m-%d %H:%M:%S')
+            }])
         calib_results = pd.concat([calib_results, new_df], ignore_index=True)
 
     return calib_results
@@ -120,12 +130,13 @@ def main():
 
         # insert data into calibration table
         cursor.execute('''
-          CREATE TABLE IF NOT EXISTS calibration_results (
+          CREATE TABLE IF NOT EXISTS calib_mean_results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cent TEXT NOT NULL,
             leaf TEXT NOT NULL,
             cent_tx_gain NUMERIC,
             leaf_rx_gain NUMERIC,
+            amp_c_to_l_mean REAL,
             amp_ratio_mean REAL NOT NULL,
             amp_ratio_var REAL NOT NULL,
             total_runs INTEGER,
@@ -134,8 +145,8 @@ def main():
           ''')
         
         insert_query = '''
-                        INSERT INTO calibration_results (cent, leaf, cent_tx_gain, leaf_rx_gain, amp_ratio_mean, amp_ratio_var, total_runs, timestamp)
-                        VALUES (:cent, :leaf, :cent_tx_gain, :leaf_rx_gain, :amp_ratio_mean, :amp_ratio_var, :total_runs, :time)
+                        INSERT INTO calib_mean_results (cent, leaf, cent_tx_gain, leaf_rx_gain, amp_c_to_l_mean, amp_ratio_mean, amp_ratio_var, total_runs, timestamp)
+                        VALUES (:cent, :leaf, :cent_tx_gain, :leaf_rx_gain, :amp_c_to_l_mean, :amp_ratio_mean, :amp_ratio_var, :total_runs, :time)
                         '''
         for i, cdata in calib_res.iterrows():
             cdict = cdata.to_dict()

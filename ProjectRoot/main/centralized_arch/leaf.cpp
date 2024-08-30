@@ -200,6 +200,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     bool got_calib_ratio = false, got_cfo = false;
     std::string cent_serial = parser.getValue_str("cent-serial");
     std::string CFO_topic = "calibration/CFO/" + device_id, calib_topic = "calibration/ratio/" + cent_serial + "/" + device_id;
+
     std::function<void(const std::string &)> CFO_callback = [&last_cfo, &got_cfo](const std::string &payload)
     {
         // Parse the JSON payload

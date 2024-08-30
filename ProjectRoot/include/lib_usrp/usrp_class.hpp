@@ -31,6 +31,9 @@ public:
 
     void adjust_for_freq_offset(const float &freq_offset);
 
+    void set_tx_gain(const float &_tx_gain, const int &channel = 0);
+    void set_rx_gain(const float &_rx_gain, const int &channel = 0);
+
     std::ofstream rx_save_stream;
     float init_noise_ampl = 0.0;
     size_t max_rx_packet_size, max_tx_packet_size;

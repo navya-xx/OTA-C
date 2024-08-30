@@ -12,11 +12,11 @@ if $CLEAN_SLATE; then
 fi
 
 cent_node="32B1728"
-# leaf_node_serials=("32B172B" "32C793E" "32B1708" "32C7981" "337D42D" "32C79F7" "32C7920" "32C79BE" "32C79C6")
-leaf_node_serials=("32C79C6")
+leaf_node_serials=("32B172B" "32C793E" "32B1708" "32C7981" "337D42D" "32C79F7" "32C7920" "32C79BE" "32C79C6")
+# leaf_node_serials=("32C79C6")
 
-# remote_nodes=("rpi4m1@192.168.5.241" "rpi4m2@192.168.5.242" "rpi4m3@192.168.5.243" "rpi4m4@192.168.5.244" "rpi4m4@192.168.5.244" "rpi4m5@192.168.5.245" "rpi4m5@192.168.5.245" "rpi4compute@192.168.5.246" "nuc01@192.168.5.248")
-remote_nodes=("nuc01@192.168.5.248")
+remote_nodes=("rpi4m1@192.168.5.241" "rpi4m2@192.168.5.242" "rpi4m3@192.168.5.243" "rpi4m4@192.168.5.244" "rpi4m4@192.168.5.244" "rpi4m5@192.168.5.245" "rpi4m5@192.168.5.245" "rpi4compute@192.168.5.246" "nuc01@192.168.5.248")
+# remote_nodes=("nuc01@192.168.5.248")
 
 timeout=900  # Set your timeout in seconds
 

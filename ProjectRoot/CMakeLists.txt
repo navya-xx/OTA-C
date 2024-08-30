@@ -96,8 +96,8 @@ endfunction()
 # add_library(lib_usrp STATIC src/lib_usrp/USRPclass.cpp)
 # enable_precompiled_headers(lib_usrp)
 
-SET(executables_list CA_leaf CA_cent_test CA_calib rx_to_file)
-SET(files_list main/centralized_arch/leaf.cpp main/centralized_arch/cent_sync_test.cpp main/centralized_arch/calibration.cpp main/experiments/rx_to_file.cpp)
+SET(executables_list CA_leaf CA_cent_test TX_calib rx_to_file)
+SET(files_list main/centralized_arch/leaf.cpp main/centralized_arch/cent_sync_test.cpp main/calibration/tx_calib.cpp main/experiments/rx_to_file.cpp)
 SET(counter 0)
 
 ### Make the executable #######################################################

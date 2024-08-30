@@ -1,4 +1,5 @@
 #include "usrp_class.hpp"
+#include <uhd/cal/database.hpp>
 
 USRP_class::USRP_class(const ConfigParser &parser) : parser(parser) {};
 
@@ -97,6 +98,28 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     std::string args = "serial=" + device_id;
 
     usrp = uhd::usrp::multi_usrp::make(args);
+
+    if (false)
+    {
+        uhd::dict<std::string, std::string> rx_info = usrp->get_usrp_rx_info();
+        for (auto key : rx_info.keys())
+            LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
+        auto tx_info = usrp->get_usrp_tx_info();
+        for (auto key : tx_info.keys())
+            LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
+
+        // query database for calibration data
+        if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
+        {
+            auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
+            LOG_INFO("Calibration data exists!");
+        }
+        else
+        {
+            LOG_INFO("Calibration data DO NOT exist!");
+        }
+    }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     usrp_make_success = true;
 
@@ -283,6 +306,22 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     LOG_INFO("--------- USRP initilization finished -----------------");
+};
+
+void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
+{
+    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", _tx_gain);
+    usrp->set_tx_gain(_tx_gain, channel);
+    float tx_gain = usrp->get_tx_gain(channel);
+    LOG_DEBUG_FMT("Actual TX Gain: %1% dB...", tx_gain);
+};
+
+void USRP_class::set_rx_gain(const float &_rx_gain, const int &channel)
+{
+    LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", _rx_gain);
+    usrp->set_rx_gain(_rx_gain, channel);
+    float rx_gain = usrp->get_rx_gain(channel);
+    LOG_DEBUG_FMT("Actual RX Gain: %1% dB...", rx_gain);
 };
 
 bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)

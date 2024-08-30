@@ -22,6 +22,29 @@ std::string currentDateTimeFilename()
     return oss.str();
 }
 
+// Function to convert a string with format "%Y%m%d_%H_%M_%S" to std::tm
+std::time_t convertStrToTime(const std::string &datetime)
+{
+    std::tm tm = {};
+    std::istringstream ss(datetime);
+    std::string format = "%Y%m%d_%H_%M_%S";
+    ss >> std::get_time(&tm, format.c_str());
+    if (ss.fail())
+        LOG_WARN_FMT("Failed to parse time string %1% with format %2%", datetime, format);
+    return std::mktime(&tm);
+}
+
+// Function to convert a string with format "%Y%m%d_%H_%M_%S" to std::tm
+std::string convertTimeToStr(const std::time_t &datetime, const std::string &format)
+{
+    std::tm time_tm = *std::localtime(&datetime);
+    std::ostringstream oss;
+    oss << std::put_time(&time_tm, format.c_str());
+    if (oss.fail())
+        LOG_WARN_FMT("Failed to parse time %1% to string with format %2%", datetime, format);
+    return oss.str();
+}
+
 void append_value_with_timestamp(const std::string &filename, std::ofstream &outfile, std::string value)
 {
     // Open the file in append mode (if not already open)
