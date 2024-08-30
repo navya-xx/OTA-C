@@ -461,6 +461,45 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
+void USRP_class::continuous_transmission(const std::vector<std::complex<float>> &buff, std::atomic_bool &stop_transmission)
+{
+
+    // setup metadata for the first packet
+    uhd::tx_metadata_t md;
+    md.start_of_burst = true;
+    md.end_of_burst = false;
+
+    const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_tx_packet_size / tx_rate));
+
+    // transmission
+    size_t num_acc_samps = 0;
+    size_t num_tx_samps_sent_now = 0;
+    size_t total_num_samps = buff.size();
+
+    while (not stop_transmission)
+    {
+        while (num_acc_samps < total_num_samps)
+        {
+            size_t samps_to_send = std::min(total_num_samps - num_acc_samps, max_tx_packet_size);
+            num_tx_samps_sent_now = tx_streamer->send(&buff.front(), samps_to_send, md, burst_pkt_time);
+            if (num_tx_samps_sent_now < samps_to_send)
+            {
+                LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d.", num_tx_samps_sent_now, buff.size());
+            }
+
+            if (stop_transmission)
+                break;
+
+            md.start_of_burst = false;
+        }
+        num_acc_samps = 0;
+    }
+
+    // send a mini EOB packet
+    md.end_of_burst = true;
+    tx_streamer->send("", 0, md);
+};
+
 std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
 {
     std::string filename;

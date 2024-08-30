@@ -36,8 +36,6 @@ private:
     std::vector<std::complex<float>> generateImpulseSignal();
 
     std::vector<std::complex<float>> generateDFTseq();
-
-    std::vector<std::complex<float>> generateSine();
 };
 
 #endif // WAVEFORMS

@@ -81,19 +81,6 @@ std::vector<std::complex<float>> WaveformGenerator::generateDFTseq()
     return sequence;
 }
 
-std::vector<std::complex<float>> WaveformGenerator::generateSine()
-{
-    std::vector<std::complex<float>> sequence(wf_len);
-
-    for (int n = 0; n < wf_len; ++n)
-    {
-        float angle = 2 * M_PI * n / wf_len;
-        sequence[n] = std::polar(scale, angle);
-    }
-
-    return sequence;
-}
-
 std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
 {
 
@@ -115,7 +102,7 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
         break;
 
     case WAVEFORM_TYPE::DFT:
-        sequence = generateImpulseSignal();
+        sequence = generateDFTseq();
         break;
 
     default:
