@@ -303,7 +303,7 @@ void USRP_class::initialize(bool perform_rxtx_tests)
         json_data["noise-level"] = init_noise_ampl;
         json_data["time"] = currentDateTime();
         MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-        mqttClient.publish("usrp/noise_levels", json_data.dump(4));
+        mqttClient.publish("usrp/noise_levels", json_data.dump(4), true);
     }
 
     // set current clock to zero
