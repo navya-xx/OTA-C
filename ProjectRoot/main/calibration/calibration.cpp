@@ -41,7 +41,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
-    size_t wf_pad = 10 * size_t(reps_zfc * N_zfc);
+    size_t wf_pad = size_t(reps_zfc * N_zfc * parser.getValue_int("Ref-padding-mul"));
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
     wf_gen.pad_scale = 0.05;
     auto tx_waveform = wf_gen.generate_waveform();
