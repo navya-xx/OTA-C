@@ -254,8 +254,7 @@ float averageAbsoluteValue(const std::vector<std::complex<float>> &vec, const fl
 
 void update_device_config_cfo(const std::string &serial, const float &cfo)
 {
-    const char *homeDir = std::getenv("HOME");
-    std::string homeDirStr(homeDir);
+    std::string homeDirStr = get_home_dir();
     std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
     std::string file = projectDir + "/config/devices.json";
     std::ifstream inputFile(file);
@@ -288,8 +287,7 @@ void update_device_config_cfo(const std::string &serial, const float &cfo)
 
 float obtain_last_cfo(const std::string &serial)
 {
-    const char *homeDir = std::getenv("HOME");
-    std::string homeDirStr(homeDir);
+    std::string homeDirStr = get_home_dir();
     std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
     std::string file = projectDir + "/config/devices.json";
     std::ifstream inputFile(file);
@@ -311,4 +309,28 @@ float obtain_last_cfo(const std::string &serial)
 
     LOG_WARN("CFO not found!!");
     return 0.0;
+}
+
+std::string get_home_dir()
+{
+    const char *homeDir = std::getenv("HOME");
+
+    if (!homeDir)
+    {
+        // If HOME is not set, use getpwuid to get the home directory of the current user
+        struct passwd *pw = getpwuid(getuid());
+        if (pw && pw->pw_dir)
+        {
+            homeDir = pw->pw_dir;
+        }
+        else
+        {
+            LOG_ERROR("Unable to determine the home directory.");
+            return ""; // Exit with an error code
+        }
+    }
+
+    std::string homeDirStr(homeDir);
+
+    return homeDirStr;
 }

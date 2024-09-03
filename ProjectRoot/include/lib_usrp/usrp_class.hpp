@@ -6,6 +6,7 @@
 #include "log_macros.hpp"
 #include "utility.hpp"
 #include "config_parser.hpp"
+#include "MQTTClient.hpp"
 
 extern const bool DEBUG;
 

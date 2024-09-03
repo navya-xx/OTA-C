@@ -3,7 +3,8 @@
 
 #include "pch.hpp"
 #include "log_macros.hpp"
-#include "json.hpp"
+#include <pwd.h>
+#include <unistd.h>
 
 std::string currentDateTime();
 std::time_t convertStrToTime(const std::string &datetime);
@@ -22,5 +23,6 @@ float calc_signal_power(const std::vector<std::complex<float>> &signal, const si
 float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0);
 void update_device_config_cfo(const std::string &serial, const float &cfo);
 float obtain_last_cfo(const std::string &serial);
+std::string get_home_dir();
 
 #endif // UTILITY_FUNCS

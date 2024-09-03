@@ -1,5 +1,4 @@
 #include "usrp_class.hpp"
-#include <uhd/cal/database.hpp>
 
 USRP_class::USRP_class(const ConfigParser &parser) : parser(parser) {};
 
@@ -99,26 +98,25 @@ void USRP_class::initialize(bool perform_rxtx_tests)
 
     usrp = uhd::usrp::multi_usrp::make(args);
 
-    if (false)
-    {
-        uhd::dict<std::string, std::string> rx_info = usrp->get_usrp_rx_info();
-        for (auto key : rx_info.keys())
-            LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
-        auto tx_info = usrp->get_usrp_tx_info();
-        for (auto key : tx_info.keys())
-            LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
-
-        // query database for calibration data
-        if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
-        {
-            auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
-            LOG_INFO("Calibration data exists!");
-        }
-        else
-        {
-            LOG_INFO("Calibration data DO NOT exist!");
-        }
-    }
+    // if (false)
+    // {
+    //     uhd::dict<std::string, std::string> rx_info = usrp->get_usrp_rx_info();
+    //     for (auto key : rx_info.keys())
+    //         LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
+    //     auto tx_info = usrp->get_usrp_tx_info();
+    //     for (auto key : tx_info.keys())
+    //         LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
+    //     // query database for calibration data
+    //     if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
+    //     {
+    //         auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
+    //         LOG_INFO("Calibration data exists!");
+    //     }
+    //     else
+    //     {
+    //         LOG_INFO("Calibration data DO NOT exist!");
+    //     }
+    // }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     usrp_make_success = true;
@@ -299,6 +297,13 @@ void USRP_class::initialize(bool perform_rxtx_tests)
         init_noise_ampl = std::sqrt(noise_power);
         // float tmp_noise_ampl = averageAbsoluteValue(rx_samples);
         LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
+        json json_data;
+        json_data["device_id"] = device_id;
+        json_data["rx-gain"] = rx_gain;
+        json_data["noise-level"] = init_noise_ampl;
+        json_data["time"] = currentDateTime();
+        MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+        mqttClient.publish("usrp/noise_levels", json_data.dump(4));
     }
 
     // set current clock to zero
@@ -650,9 +655,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
 void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &duration)
 {
     std::string data_filename, timer_filename;
-
-    const char *homeDir = std::getenv("HOME");
-    std::string homeDirStr(homeDir);
+    std::string homeDirStr = get_home_dir();
     std::string curr_datetime = currentDateTimeFilename();
     data_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_data_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
     timer_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_timer_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
