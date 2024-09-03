@@ -43,7 +43,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = 10 * size_t(reps_zfc * N_zfc);
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
-    wf_gen.pad_scale = 0.05;
+    wf_gen.pad_scale = 0.0;
     auto tx_waveform = wf_gen.generate_waveform();
 
     std::string device_id = parser.getValue_str("device-id");
@@ -55,7 +55,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     MQTTClient &mqttClient = MQTTClient::getInstance();
 
     float rx_duration = is_cent ? 1.0 : 0.0; // fix reception duration for cent node
-    double sleep_sec = 0.2 + tx_waveform.size() / usrp_obj.tx_rate;
+    double sleep_sec = 1.2 + tx_waveform.size() / usrp_obj.tx_rate;
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
