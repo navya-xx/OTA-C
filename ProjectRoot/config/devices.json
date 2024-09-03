@@ -48,20 +48,6 @@
             }
         },
         {
-            "serial": "32C7981",
-            "id": 89,
-            "hostname": "rpi4m4",
-            "IP address": "192.168.5.244",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
-        },
-        {
             "serial": "337D42D",
             "id": 113,
             "hostname": "rpi4m4",
@@ -120,6 +106,20 @@
         {
             "serial": "32C79C6",
             "id": 241,
+            "hostname": "nuc01",
+            "IP address": "192.168.5.248",
+            "calibration": {
+                "last_calibration": "12:36:00 18.08.2024",
+                "scaling_factor": 1.0
+            },
+            "parameters": {
+                "last_noise_level": 0.01,
+                "last_CFO": 0.0
+            }
+        },
+        {
+            "serial": "32C7981",
+            "id": 89,
             "hostname": "nuc01",
             "IP address": "192.168.5.248",
             "calibration": {
