@@ -117,11 +117,11 @@ std::vector<std::complex<float>> WaveformGenerator::generate_waveform()
             final_sequence.insert(final_sequence.end(), wf_gap, std::complex<float>(0.0, 0.0));
     }
 
-    // add zero at the beginning and end
+    // add zero at the beginning
     if (wf_pad > 0)
     {
         final_sequence.insert(final_sequence.begin(), wf_pad, std::complex<float>(pad_scale));
-        final_sequence.insert(final_sequence.end(), wf_pad, std::complex<float>(pad_scale));
+        // final_sequence.insert(final_sequence.end(), wf_pad, std::complex<float>(pad_scale));
     }
 
     return final_sequence;
