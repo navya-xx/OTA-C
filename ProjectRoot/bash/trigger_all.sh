@@ -37,10 +37,16 @@ do
     echo "Iteration $i for node ${node_serial}: Starting..."
 
     # Start two commands in detached screen sessions
+    # if [ "${node_name}" == "" ]; then
+    #     tmux send-keys -t $SESSION_NAME:0.$i "cd $HOME/OTA-C/ProjectRoot/build && ./CA_leaf ${node_serial} 1" C-m
+    # else
+    #     tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} 'cd \$HOME/OTA-C/ProjectRoot/build && ./CA_leaf ${node_serial} 1'" C-m
+    # fi
+
     if [ "${node_name}" == "" ]; then
-        tmux send-keys -t $SESSION_NAME:0.$i "cd $HOME/OTA-C/ProjectRoot/build && ./CA_leaf ${node_serial} 1" C-m
+        tmux send-keys -t $SESSION_NAME:0.$i "pgrep CA_ && pkill -9 CA_" C-m
     else
-        tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} 'cd \$HOME/OTA-C/ProjectRoot/build && ./CA_leaf ${node_serial} 1'" C-m
+        tmux send-keys -t $SESSION_NAME:0.$i "ssh ${node_name} 'pgrep CA_ && pkill -9 CA_'" C-m
     fi
 done
 

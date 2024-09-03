@@ -54,8 +54,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     MQTTClient &mqttClient = MQTTClient::getInstance();
 
-    float rx_duration = is_cent ? 1.0 : 0.0; // fix reception duration for cent node
-    double sleep_sec = 1.2 + tx_waveform.size() / usrp_obj.tx_rate;
+    float rx_duration = is_cent ? 2.0 : 0.0; // fix reception duration for cent node
+    double sleep_sec = 0.1 + (tx_waveform.size() / usrp_obj.tx_rate);
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -70,24 +70,24 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     if (is_cent)
     { // start with transmission
-        bool transmit_success = usrp_obj.transmission(tx_waveform, uhd::time_spec_t(0.0), stop_signal_called, false);
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec);
+        bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, true);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
         else
             LOG_INFO("Transmission Sucessful!");
 
-        // std::this_thread::sleep_for(std::chrono::milliseconds(sleep_millisec));
+        std::this_thread::sleep_for(std::chrono::milliseconds(int(sleep_sec * 1e3)));
     }
 
     while (not stop_signal_called)
     {
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(int(sleep_sec * 1e3)));
-
         // CycleStartDetector - producer loop
 
-        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, uhd::time_spec_t(0.0), false, producer_wrapper);
+        uhd::time_spec_t rx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_waveform.size() / usrp_obj.tx_rate);
+        auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, rx_start_timer, false, producer_wrapper);
 
         if (stop_signal_called)
             break;
@@ -147,7 +147,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         else
             LOG_INFO("Transmission Sucessful!");
 
-        // std::this_thread::sleep_for(std::chrono::microseconds(int((fix_wait_time - 1.0 + 0.1) * 1e6)));
+        LOG_INFO_FMT("Sleep for %1% secs ...", sleep_sec);
+        std::this_thread::sleep_for(std::chrono::milliseconds(int(sleep_sec * 1e3)));
 
         // move to next round
         csd_success_signal = false;

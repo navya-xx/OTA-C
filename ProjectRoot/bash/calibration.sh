@@ -31,6 +31,7 @@ cleanup() {
         fi
         sleep 1
     done
+    exit 0
 }
 
 trap cleanup SIGINT
