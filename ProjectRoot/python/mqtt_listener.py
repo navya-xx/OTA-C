@@ -8,7 +8,8 @@ import time
 list_of_topics = [
     "calibration/#",
     "config/run_config_info",
-    "otac/#"
+    "otac/#",
+    "usrp/#"
 ]
 
 # SQLite setup
