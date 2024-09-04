@@ -56,7 +56,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     float rx_duration = is_cent ? 2.0 : 0.0; // fix reception duration for cent node
     double sleep_sec = 0.1 + (tx_waveform.size() / usrp_obj.tx_rate);
-    double max_tx_delay = 100e-6;
+    double max_tx_delay = 1000e-6;
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
