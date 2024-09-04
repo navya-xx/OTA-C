@@ -376,9 +376,9 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
                 num_tx_samps_sent_now = tx_streamer->send(&buff.front() + num_acc_samps, samps_to_send, md, timeout);
                 if (num_tx_samps_sent_now < samps_to_send)
                 {
-                    LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d. Resetting streamer!", num_tx_samps_sent_now, samps_to_send);
+                    LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d.", num_tx_samps_sent_now, samps_to_send);
 
-                    tx_streamer.reset();
+                    // tx_streamer.reset();
 
                     ++retry_tx_counter;
                     if (retry_tx_counter > 5)
