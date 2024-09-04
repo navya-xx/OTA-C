@@ -43,7 +43,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = size_t(reps_zfc * N_zfc * parser.getValue_int("Ref-padding-mul"));
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
-    wf_gen.pad_scale = 0.05;
+    wf_gen.pad_scale = 0.005;
     auto tx_waveform = wf_gen.generate_waveform();
 
     std::string device_id = parser.getValue_str("device-id");

@@ -157,7 +157,7 @@ def main():
           ''')
         
         insert_query = '''
-                        INSERT INTO calib_mean_results (cent, leaf, cent_tx_gain, leaf_rx_gain, amp_c_to_l_mean, amp_c_to_l_var, amp_l_to_c_mean, amp_l_to_c_var, amp_ratio_mean, amp_ratio_var, total_runs, timestamp)
+                        INSERT INTO calib_mean_results (cent, leaf, cent_tx_gain, leaf_rx_gain, amp_c_to_l_mean, amp_c_to_l_var, amp_l_to_c_mean, amp_l_to_c_var, ratio_amp_mean, amp_ratio_mean, amp_ratio_var, total_runs, timestamp)
                         VALUES (:cent, :leaf, :cent_tx_gain, :leaf_rx_gain, :amp_c_to_l_mean, :amp_c_to_l_var, :amp_l_to_c_mean, :amp_l_to_c_var, :ratio_amp_mean, :amp_ratio_mean, :amp_ratio_var, :total_runs, :time)
                         '''
         for i, cdata in calib_res.iterrows():
