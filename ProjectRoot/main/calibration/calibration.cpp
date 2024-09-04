@@ -69,14 +69,15 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
     };
 
     if (is_cent)
-    { // start with transmission
-        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec);
+    {
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now(); // + uhd::time_spec_t(sleep_sec);
         bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, true);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");
         else
             LOG_INFO("Transmission Sucessful!");
 
+        LOG_INFO_FMT("Sleep for %1% secs ...", sleep_sec);
         std::this_thread::sleep_for(std::chrono::milliseconds(int(sleep_sec * 1e3)));
     }
 
@@ -123,8 +124,6 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         }
 
         // Transmission after cyclestartdetector
-        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec);
-        LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
 
         if (!is_cent)
         {
@@ -141,6 +140,8 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         }
 
         // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec);
+        LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
         bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, true);
         if (!transmit_success)
             LOG_WARN("Transmission Unsuccessful!");

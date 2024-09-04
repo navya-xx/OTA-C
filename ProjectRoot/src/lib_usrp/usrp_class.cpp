@@ -342,7 +342,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     auto usrp_now = usrp->get_time_now();
     double time_diff = (tx_time - usrp_now).get_real_secs();
     LOG_DEBUG_FMT("TX with delay = %.4f microsecs.", (time_diff * 1e6));
-    if (tx_time <= usrp_now or tx_time == uhd::time_spec_t(0.0))
+    if (time_diff <= 0.0)
     {
         LOG_DEBUG_FMT("Transmitting %d samples WITHOUT delay.", total_num_samps);
         md.has_time_spec = false;
@@ -389,7 +389,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
                     }
                     else
                     {
-                        LOG_WARN_FMT("Retry %1% to transmit signal after resetting tx_streamer!", retry_tx_counter);
+                        LOG_WARN_FMT("Retry %1% to transmit signal again!", retry_tx_counter);
                         time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
                         if (time_diff <= 0.0)
                             md.has_time_spec = false;
