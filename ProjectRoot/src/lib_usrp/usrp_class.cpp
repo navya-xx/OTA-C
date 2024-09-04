@@ -364,13 +364,13 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
 
     while (num_acc_samps < total_num_samps and not stop_signal_called)
     {
-        size_t samps_to_send = std::min(total_num_samps - num_acc_samps, max_tx_packet_size);
-        tx_delay = md.has_time_spec ? time_diff : 0.0;
-        timeout = burst_pkt_time + tx_delay;
         size_t retry_tx_counter = 0;
+        size_t samps_to_send = std::min(total_num_samps - num_acc_samps, max_tx_packet_size);
 
         while (true)
         {
+            tx_delay = md.has_time_spec ? time_diff : 0.0;
+            timeout = burst_pkt_time + tx_delay;
             try
             {
                 num_tx_samps_sent_now = tx_streamer->send(&buff.front() + num_acc_samps, samps_to_send, md, timeout);
@@ -391,7 +391,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
                     {
                         LOG_WARN_FMT("Retry %1% to transmit signal after resetting tx_streamer!", retry_tx_counter);
                         time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
-                        if (tx_time <= usrp_now or tx_time == uhd::time_spec_t(0.0))
+                        if (time_diff <= 0.0)
                             md.has_time_spec = false;
                         else
                         {
