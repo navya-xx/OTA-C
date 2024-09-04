@@ -60,7 +60,10 @@ def process_calibration_data(dataframe):
         
         # compute mean and variance of the data
         amp_c_to_l_mean = store_df['amp_c_to_l'].mean()
+        amp_c_to_l_var = store_df['amp_c_to_l'].var()
         amp_l_to_c_mean = store_df['amp_l_to_c'].mean()
+        amp_l_to_c_var = store_df['amp_l_to_c'].var()
+        ratio_amp_mean = amp_c_to_l_mean / amp_l_to_c_mean
         amp_mean = store_df['amp_ratio'].mean()
         amp_var = store_df['amp_ratio'].var() / (amp_mean ** 2)
         total_runs = store_df.shape[0]
@@ -73,9 +76,12 @@ def process_calibration_data(dataframe):
             'cent':cent, 'leaf':leaf, 
             'cent_tx_gain':store_df['cent_tx_gain'].values[0], 
             'leaf_rx_gain':store_df['leaf_rx_gain'].values[0], 
-            'amp_c_to_l_mean': amp_c_to_l_mean, 
+            'amp_c_to_l_mean': amp_c_to_l_mean,
+            'amp_c_to_l_var': amp_c_to_l_var,
             'amp_l_to_c_mean': amp_l_to_c_mean, 
-            'amp_ratio_mean':amp_mean, 
+            'amp_l_to_c_var': amp_l_to_c_var,
+            'ratio_amp_mean': ratio_amp_mean, 
+            'amp_ratio_mean':amp_mean,
             'amp_ratio_var':amp_var, 
             'time':store_df['time'].min().strftime('%Y-%m-%d %H:%M:%S')
             }])
@@ -139,7 +145,10 @@ def main():
             cent_tx_gain NUMERIC,
             leaf_rx_gain NUMERIC,
             amp_c_to_l_mean REAL,
+            amp_c_to_l_var REAL,
             amp_l_to_c_mean REAL,
+            amp_l_to_c_var REAL,
+            ratio_amp_mean REAL,
             amp_ratio_mean REAL NOT NULL,
             amp_ratio_var REAL NOT NULL,
             total_runs INTEGER,
@@ -148,8 +157,8 @@ def main():
           ''')
         
         insert_query = '''
-                        INSERT INTO calib_mean_results (cent, leaf, cent_tx_gain, leaf_rx_gain, amp_c_to_l_mean, amp_l_to_c_mean, amp_ratio_mean, amp_ratio_var, total_runs, timestamp)
-                        VALUES (:cent, :leaf, :cent_tx_gain, :leaf_rx_gain, :amp_c_to_l_mean, :amp_l_to_c_mean, :amp_ratio_mean, :amp_ratio_var, :total_runs, :time)
+                        INSERT INTO calib_mean_results (cent, leaf, cent_tx_gain, leaf_rx_gain, amp_c_to_l_mean, amp_c_to_l_var, amp_l_to_c_mean, amp_l_to_c_var, amp_ratio_mean, amp_ratio_var, total_runs, timestamp)
+                        VALUES (:cent, :leaf, :cent_tx_gain, :leaf_rx_gain, :amp_c_to_l_mean, :amp_c_to_l_var, :amp_l_to_c_mean, :amp_l_to_c_var, :ratio_amp_mean, :amp_ratio_mean, :amp_ratio_var, :total_runs, :time)
                         '''
         for i, cdata in calib_res.iterrows():
             cdict = cdata.to_dict()
