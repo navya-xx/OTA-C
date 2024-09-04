@@ -56,6 +56,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
     float rx_duration = is_cent ? 2.0 : 0.0; // fix reception duration for cent node
     double sleep_sec = 0.1 + (tx_waveform.size() / usrp_obj.tx_rate);
+    double max_tx_delay = 100e-6;
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [&csd_obj, &csd_success_signal](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -87,7 +88,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
 
         // CycleStartDetector - producer loop
 
-        uhd::time_spec_t rx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_waveform.size() / usrp_obj.tx_rate);
+        uhd::time_spec_t rx_start_timer = usrp_obj.usrp->get_time_now(); // + uhd::time_spec_t(tx_waveform.size() / usrp_obj.tx_rate);
         auto rx_samples = usrp_obj.reception(stop_signal_called, 0, rx_duration, rx_start_timer, false, producer_wrapper);
 
         if (stop_signal_called)
@@ -140,7 +141,10 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         }
 
         // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(sleep_sec);
+        if (sleep_sec > max_tx_delay)
+            std::this_thread::sleep_for(std::chrono::milliseconds(int((sleep_sec - max_tx_delay) * 1e3)));
+
+        uhd::time_spec_t tx_start_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(max_tx_delay);
         LOG_INFO_FMT("Current timer %1% and Tx start timer %2%.", usrp_obj.usrp->get_time_now().get_real_secs(), tx_start_timer.get_real_secs());
         bool transmit_success = usrp_obj.transmission(tx_waveform, tx_start_timer, stop_signal_called, true);
         if (!transmit_success)
