@@ -17,6 +17,26 @@ public:
 
     void initialize(bool perform_rxtx_test = true);
 
+    // device setup
+    void set_device_parameters();
+    void set_sample_rate();
+    void set_center_frequency();
+    void set_gains();
+    void set_bandwidth();
+    void apply_additional_settings();
+
+    // additional features
+    void setup_usrp_device();
+    void query_calibration_data();
+    void setup_streamers();
+    void perform_rx_tx_tests();
+
+    // Helper functions
+    bool check_and_create_usrp_device();
+    void configure_clock_source();
+    void publish_noise_level();
+    void log_device_parameters();
+
     bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
 
     void continuous_transmission(const std::vector<std::complex<float>> &buff, std::atomic_bool &stop_signal_called);
@@ -44,7 +64,8 @@ public:
     uhd::usrp::multi_usrp::sptr usrp;
     uhd::rx_streamer::sptr rx_streamer;
     uhd::tx_streamer::sptr tx_streamer;
-    float tx_rate, rx_rate, tx_gain, rx_gain, tx_bw, rx_bw, carrier_freq;
+    std::string device_id;
+    float tx_rate, rx_rate, tx_gain, tx_pow_ref, rx_gain, rx_pow_ref, tx_bw, rx_bw, carrier_freq;
     uhd::time_spec_t rx_sample_duration, tx_sample_duration, rx_md_time, tx_md_time;
     bool intialize_with_dummy_txrx = true;
 

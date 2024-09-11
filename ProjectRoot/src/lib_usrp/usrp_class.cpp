@@ -91,75 +91,101 @@ bool USRP_class::check_locked_sensor_tx(float setup_time)
 
 void USRP_class::initialize(bool perform_rxtx_tests)
 {
-    // Entire routine to setup USRP, streamers, testing Rx/Tx capabilities, etc.
-    std::string device_id = parser.getValue_str("device-id");
+    device_id = parser.getValue_str("device-id");
+    external_ref = parser.getValue_str("external_ref") == "true";
 
+    if (!check_and_create_usrp_device())
+    {
+        LOG_ERROR("Failed to create USRP device. Exiting!");
+        return;
+    }
+
+    setup_usrp_device();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    configure_clock_source();
+    set_device_parameters();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    check_locked_sensor_rx();
+    check_locked_sensor_tx();
+
+    setup_streamers();
+
+    if (perform_rxtx_tests)
+    {
+        perform_rx_tx_tests();
+    }
+
+    usrp->set_time_now(uhd::time_spec_t(0.0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    LOG_INFO("--------- USRP initialization finished -----------------");
+}
+
+bool USRP_class::check_and_create_usrp_device()
+{
     bool usrp_make_success = false;
     std::string args = "serial=" + device_id;
 
-    usrp = uhd::usrp::multi_usrp::make(args);
-
-    if (true)
+    try
     {
-        uhd::dict<std::string, std::string> rx_info = usrp->get_usrp_rx_info();
-        for (auto key : rx_info.keys())
-            LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
-
-        // query database for calibration data
-        if (uhd::usrp::cal::database::has_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]))
-        {
-            auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]);
-            LOG_INFO("Rx Calibration data exists!");
-        }
-        else
-        {
-            LOG_INFO("Rx Calibration data DO NOT exist!");
-        }
-
-        auto tx_info = usrp->get_usrp_tx_info();
-        for (auto key : tx_info.keys())
-            LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
-        // query database for calibration data
-        if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
-        {
-            auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
-            LOG_INFO("Tx Calibration data exists!");
-        }
-        else
-        {
-            LOG_INFO("Tx Calibration data DO NOT exist!");
-        }
+        usrp = uhd::usrp::multi_usrp::make(args);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        usrp_make_success = true;
+    }
+    catch (const std::exception &e)
+    {
+        LOG_ERROR_FMT("%1%", e.what());
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    usrp_make_success = true;
+    return usrp_make_success;
+}
 
-    // for (int i = 0; i < 3; ++i)
-    // {
-    //     try
-    //     {
-    //         usrp = uhd::usrp::multi_usrp::make(args);
-    //         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //         usrp_make_success = true;
-    //         break;
-    //     }
-    //     catch (const std::exception &e)
-    //     {
-    //         LOG_ERROR_FMT("%1%", e.what());
-    //     }
-    // }
+void USRP_class::setup_usrp_device()
+{
+    LOG_INFO_FMT("Initializing Device: %1%", usrp->get_pp_string());
+    // query_calibration_data();
+}
 
-    if (not usrp_make_success)
-        LOG_ERROR("Failed to create USRP device. Exiting!");
+void USRP_class::query_calibration_data()
+{
+    // Query RX calibration data
+    auto rx_info = usrp->get_usrp_rx_info();
+    for (auto key : rx_info.keys())
+        LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
 
-    LOG_INFO_FMT("Initilizing Device: %1%", usrp->get_pp_string());
+    if (uhd::usrp::cal::database::has_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]))
+    {
+        auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]);
+        LOG_INFO("Rx Calibration data exists!");
+    }
+    else
+    {
+        LOG_INFO("Rx Calibration data DO NOT exist!");
+    }
 
-    //_____________________ SETUP STREAMERS _____________________
+    // Query TX calibration data
+    auto tx_info = usrp->get_usrp_tx_info();
+    for (auto key : tx_info.keys())
+        LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
 
+    if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
+    {
+        auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
+        LOG_INFO("Tx Calibration data exists!");
+    }
+    else
+    {
+        LOG_INFO("Tx Calibration data DO NOT exist!");
+    }
+}
+
+void USRP_class::configure_clock_source()
+{
     if (external_ref)
     {
         usrp->set_clock_source("external");
-        // usrp->set_time_source("external");
 
         LOG_INFO("Now confirming lock on clock signals...");
         bool is_locked = false;
@@ -172,168 +198,194 @@ void USRP_class::initialize(bool perform_rxtx_tests)
         if (is_locked == false)
         {
             LOG_WARN("ERROR: Unable to confirm clock signal locked on board");
-            // usrp->set_clock_source("internal");
-            // usrp->set_time_source("internal");
         }
-        else
-        {
-            LOG_INFO_FMT("Clock and time sources set to : %1% and %2%.", usrp->get_clock_source(0), usrp->get_time_source(0));
-        }
+    }
+
+    LOG_INFO_FMT("Clock and time sources set to : %1% and %2%.", usrp->get_clock_source(0), usrp->get_time_source(0));
+}
+
+void USRP_class::set_device_parameters()
+{
+    set_sample_rate();
+    set_center_frequency();
+    set_gains();
+    set_bandwidth();
+    apply_additional_settings();
+}
+
+void USRP_class::set_sample_rate()
+{
+    float rate = parser.getValue_float("rate");
+    if (rate <= 0.0)
+    {
+        throw std::invalid_argument("Specify a valid sampling rate!");
+    }
+
+    LOG_DEBUG_FMT("Setting Tx/Rx Rate: %1% Msps.", (rate / 1e6));
+    usrp->set_tx_rate(rate);
+    usrp->set_rx_rate(rate, 0); // Assuming channel 0
+    tx_rate = usrp->get_tx_rate(0);
+    rx_rate = usrp->get_rx_rate(0);
+    LOG_DEBUG_FMT("Actual Tx Sampling Rate :  %1%", (tx_rate / 1e6));
+    LOG_DEBUG_FMT("Actual Rx Sampling Rate : %1%", (rx_rate / 1e6));
+}
+
+void USRP_class::set_center_frequency()
+{
+    float freq = parser.getValue_float("freq");
+    float lo_offset = parser.getValue_float("lo-offset");
+
+    LOG_DEBUG_FMT("Setting TX/RX Freq: %1% MHz...", (freq / 1e6));
+    LOG_DEBUG_FMT("Setting TX/RX LO Offset: %1% MHz...", (lo_offset / 1e6));
+
+    uhd::tune_request_t tune_request(freq, lo_offset);
+    usrp->set_rx_freq(tune_request, 0); // Assuming channel 0
+    usrp->set_tx_freq(tune_request, 0);
+    carrier_freq = usrp->get_rx_freq(0);
+    LOG_DEBUG_FMT("Actual Rx Freq: %1% MHz...", (usrp->get_rx_freq(0) / 1e6));
+    LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
+}
+
+void USRP_class::set_gains()
+{
+    bool mgmt_flat = parser.getValue_str("gain-mgmt") == "gain";
+
+    if (mgmt_flat)
+    {
+        float rx_gain_input = parser.getValue_float("rx-gain");
+        float tx_gain_input = parser.getValue_float("tx-gain");
+
+        LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", rx_gain_input);
+        usrp->set_rx_gain(rx_gain_input, 0); // Assuming channel 0
+        rx_gain = usrp->get_rx_gain(0);
+        LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
+
+        LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", tx_gain_input);
+        usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
+        tx_gain = usrp->get_tx_gain(0);
+        LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
     }
     else
     {
-        // usrp->set_clock_source("internal");
-        // usrp->set_time_source("internal");
-        LOG_INFO_FMT("Clock and time sources set to : %1% and %2%.", usrp->get_clock_source(0), usrp->get_time_source(0));
+        float rx_pow_ref_input = parser.getValue_float("rx-pow-ref");
+        float tx_pow_ref_input = parser.getValue_float("tx-pow-ref");
+
+        LOG_DEBUG_FMT("Setting RX Power ref level: %1% dBm...", rx_pow_ref_input);
+        usrp->set_rx_power_reference(rx_pow_ref_input); // Assuming channel 0
+        rx_pow_ref = usrp->get_rx_power_reference(0);
+        LOG_DEBUG_FMT("Actual Rx Power ref level: %1% dBm...", rx_pow_ref);
+
+        LOG_DEBUG_FMT("Setting TX Power ref level: %1% dBm...", tx_pow_ref_input);
+        usrp->set_tx_power_reference(tx_pow_ref_input); // Assuming channel 0
+        tx_pow_ref = usrp->get_tx_power_reference(0);
+        LOG_DEBUG_FMT("Actual Tx Power ref level: %1% dBm...", tx_pow_ref);
     }
+}
 
-    // set the sample rate
-    float rate = parser.getValue_float("rate");
-    int channel = 0; // we only use one channel on each device
-    if (rate <= 0.0)
-        throw std::invalid_argument("Specify a valid sampling rate!");
-    LOG_DEBUG_FMT("Setting Tx/Rx Rate: %1% Msps.", (rate / 1e6));
-    usrp->set_tx_rate(rate);
-    usrp->set_rx_rate(rate, channel);
-    tx_rate = usrp->get_tx_rate(channel);
-    rx_rate = usrp->get_rx_rate(channel);
-
-    // set the center frequency
-    float freq = parser.getValue_float("freq");
-    float lo_offset = parser.getValue_float("lo-offset");
-    LOG_DEBUG_FMT("Setting TX/RX Freq: %1% MHz...", (freq / 1e6));
-    LOG_DEBUG_FMT("Setting TX/RX LO Offset: %1% MHz...", (lo_offset / 1e6));
-    uhd::tune_request_t tune_request(freq, lo_offset);
-    usrp->set_rx_freq(tune_request, channel);
-    usrp->set_tx_freq(tune_request, channel);
-    carrier_freq = usrp->get_rx_freq(channel);
-
-    // set tx/rx gains
-    float _rx_gain, _tx_gain;
-    _rx_gain = parser.getValue_float("rx-gain");
-    _tx_gain = parser.getValue_float("tx-gain");
-
-    if (_rx_gain >= 0.0)
+void USRP_class::set_bandwidth()
+{
+    float rx_bw_input = parser.getValue_float("rx-bw");
+    if (rx_bw_input >= 0.0)
     {
-        LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", _rx_gain);
-        usrp->set_rx_gain(_rx_gain, channel);
-        rx_gain = usrp->get_rx_gain(channel);
+        LOG_DEBUG_FMT("Setting RX Bandwidth: %1% MHz...", (rx_bw_input / 1e6));
+        usrp->set_rx_bandwidth(rx_bw_input, 0); // Assuming channel 0
+        rx_bw = usrp->get_rx_bandwidth(0);
+        LOG_DEBUG_FMT("Actual Rx Bandwidth: %1% MHz...", (rx_bw / 1e6));
     }
-    if (_tx_gain >= 0.0)
-    {
-        LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", _tx_gain);
-        usrp->set_tx_gain(_tx_gain, channel);
-        tx_gain = usrp->get_tx_gain(channel);
-    }
-    // set the IF filter bandwidth
-    float _rx_bw = parser.getValue_float("rx-bw");
-    if (_rx_bw >= 0.0)
-    {
-        LOG_DEBUG_FMT("Setting RX Bandwidth: %1% MHz...", (_rx_bw / 1e6));
-        usrp->set_rx_bandwidth(_rx_bw, channel);
-        rx_bw = usrp->get_rx_bandwidth(channel);
-    }
-    float _tx_bw = parser.getValue_float("tx-bw");
-    if (_tx_bw >= 0.0)
-    {
-        LOG_DEBUG_FMT("Setting TX Bandwidth: %1% MHz...", (_tx_bw / 1e6));
-        usrp->set_tx_bandwidth(_tx_bw, channel);
-        tx_bw = usrp->get_tx_bandwidth(channel);
-    }
-    // sleep a bit to allow setup
-    std::this_thread::sleep_for(std::chrono::microseconds(500));
 
-    // check Ref and LO Lock detect
-    check_locked_sensor_rx();
-    check_locked_sensor_tx();
+    float tx_bw_input = parser.getValue_float("tx-bw");
+    if (tx_bw_input >= 0.0)
+    {
+        LOG_DEBUG_FMT("Setting TX Bandwidth: %1% MHz...", (tx_bw_input / 1e6));
+        usrp->set_tx_bandwidth(tx_bw_input, 0); // Assuming channel 0
+        tx_bw = usrp->get_tx_bandwidth(0);
+        LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
+    }
 
-    // Actual parameters set by USRP
+    std::this_thread::sleep_for(std::chrono::microseconds(500)); // Allow setup to settle
+}
+
+void USRP_class::apply_additional_settings()
+{
+    // This function could handle any additional settings, such as specific filters,
+    // advanced tuning settings, or any hardware-specific features.
+}
+
+void USRP_class::log_device_parameters()
+{
     LOG_DEBUG_FMT("Master Clock Rate: %1% Msps...", (usrp->get_master_clock_rate() / 1e6));
     LOG_DEBUG_FMT("Actual Tx Sampling Rate :  %1%", (tx_rate / 1e6));
     LOG_DEBUG_FMT("Actual Rx Sampling Rate : %1%", (rx_rate / 1e6));
-    LOG_DEBUG_FMT("Actual Rx Freq: %1% MHz...", (usrp->get_rx_freq(channel) / 1e6));
-    LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(channel) / 1e6));
+    LOG_DEBUG_FMT("Actual Rx Freq: %1% MHz...", (usrp->get_rx_freq(0) / 1e6));
+    LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
     LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
     LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
+    LOG_DEBUG_FMT("Tx Ref gain levels: %1%...", usrp->get_tx_power_reference(0)); // Assuming channel 0
+    LOG_DEBUG_FMT("Rx Ref gain levels: %1%...", usrp->get_rx_power_reference(0)); // Assuming channel 0
     LOG_DEBUG_FMT("Actual Rx Bandwidth: %1% MHz...", (rx_bw / 1e6));
     LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
+}
 
-    try
-    {
-        LOG_DEBUG_FMT("Tx Ref gain levels: %1%...", usrp->get_tx_power_reference(channel));
-        LOG_DEBUG_FMT("Tx Ref gain levels: %1%..", usrp->get_rx_power_reference(channel));
-    }
-    catch (...)
-    {
-    };
-
-    // -----------------------------------------------------------------------
-
-    // create streamers
+void USRP_class::setup_streamers()
+{
     std::string cpu_format = parser.getValue_str("cpu-format");
     std::string otw_format = "sc16";
     uhd::stream_args_t stream_args(cpu_format, otw_format);
-    std::vector<size_t> channel_nums;
-    channel_nums.push_back(channel);
+    std::vector<size_t> channel_nums = {0}; // Assuming channel 0
     stream_args.channels = channel_nums;
     rx_streamer = usrp->get_rx_stream(stream_args);
     tx_streamer = usrp->get_tx_stream(stream_args);
 
-    // set max packet size values
     max_rx_packet_size = rx_streamer->get_max_num_samps();
     max_tx_packet_size = tx_streamer->get_max_num_samps();
 
-    // set sampling durations
     rx_sample_duration = 1 / rx_rate;
     tx_sample_duration = 1 / tx_rate;
+}
 
-    //_____________________ TEST TX - RX _____________________
-    if (perform_rxtx_tests)
+void USRP_class::perform_rx_tx_tests()
+{
+    std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
+    bool dont_stop = false;
+    bool tx_success = transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop);
+    if (tx_success)
     {
-        std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
-        bool dont_stop = false;
-        bool tx_success = transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop);
-        if (tx_success)
-        {
-            LOG_DEBUG("Transmit test successful!");
-        }
-        else
-        {
-            LOG_WARN("Transmit test failed!");
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        size_t num_pkts = 10;
-        auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
-        if (rx_samples.size() == max_rx_packet_size * num_pkts)
-        {
-            LOG_DEBUG_FMT("Reception test successful! Total %1% samples received.", rx_samples.size());
-        }
-        else
-        {
-            LOG_WARN("Reception test Failed!");
-        }
-
-        float noise_power = calc_signal_power(rx_samples);
-        init_noise_ampl = std::sqrt(noise_power);
-        // float tmp_noise_ampl = averageAbsoluteValue(rx_samples);
-        LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
-        json json_data;
-        json_data["device_id"] = device_id;
-        json_data["rx-gain"] = rx_gain;
-        json_data["noise-level"] = init_noise_ampl;
-        json_data["time"] = currentDateTime();
-        MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-        mqttClient.publish("usrp/noise_levels", json_data.dump(4), true);
+        LOG_DEBUG("Transmit test successful!");
+    }
+    else
+    {
+        LOG_WARN("Transmit test failed!");
     }
 
-    // set current clock to zero
-    usrp->set_time_now(uhd::time_spec_t(0.0));
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    LOG_INFO("--------- USRP initilization finished -----------------");
-};
+    size_t num_pkts = 10;
+    auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
+    if (rx_samples.size() == max_rx_packet_size * num_pkts)
+    {
+        LOG_DEBUG_FMT("Reception test successful! Total %1% samples received.", rx_samples.size());
+    }
+    else
+    {
+        LOG_WARN("Reception test Failed!");
+    }
+
+    float noise_power = calc_signal_power(rx_samples);
+    init_noise_ampl = std::sqrt(noise_power);
+    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
+    publish_noise_level();
+}
+
+void USRP_class::publish_noise_level()
+{
+    json json_data;
+    json_data["device_id"] = device_id;
+    json_data["rx-gain"] = rx_gain;
+    json_data["noise-level"] = init_noise_ampl;
+    json_data["time"] = currentDateTime();
+    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+    mqttClient.publish("usrp/noise_levels", json_data.dump(4), true);
+}
 
 void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
 {
