@@ -92,7 +92,7 @@ bool USRP_class::check_locked_sensor_tx(float setup_time)
 void USRP_class::initialize(bool perform_rxtx_tests)
 {
     device_id = parser.getValue_str("device-id");
-    external_ref = parser.getValue_str("external_ref") == "true";
+    external_ref = parser.getValue_str("external-clock-ref") == "true";
 
     if (!check_and_create_usrp_device())
     {
