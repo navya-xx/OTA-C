@@ -393,3 +393,167 @@ std::pair<float, float> find_closest_gain(const std::string &json_filename, cons
     // Return the closest gain and the corresponding power_dBm
     return {closest_gain, closest_power_dbm};
 }
+
+// Function to find the closest gain value corresponding to the given power_dBm
+std::pair<float, float> find_best_rx_gain(const std::string &json_filename, const float &input_power_dbm, const float &input_freq)
+{
+    // Open and read the JSON file
+    std::ifstream file(json_filename);
+    if (!file.is_open())
+    {
+        LOG_WARN_FMT("Could not open JSON file %1%.", json_filename);
+        return {-100.0, -100.0};
+    }
+
+    // Parse the JSON file
+    json j;
+    file >> j;
+
+    // Variables to store the closest gain and power_dBm values
+    const auto &temp_freq_map = j["temp_freq_map"][0];
+    bool found_freq = false;
+
+    // Iterate through the temp_freq_map in the JSON data
+    for (const auto &freq_map : temp_freq_map["freqs"])
+    {
+        float freq = freq_map["freq"];
+        if (std::abs(freq - input_freq) < 1e3)
+        {
+            found_freq = true;
+            auto powers = freq_map["powers"];
+
+            // Find the two closest points for interpolation
+            GainPower lower_bound = {0.0, 0.0};
+            GainPower upper_bound = {0.0, 0.0};
+            bool found = false;
+
+            for (size_t i = powers.size() - 1; i >= 0; --i)
+            {
+                float gain = powers[i]["gain"];
+                float power_dbm = powers[i]["power_dbm"];
+
+                if (power_dbm >= input_power_dbm)
+                {
+                    if (i == powers.size() - 1)
+                    {
+                        // If the requested power is less than the first entry, use the first value
+                        return {gain, power_dbm};
+                    }
+
+                    // Upper bound is the current element
+                    upper_bound = {gain, power_dbm};
+
+                    // Lower bound is the previous element
+                    lower_bound = {powers[i + 1]["gain"], powers[i + 1]["power_dbm"]};
+
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found)
+            {
+                // Perform linear interpolation between lower_bound and upper_bound
+                float interpolated_gain = lower_bound.gain +
+                                          (input_power_dbm - lower_bound.power_dbm) *
+                                              (upper_bound.gain - lower_bound.gain) /
+                                              (upper_bound.power_dbm - lower_bound.power_dbm);
+
+                return {interpolated_gain, input_power_dbm};
+            }
+            else if (!found && !powers.empty())
+            {
+                auto last = powers.back();
+                return {last["gain"], last["power_dbm"]};
+            }
+        }
+    }
+
+    if (!found_freq)
+    {
+        LOG_WARN_FMT("Calibration data for input frequency %1% not found!", input_freq);
+    }
+    return {-100.0, -100.0};
+}
+
+// Function to find the closest gain value corresponding to the given power_dBm
+std::pair<float, float> find_best_tx_gain(const std::string &json_filename, const float &input_power_dbm, const float &input_freq)
+{
+    // Open and read the JSON file
+    std::ifstream file(json_filename);
+    if (!file.is_open())
+    {
+        LOG_WARN_FMT("Could not open JSON file %1%.", json_filename);
+        return {-100.0, -100.0};
+    }
+
+    // Parse the JSON file
+    json j;
+    file >> j;
+
+    // Variables to store the closest gain and power_dBm values
+    const auto &temp_freq_map = j["temp_freq_map"][0];
+    bool found_freq = false;
+
+    // Iterate through the temp_freq_map in the JSON data
+    for (const auto &freq_map : temp_freq_map["freqs"])
+    {
+        float freq = freq_map["freq"];
+        if (std::abs(freq - input_freq) < 1e3)
+        {
+            found_freq = true;
+            auto powers = freq_map["powers"];
+
+            // Find the two closest points for interpolation
+            GainPower lower_bound = {0.0, 0.0};
+            GainPower upper_bound = {0.0, 0.0};
+            bool found = false;
+
+            for (size_t i = 0; i < powers.size(); ++i)
+            {
+                float gain = powers[i]["gain"];
+                float power_dbm = powers[i]["power_dbm"];
+
+                if (power_dbm >= input_power_dbm)
+                {
+                    if (i == 0)
+                    {
+                        // If the requested power is less than the first entry, use the first value
+                        return {gain, power_dbm};
+                    }
+
+                    // Upper bound is the current element
+                    upper_bound = {gain, power_dbm};
+
+                    // Lower bound is the previous element
+                    lower_bound = {powers[i - 1]["gain"], powers[i - 1]["power_dbm"]};
+
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found)
+            {
+                // Perform linear interpolation between lower_bound and upper_bound
+                float interpolated_gain = lower_bound.gain +
+                                          (input_power_dbm - lower_bound.power_dbm) *
+                                              (upper_bound.gain - lower_bound.gain) /
+                                              (upper_bound.power_dbm - lower_bound.power_dbm);
+
+                return {interpolated_gain, input_power_dbm};
+            }
+            else if (!found && !powers.empty())
+            {
+                auto last = powers.back();
+                return {last["gain"], last["power_dbm"]};
+            }
+        }
+    }
+
+    if (!found_freq)
+    {
+        LOG_WARN_FMT("Calibration data for input frequency %1% not found!", input_freq);
+    }
+    return {-100.0, -100.0};
+}
