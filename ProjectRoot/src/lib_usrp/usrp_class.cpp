@@ -155,7 +155,7 @@ std::pair<float, float> USRP_class::query_calibration_data()
     std::string cal_dir = get_home_dir() + "/uhd/caldata/";
     std::string rx_ref_power_file = cal_dir + rx_info["rx_ref_power_key"] + "_" + rx_info["rx_ref_power_serial"] + ".json";
 
-    auto retval = find_best_rx_gain(rx_ref_power_file, rx_pow_ref_input, carrier_freq);
+    auto retval = find_closest_gain(rx_ref_power_file, rx_pow_ref_input, carrier_freq);
     float rx_pow_ref_gain = retval.first;
     float rx_pow_ref_pow = retval.second;
     LOG_INFO_FMT("Rx Power ref | requested %1% | implemented %2% | at gain %3%", rx_pow_ref_input, rx_pow_ref_pow, rx_pow_ref_gain);
@@ -164,7 +164,7 @@ std::pair<float, float> USRP_class::query_calibration_data()
     auto tx_info = usrp->get_usrp_tx_info();
     std::string tx_ref_power_file = cal_dir + tx_info["tx_ref_power_key"] + "_" + tx_info["tx_ref_power_serial"] + ".json";
 
-    auto reretval = find_best_tx_gain(tx_ref_power_file, tx_pow_ref_input, carrier_freq);
+    auto reretval = find_closest_gain(tx_ref_power_file, tx_pow_ref_input, carrier_freq);
     float tx_pow_ref_gain = reretval.first;
     float tx_pow_ref_pow = reretval.second;
     LOG_INFO_FMT("Tx Power ref | requested %1% | implemented %2% | at gain %3%", tx_pow_ref_input, tx_pow_ref_pow, tx_pow_ref_gain);
