@@ -100,11 +100,11 @@ void USRP_class::initialize(bool perform_rxtx_tests)
         return;
     }
 
-    setup_usrp_device();
-
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     configure_clock_source();
     set_device_parameters();
+
+    query_calibration_data();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     check_locked_sensor_rx();
