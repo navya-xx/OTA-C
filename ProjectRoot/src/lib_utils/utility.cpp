@@ -342,7 +342,7 @@ std::pair<float, float> find_closest_gain(const std::string &json_filename, cons
     std::ifstream file(json_filename);
     if (!file.is_open())
     {
-        LOG_WARN("Could not open JSON file.");
+        LOG_WARN_FMT("Could not open JSON file %1%.", json_filename);
         return {-100.0, -100.0};
     }
 
