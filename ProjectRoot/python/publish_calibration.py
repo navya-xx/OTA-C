@@ -5,6 +5,7 @@ import paho.mqtt.client as mqtt
 import json
 import pandas as pd
 from datetime import datetime, timedelta
+from matplotlib import pyplot as plt
 
 # MQTT settings
 MQTT_BROKER = 'localhost'
@@ -70,6 +71,12 @@ def process_calibration_data(dataframe):
         if total_runs == 0:
             print("%s: No calibration data available!" %leaf)
             continue
+        
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+        store_df.plot(y="amp_c_to_l", kind="line", ax=ax1, style='-r', label="Cent to leaf %s"%leaf)
+        store_df.plot(y="amp_l_to_c", kind="line", ax=ax2, style='-b', label="leaf %s to cent"%leaf)
+        plt.savefig("/home/nuc/OTA-C/plots/calib_cent_%s_leaf_%s_%s.png"%(cent, leaf, store_df['time'].min().strftime('%Y-%m-%d %H:%M:%S')))
         
         new_df = pd.DataFrame([{
             'total_runs':total_runs, 

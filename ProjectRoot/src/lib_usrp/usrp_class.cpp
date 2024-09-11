@@ -1,4 +1,5 @@
 #include "usrp_class.hpp"
+#include <uhd/cal/database.hpp>
 
 USRP_class::USRP_class(const ConfigParser &parser) : parser(parser) {};
 
@@ -98,25 +99,37 @@ void USRP_class::initialize(bool perform_rxtx_tests)
 
     usrp = uhd::usrp::multi_usrp::make(args);
 
-    // if (false)
-    // {
-    //     uhd::dict<std::string, std::string> rx_info = usrp->get_usrp_rx_info();
-    //     for (auto key : rx_info.keys())
-    //         LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
-    //     auto tx_info = usrp->get_usrp_tx_info();
-    //     for (auto key : tx_info.keys())
-    //         LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
-    //     // query database for calibration data
-    //     if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
-    //     {
-    //         auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
-    //         LOG_INFO("Calibration data exists!");
-    //     }
-    //     else
-    //     {
-    //         LOG_INFO("Calibration data DO NOT exist!");
-    //     }
-    // }
+    if (true)
+    {
+        uhd::dict<std::string, std::string> rx_info = usrp->get_usrp_rx_info();
+        for (auto key : rx_info.keys())
+            LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
+
+        // query database for calibration data
+        if (uhd::usrp::cal::database::has_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]))
+        {
+            auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]);
+            LOG_INFO("Rx Calibration data exists!");
+        }
+        else
+        {
+            LOG_INFO("Rx Calibration data DO NOT exist!");
+        }
+
+        auto tx_info = usrp->get_usrp_tx_info();
+        for (auto key : tx_info.keys())
+            LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
+        // query database for calibration data
+        if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
+        {
+            auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
+            LOG_INFO("Tx Calibration data exists!");
+        }
+        else
+        {
+            LOG_INFO("Tx Calibration data DO NOT exist!");
+        }
+    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     usrp_make_success = true;
@@ -244,6 +257,15 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
     LOG_DEBUG_FMT("Actual Rx Bandwidth: %1% MHz...", (rx_bw / 1e6));
     LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
+
+    try
+    {
+        LOG_DEBUG_FMT("Tx Ref gain levels: %1%...", usrp->get_tx_power_reference(channel));
+        LOG_DEBUG_FMT("Tx Ref gain levels: %1%..", usrp->get_rx_power_reference(channel));
+    }
+    catch (...)
+    {
+    };
 
     // -----------------------------------------------------------------------
 
@@ -749,4 +771,4 @@ void USRP_class::adjust_for_freq_offset(const float &freq_offset)
     LOG_DEBUG_FMT("New Rx rate after changing Master Clock Rate is %1%", usrp->get_rx_rate());
     tx_rate = usrp->get_tx_rate(channel);
     rx_rate = usrp->get_rx_rate(channel);
-}
+};
