@@ -27,8 +27,8 @@ public:
     void apply_additional_settings();
 
     // additional features
-    void setup_usrp_device();
-    void query_calibration_data();
+    void print_usrp_device_info();
+    std::pair<float, float> query_calibration_data();
     void setup_streamers();
     void perform_rx_tx_tests();
 

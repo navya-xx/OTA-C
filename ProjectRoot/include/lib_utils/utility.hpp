@@ -24,5 +24,6 @@ float calc_signal_power(const std::deque<std::complex<float>> &signal, const siz
 void update_device_config_cfo(const std::string &serial, const float &cfo);
 float obtain_last_cfo(const std::string &serial);
 std::string get_home_dir();
+std::pair<float, float> find_closest_gain(const std::string &json_filename, const float &input_power_dbm, const float &input_freq);
 
 #endif // UTILITY_FUNCS

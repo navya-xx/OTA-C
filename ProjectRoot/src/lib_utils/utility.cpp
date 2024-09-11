@@ -334,3 +334,62 @@ std::string get_home_dir()
 
     return homeDirStr;
 }
+
+// Function to find the closest gain value corresponding to the given power_dBm
+std::pair<float, float> find_closest_gain(const std::string &json_filename, const float &input_power_dbm, const float &input_freq)
+{
+    // Open and read the JSON file
+    std::ifstream file(json_filename);
+    if (!file.is_open())
+    {
+        LOG_WARN("Could not open JSON file.");
+        return {-100.0, -100.0};
+    }
+
+    // Parse the JSON file
+    json j;
+    file >> j;
+
+    // Variables to store the closest gain and power_dBm values
+    float closest_gain = -100.0;
+    float closest_power_dbm = -100.0;
+    float min_diff = std::numeric_limits<float>::max();
+    const auto &temp_freq_map = j["temp_freq_map"][0];
+    bool found_freq = false;
+
+    // Iterate through the temp_freq_map in the JSON data
+    for (const auto &freq_map : temp_freq_map["freqs"])
+    {
+        float freq = freq_map["freq"];
+        if (std::abs(freq - input_freq) < 1e3)
+        {
+            found_freq = true;
+            // Iterate through the powers array to find the closest power_dBm
+            for (const auto &power_entry : freq_map["powers"])
+            {
+                float gain = power_entry["gain"];
+                float power_dbm = power_entry["power_dbm"];
+
+                // Calculate the absolute difference between the input and the current power_dBm
+                float diff = std::abs(input_power_dbm - power_dbm);
+
+                // Check if the current difference is the smallest
+                if (diff < min_diff)
+                {
+                    min_diff = diff;
+                    closest_gain = gain;
+                    closest_power_dbm = power_dbm;
+                }
+            }
+            break;
+        }
+    }
+
+    if (!found_freq)
+    {
+        LOG_WARN_FMT("Calibration data for input frequency %1% not found!", input_freq);
+    }
+
+    // Return the closest gain and the corresponding power_dBm
+    return {closest_gain, closest_power_dbm};
+}

@@ -104,8 +104,6 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     configure_clock_source();
     set_device_parameters();
 
-    query_calibration_data();
-
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     check_locked_sensor_rx();
     check_locked_sensor_tx();
@@ -142,43 +140,36 @@ bool USRP_class::check_and_create_usrp_device()
     return usrp_make_success;
 }
 
-void USRP_class::setup_usrp_device()
+void USRP_class::print_usrp_device_info()
 {
     LOG_INFO_FMT("Initializing Device: %1%", usrp->get_pp_string());
-    query_calibration_data();
 }
 
-void USRP_class::query_calibration_data()
+std::pair<float, float> USRP_class::query_calibration_data()
 {
+    float rx_pow_ref_input = parser.getValue_float("rx-pow-ref");
+    float tx_pow_ref_input = parser.getValue_float("tx-pow-ref");
+
     // Query RX calibration data
     auto rx_info = usrp->get_usrp_rx_info();
-    for (auto key : rx_info.keys())
-        LOG_INFO_FMT("USRP RX INFO: (%1%, %2%)", key, rx_info[key]);
+    std::string cal_dir = get_home_dir() + "/uhd/caldata/";
+    std::string rx_ref_power_file = cal_dir + rx_info["rx_ref_power_key"] + "_" + rx_info["rx_ref_power_serial"] + ".json";
 
-    if (uhd::usrp::cal::database::has_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]))
-    {
-        auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(rx_info["rx_ref_power_key"], rx_info["rx_ref_power_serial"]);
-        LOG_INFO("Rx Calibration data exists!");
-    }
-    else
-    {
-        LOG_INFO("Rx Calibration data DO NOT exist!");
-    }
+    auto retval = find_closest_gain(rx_ref_power_file, rx_pow_ref_input, carrier_freq);
+    float rx_pow_ref_gain = retval.first;
+    float rx_pow_ref_pow = retval.second;
+    LOG_INFO_FMT("Rx Power ref | requested %1% | implemented %2% | at gain %3%", rx_pow_ref_input, rx_pow_ref_pow, rx_pow_ref_gain);
 
     // Query TX calibration data
     auto tx_info = usrp->get_usrp_tx_info();
-    for (auto key : tx_info.keys())
-        LOG_INFO_FMT("USRP TX INFO: (%1%, %2%)", key, tx_info[key]);
+    std::string tx_ref_power_file = cal_dir + tx_info["tx_ref_power_key"] + "_" + tx_info["tx_ref_power_serial"] + ".json";
 
-    if (uhd::usrp::cal::database::has_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]))
-    {
-        auto calib_tx_data = uhd::usrp::cal::database::read_cal_data(tx_info["tx_ref_power_key"], tx_info["tx_ref_power_serial"]);
-        LOG_INFO("Tx Calibration data exists!");
-    }
-    else
-    {
-        LOG_INFO("Tx Calibration data DO NOT exist!");
-    }
+    auto reretval = find_closest_gain(tx_ref_power_file, tx_pow_ref_input, carrier_freq);
+    float tx_pow_ref_gain = reretval.first;
+    float tx_pow_ref_pow = reretval.second;
+    LOG_INFO_FMT("Tx Power ref | requested %1% | implemented %2% | at gain %3%", tx_pow_ref_input, tx_pow_ref_pow, tx_pow_ref_gain);
+
+    return {rx_pow_ref_gain, tx_pow_ref_gain};
 }
 
 void USRP_class::configure_clock_source()
@@ -216,8 +207,10 @@ void USRP_class::set_device_parameters()
 
 void USRP_class::set_antenna()
 {
+    LOG_DEBUG("Setting Tx/Rx antenna.");
     usrp->set_tx_antenna("TX/RX");
     usrp->set_rx_antenna("TX/RX");
+    LOG_DEBUG_FMT("Actual Tx/Rx antenna: %1%, %2%.", usrp->get_tx_antenna(), usrp->get_rx_antenna());
 }
 
 void USRP_class::set_sample_rate()
@@ -256,37 +249,38 @@ void USRP_class::set_center_frequency()
 void USRP_class::set_gains()
 {
     bool mgmt_flat = parser.getValue_str("gain-mgmt") == "gain";
+    float rx_gain_input, tx_gain_input;
 
     if (mgmt_flat)
     {
-        float rx_gain_input = parser.getValue_float("rx-gain");
-        float tx_gain_input = parser.getValue_float("tx-gain");
-
-        LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", rx_gain_input);
-        usrp->set_rx_gain(rx_gain_input, 0); // Assuming channel 0
-        rx_gain = usrp->get_rx_gain(0);
-        LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
-
-        LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", tx_gain_input);
-        usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
-        tx_gain = usrp->get_tx_gain(0);
-        LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
+        rx_gain_input = parser.getValue_float("rx-gain");
+        tx_gain_input = parser.getValue_float("tx-gain");
     }
     else
     {
-        float rx_pow_ref_input = parser.getValue_float("rx-pow-ref");
-        float tx_pow_ref_input = parser.getValue_float("tx-pow-ref");
+        LOG_DEBUG("Setting Gain via calibration data and power reference.");
+        auto retval = query_calibration_data();
 
-        LOG_DEBUG_FMT("Setting RX Power ref level: %1% dBm...", rx_pow_ref_input);
-        usrp->set_rx_power_reference(rx_pow_ref_input); // Assuming channel 0
-        rx_pow_ref = usrp->get_rx_power_reference(0);
-        LOG_DEBUG_FMT("Actual Rx Power ref level: %1% dBm...", rx_pow_ref);
+        if (retval.first == -100.0)
+            rx_gain_input = parser.getValue_float("rx-gain");
+        else
+            rx_gain_input = retval.first;
 
-        LOG_DEBUG_FMT("Setting TX Power ref level: %1% dBm...", tx_pow_ref_input);
-        usrp->set_tx_power_reference(tx_pow_ref_input); // Assuming channel 0
-        tx_pow_ref = usrp->get_tx_power_reference(0);
-        LOG_DEBUG_FMT("Actual Tx Power ref level: %1% dBm...", tx_pow_ref);
+        if (retval.second == -100.0)
+            tx_gain_input = parser.getValue_float("tx-gain");
+        else
+            tx_gain_input = retval.second;
     }
+
+    LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", rx_gain_input);
+    usrp->set_rx_gain(rx_gain_input, 0); // Assuming channel 0
+    rx_gain = usrp->get_rx_gain(0);
+    LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
+
+    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", tx_gain_input);
+    usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
+    tx_gain = usrp->get_tx_gain(0);
+    LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
 }
 
 void USRP_class::set_bandwidth()
