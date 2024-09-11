@@ -19,6 +19,7 @@ public:
 
     // device setup
     void set_device_parameters();
+    void set_antenna();
     void set_sample_rate();
     void set_center_frequency();
     void set_gains();

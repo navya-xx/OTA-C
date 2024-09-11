@@ -206,11 +206,18 @@ void USRP_class::configure_clock_source()
 
 void USRP_class::set_device_parameters()
 {
+    set_antenna();
     set_sample_rate();
     set_center_frequency();
     set_gains();
     set_bandwidth();
     apply_additional_settings();
+}
+
+void USRP_class::set_antenna()
+{
+    usrp->set_tx_antenna("TX/RX");
+    usrp->set_rx_antenna("TX/RX");
 }
 
 void USRP_class::set_sample_rate()
