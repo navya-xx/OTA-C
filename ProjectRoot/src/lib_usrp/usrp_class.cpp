@@ -145,7 +145,7 @@ bool USRP_class::check_and_create_usrp_device()
 void USRP_class::setup_usrp_device()
 {
     LOG_INFO_FMT("Initializing Device: %1%", usrp->get_pp_string());
-    // query_calibration_data();
+    query_calibration_data();
 }
 
 void USRP_class::query_calibration_data()
