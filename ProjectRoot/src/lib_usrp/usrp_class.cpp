@@ -118,10 +118,10 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     usrp->set_time_now(uhd::time_spec_t(0.0));
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    float current_temp = get_device_temperature();
-    LOG_INFO_FMT("Current temperature of device = %1% C.", current_temp);
+    current_temperature = get_device_temperature();
+    LOG_INFO_FMT("Current temperature of device = %1% C.", current_temperature);
 
-    // print_available_sensors();
+    publish_usrp_data();
 
     LOG_INFO("--------- USRP initialization finished -----------------");
 }
@@ -163,7 +163,7 @@ std::pair<float, float> USRP_class::query_calibration_data()
     auto retval = find_closest_gain(rx_ref_power_file, rx_pow_ref_input, carrier_freq);
     float rx_pow_ref_gain = retval.first;
     float rx_pow_ref_pow = retval.second;
-    LOG_INFO_FMT("Rx Power ref | requested %1% | implemented %2% | at gain %3%", rx_pow_ref_input, rx_pow_ref_pow, rx_pow_ref_gain);
+    LOG_INFO_FMT("Rx Power ref | requested %1% dBm | implemented %2% dBm | at gain %3% dB", rx_pow_ref_input, rx_pow_ref_pow, rx_pow_ref_gain);
 
     // Query TX calibration data
     auto tx_info = usrp->get_usrp_tx_info();
@@ -172,7 +172,7 @@ std::pair<float, float> USRP_class::query_calibration_data()
     auto reretval = find_closest_gain(tx_ref_power_file, tx_pow_ref_input, carrier_freq);
     float tx_pow_ref_gain = reretval.first;
     float tx_pow_ref_pow = reretval.second;
-    LOG_INFO_FMT("Tx Power ref | requested %1% | implemented %2% | at gain %3%", tx_pow_ref_input, tx_pow_ref_pow, tx_pow_ref_gain);
+    LOG_INFO_FMT("Tx Power ref | requested %1% dBm | implemented %2% dBm | at gain %3% dB", tx_pow_ref_input, tx_pow_ref_pow, tx_pow_ref_gain);
 
     return {rx_pow_ref_gain, tx_pow_ref_gain};
 }
@@ -437,18 +437,21 @@ void USRP_class::perform_rx_tx_tests()
     float noise_power = calc_signal_power(rx_samples);
     init_noise_ampl = std::sqrt(noise_power);
     LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
-    publish_noise_level();
 }
 
-void USRP_class::publish_noise_level()
+void USRP_class::publish_usrp_data()
 {
     json json_data;
     json_data["device_id"] = device_id;
     json_data["rx-gain"] = rx_gain;
+    json_data["tx-gain"] = tx_gain;
+    json_data["rx-rate"] = rx_rate;
+    json_data["tx-rate"] = tx_rate;
+    json_data["temp"] = current_temperature;
     json_data["noise-level"] = init_noise_ampl;
     json_data["time"] = currentDateTime();
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-    mqttClient.publish("usrp/noise_levels", json_data.dump(4), true);
+    mqttClient.publish("usrp/init_data/" + device_id, json_data.dump(4), true);
 }
 
 bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
@@ -639,8 +642,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     {
         if (not rx_save_stream.is_open())
         {
-            const char *homeDir = std::getenv("HOME");
-            std::string homeDirStr(homeDir);
+            std::string homeDirStr = get_home_dir();
             std::string curr_datetime = currentDateTimeFilename();
             filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
         }

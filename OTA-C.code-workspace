@@ -79,7 +79,8 @@
 			"any": "cpp",
 			"codecvt": "cpp",
 			"forward_list": "cpp",
-			"fft": "cpp"
+			"fft": "cpp",
+			"*.ipp": "cpp"
 		}
 	}
 }

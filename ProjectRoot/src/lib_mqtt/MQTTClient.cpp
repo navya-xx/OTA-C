@@ -105,11 +105,40 @@ void MQTTClient::onMessage(const std::string &topic, const std::string &payload)
     auto it = callbacks.find(topic);
     if (it != callbacks.end())
     {
-        it->second(payload); // Call the stored callback function
+        if (!pause_callbacks)
+            it->second(payload); // Call the stored callback function
+        else
+            LOG_WARN("Callback are pause for the moment...");
     }
     else
     {
         LOG_WARN_FMT("No callback set for topic:  %1%", topic);
+    }
+}
+
+// Start listening on a separate thread
+void MQTTClient::startListening()
+{
+    isRunning = true;
+    mqttThread = boost::thread(&MQTTClient::listenLoop, this);
+}
+
+// Stop listening thread
+void MQTTClient::stopListening()
+{
+    isRunning = false;
+    if (mqttThread.joinable())
+    {
+        mqttThread.join();
+    }
+}
+
+// Loop to listen for messages
+void MQTTClient::listenLoop()
+{
+    while (isRunning)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 

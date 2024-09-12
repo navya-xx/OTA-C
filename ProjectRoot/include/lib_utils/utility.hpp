@@ -19,14 +19,13 @@ std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector
 size_t rational_number_approximation(double a, double e = 1e-10, size_t max_iter = 100);
 float generateRandomFloat(float a, float b);
 std::string floatToStringWithPrecision(float value, int precision);
-float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0);
-float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0);
+float findMaxAbsValue(const std::vector<std::complex<float>> &vec);
+float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0, const float &min_ampl_ratio = 0.0);
+float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0, const float &min_ampl_ratio = 0.0);
 void update_device_config_cfo(const std::string &serial, const float &cfo);
 float obtain_last_cfo(const std::string &serial);
 std::string get_home_dir();
 std::pair<float, float> find_closest_gain(const std::string &json_filename, const float &input_power_dbm, const float &input_freq);
-std::pair<float, float> find_best_rx_gain(const std::string &json_filename, const float &input_power_dbm, const float &input_freq);
-std::pair<float, float> find_best_tx_gain(const std::string &json_filename, const float &input_power_dbm, const float &input_freq);
 
 struct GainPower
 {

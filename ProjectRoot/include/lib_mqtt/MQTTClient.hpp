@@ -23,7 +23,13 @@ public:
     // Set a callback for incoming messages
     void setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback);
 
+    // Thread handler for MQTT message listening
+    void startListening();
+    void stopListening();
+    void listenLoop();
+
     std::string getCurrentTimeString() const;
+    bool pause_callbacks = false;
 
 private:
     // Private constructor with fixed server address
@@ -35,6 +41,9 @@ private:
 
     // Internal callback for MQTT messages
     void onMessage(const std::string &topic, const std::string &payload);
+
+    boost::thread mqttThread;
+    bool isRunning;
 
     // MQTT client instance
     mqtt::async_client client;

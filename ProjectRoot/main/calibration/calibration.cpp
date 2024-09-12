@@ -184,8 +184,7 @@ void consumer_thread(CycleStartDetector &csd_obj, ConfigParser &parser, std::ato
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     /*------ Initialize ---------------*/
-    const char *homeDir = std::getenv("HOME");
-    std::string homeDirStr(homeDir);
+    std::string homeDirStr = get_home_dir();
     std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
     std::string curr_time_str = currentDateTimeFilename();
     std::string leaf_id = ";";

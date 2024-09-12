@@ -148,7 +148,7 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
     est_ref_sig_amp = std::sqrt(sig_power - (peak_det_obj_ref.noise_ampl * peak_det_obj_ref.noise_ampl));
     LOG_INFO_FMT("Estimated channel power is %1%.", est_ref_sig_amp);
 
-    // // debug -- save data to a file for later analysis
+    // debug -- save data to a file for later analysis
     if (saved_ref_filename != "")
     {
         std::ofstream outfile;
@@ -164,6 +164,23 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
     }
 }
 
+/**
+ * @brief Inserts samples into the synchronized buffer and associates each sample with a timestamp.
+ *
+ * This function is responsible for producing samples from an input vector of complex floats and
+ * inserting them into a synchronized buffer for further processing or transmission. Each sample
+ * is associated with a timestamp, starting from the provided `packet_start_time`, and subsequent
+ * samples are spaced based on the system's sample duration. The function continuously attempts to
+ * push samples into the buffer, yielding control if necessary, until all samples are processed or
+ * a stop signal is called.
+ *
+ * @param samples A vector of complex float samples to be inserted into the synchronized buffer.
+ * @param samples_size The number of samples from the `samples` vector to be processed.
+ * @param packet_start_time The USRP time representing when the first sample in the packet should
+ *                          be associated with.
+ * @param stop_signal_called A boolean flag that, if set to `true`, will halt the sample insertion
+ *                           process to stop the function gracefully.
+ */
 void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &packet_start_time, bool &stop_signal_called)
 {
     // insert first timer
@@ -183,6 +200,20 @@ void CycleStartDetector::produce(const std::vector<std::complex<float>> &samples
     }
 }
 
+/**
+ * @brief Consumes samples from a synchronized buffer, performs cross-correlation, and detects peaks.
+ *
+ * This function is responsible for consuming samples from the synchronized buffer, performing
+ * cross-correlation, and detecting peaks for signal processing. It adjusts for carrier frequency
+ * offset (CFO) if necessary and updates the internal buffers accordingly. If a detection flag is
+ * set, the function will reset relevant objects and signal success. Otherwise, it continues
+ * consuming data until a stop signal is called.
+ *
+ * @param csd_success_signal A reference to an atomic boolean that will be set to `true` if the
+ *                           function successfully detects a signal (e.g., a peak detection).
+ * @param stop_signal_called A reference to a boolean flag that, if set to `true`, will halt
+ *                           the function execution, stopping the consumer from further processing.
+ */
 void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &stop_signal_called)
 {
 
@@ -224,11 +255,6 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
         std::vector<std::complex<float>> corr_results = fft_cross_correlate(samples_buffer);
         peak_detector(corr_results, timer);
 
-        // correlation_operation(samples_buffer, timer);
-
-        // auto end = std::chrono::high_resolution_clock::now();
-        // size_t duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-        // std::cout << "\r # samples without peak = " << num_samples_without_peak << ". Max peak-to-noise-ratio = " << max_pnr << ". Duration of 'correlation_operation' = " << duration << " microsecs, frame duration = " << size_t(corr_seq_len / parser.getValue_float("rate") * 1e6) << " microsecs. \t" << std::flush;
         std::cout << "\r Num samples without peak = " << num_samples_without_peak << std::flush;
     }
 }
@@ -269,7 +295,6 @@ std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate_LL(cons
 
 void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &corr_results, const std::vector<uhd::time_spec_t> &timer)
 {
-    // Perform cross-correlation
     bool found_peak = false;
     float sum_ampl = 0.0;
     float corr_abs_val = 0.0;

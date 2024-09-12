@@ -38,7 +38,7 @@ public:
     // Helper functions
     bool check_and_create_usrp_device();
     void configure_clock_source();
-    void publish_noise_level();
+    void publish_usrp_data();
     void log_device_parameters();
 
     bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
@@ -69,7 +69,7 @@ public:
     uhd::rx_streamer::sptr rx_streamer;
     uhd::tx_streamer::sptr tx_streamer;
     std::string device_id;
-    float tx_rate, rx_rate, tx_gain, tx_pow_ref, rx_gain, rx_pow_ref, tx_bw, rx_bw, carrier_freq;
+    float tx_rate, rx_rate, tx_gain, tx_pow_ref, rx_gain, rx_pow_ref, tx_bw, rx_bw, carrier_freq, current_temperature;
     uhd::time_spec_t rx_sample_duration, tx_sample_duration, rx_md_time, tx_md_time;
     bool intialize_with_dummy_txrx = true;
 
