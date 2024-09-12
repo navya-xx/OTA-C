@@ -118,6 +118,11 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     usrp->set_time_now(uhd::time_spec_t(0.0));
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
+    float current_temp = get_device_temperature();
+    LOG_INFO_FMT("Current temperature of device = %1% C.", current_temp);
+
+    // print_available_sensors();
+
     LOG_INFO("--------- USRP initialization finished -----------------");
 }
 
@@ -198,6 +203,7 @@ void USRP_class::configure_clock_source()
 void USRP_class::set_device_parameters()
 {
     set_antenna();
+    set_master_clock_rate();
     set_sample_rate();
     set_center_frequency();
     set_gains();
@@ -211,6 +217,15 @@ void USRP_class::set_antenna()
     usrp->set_tx_antenna("TX/RX");
     usrp->set_rx_antenna("TX/RX");
     LOG_DEBUG_FMT("Actual Tx/Rx antenna: %1%, %2%.", usrp->get_tx_antenna(), usrp->get_rx_antenna());
+}
+
+void USRP_class::set_master_clock_rate()
+{
+    float master_clock_rate_input = parser.getValue_float("master-clock-rate");
+    LOG_DEBUG_FMT("Setting master clock rate at : %1% ...", master_clock_rate_input);
+    usrp->set_master_clock_rate(master_clock_rate_input);
+    float master_clock_rate_out = usrp->get_master_clock_rate();
+    LOG_DEBUG_FMT("Actual master clock rate set = %1%", master_clock_rate_out);
 }
 
 void USRP_class::set_sample_rate()
@@ -343,11 +358,29 @@ void USRP_class::log_device_parameters()
     LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
 }
 
+void USRP_class::print_available_sensors()
+{
+    for (auto sensor : usrp->get_mboard_sensor_names(0))
+    {
+        LOG_INFO_FMT("MBoard Sensor %1% -- avaiable", sensor);
+    }
+
+    for (auto sensor : usrp->get_tx_sensor_names(0))
+    {
+        LOG_INFO_FMT("Tx Sensor %1% -- avaiable", sensor);
+    }
+
+    for (auto sensor : usrp->get_rx_sensor_names(0))
+    {
+        LOG_INFO_FMT("Rx Sensor %1% -- avaiable", sensor);
+    }
+}
+
 float USRP_class::get_device_temperature()
 {
     try
     {
-        uhd::sensor_value_t temp = usrp->get_mboard_sensor("temp", 0);
+        uhd::sensor_value_t temp = usrp->get_tx_sensor("temp", 0);
         // std::cout << "USRP Device Temperature: " << temp.to_pp_string() << std::endl;
         return float(temp.to_real());
     }
@@ -377,16 +410,15 @@ void USRP_class::setup_streamers()
 
 void USRP_class::perform_rx_tx_tests()
 {
-    std::vector<std::complex<float>> tx_buff(max_tx_packet_size, std::complex<float>(0.1, 0.1));
+    std::vector<std::complex<float>> tx_buff(1000 * max_tx_packet_size, std::complex<float>(1.0, 1.0));
     bool dont_stop = false;
-    bool tx_success = transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop);
-    if (tx_success)
+    if (transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop, true))
     {
-        LOG_DEBUG("Transmit test successful!");
+        LOG_DEBUG("Test Tx -- success");
     }
     else
     {
-        LOG_WARN("Transmit test failed!");
+        LOG_DEBUG("Test Tx -- failed");
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -527,7 +559,11 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
 
         uhd::async_metadata_t async_md;
         bool got_async_burst_ack = false;
-        timeout = burst_pkt_time + time_diff;
+        float total_tx_time = std::max<float>(0.1, (total_num_samps / tx_rate));
+        if (time_diff >= 0.0)
+            timeout = total_tx_time + time_diff;
+        else
+            timeout = total_tx_time;
         // loop through all messages for the ACK packet (may have underflow messages in queue)
         while (not got_async_burst_ack and tx_streamer->recv_async_msg(async_md, timeout))
             got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);

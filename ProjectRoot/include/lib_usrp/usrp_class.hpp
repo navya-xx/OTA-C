@@ -20,6 +20,7 @@ public:
     // device setup
     void set_device_parameters();
     void set_antenna();
+    void set_master_clock_rate();
     void set_sample_rate();
     void set_center_frequency();
     void set_gains();
@@ -32,6 +33,7 @@ public:
     void setup_streamers();
     void perform_rx_tx_tests();
     float get_device_temperature();
+    void print_available_sensors();
 
     // Helper functions
     bool check_and_create_usrp_device();
