@@ -31,6 +31,7 @@ public:
     std::pair<float, float> query_calibration_data();
     void setup_streamers();
     void perform_rx_tx_tests();
+    float get_device_temperature();
 
     // Helper functions
     bool check_and_create_usrp_device();

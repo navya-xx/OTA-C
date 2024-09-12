@@ -281,7 +281,23 @@ void USRP_class::set_gains()
     usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
     tx_gain = usrp->get_tx_gain(0);
     LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
-}
+};
+
+void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
+{
+    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", _tx_gain);
+    usrp->set_tx_gain(_tx_gain, channel);
+    float tx_gain = usrp->get_tx_gain(channel);
+    LOG_DEBUG_FMT("Actual TX Gain: %1% dB...", tx_gain);
+};
+
+void USRP_class::set_rx_gain(const float &_rx_gain, const int &channel)
+{
+    LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", _rx_gain);
+    usrp->set_rx_gain(_rx_gain, channel);
+    float rx_gain = usrp->get_rx_gain(channel);
+    LOG_DEBUG_FMT("Actual RX Gain: %1% dB...", rx_gain);
+};
 
 void USRP_class::set_bandwidth()
 {
@@ -325,6 +341,21 @@ void USRP_class::log_device_parameters()
     LOG_DEBUG_FMT("Rx Ref gain levels: %1%...", usrp->get_rx_power_reference(0)); // Assuming channel 0
     LOG_DEBUG_FMT("Actual Rx Bandwidth: %1% MHz...", (rx_bw / 1e6));
     LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
+}
+
+float USRP_class::get_device_temperature()
+{
+    try
+    {
+        uhd::sensor_value_t temp = usrp->get_mboard_sensor("temp", 0);
+        // std::cout << "USRP Device Temperature: " << temp.to_pp_string() << std::endl;
+        return float(temp.to_real());
+    }
+    catch (const uhd::lookup_error &e)
+    {
+        LOG_WARN_FMT("Temperature sensor not found. Error : %1%...", e.what());
+        return 0.0;
+    }
 }
 
 void USRP_class::setup_streamers()
@@ -387,22 +418,6 @@ void USRP_class::publish_noise_level()
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
     mqttClient.publish("usrp/noise_levels", json_data.dump(4), true);
 }
-
-void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
-{
-    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", _tx_gain);
-    usrp->set_tx_gain(_tx_gain, channel);
-    float tx_gain = usrp->get_tx_gain(channel);
-    LOG_DEBUG_FMT("Actual TX Gain: %1% dB...", tx_gain);
-};
-
-void USRP_class::set_rx_gain(const float &_rx_gain, const int &channel)
-{
-    LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", _rx_gain);
-    usrp->set_rx_gain(_rx_gain, channel);
-    float rx_gain = usrp->get_rx_gain(channel);
-    LOG_DEBUG_FMT("Actual RX Gain: %1% dB...", rx_gain);
-};
 
 bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
 {
