@@ -68,5 +68,6 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "*.ipp": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/home/nuc/OTA-C/ProjectRoot"
 }

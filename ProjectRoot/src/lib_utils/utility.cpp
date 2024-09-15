@@ -414,3 +414,29 @@ std::pair<float, float> find_closest_gain(const std::string &json_filename, cons
     // Return the closest gain and the corresponding power_dBm
     return {closest_gain, closest_power_dbm};
 }
+
+// Function to convert power/amplitude to decibels
+float toDecibel(float value, bool isPower)
+{
+    if (isPower)
+    {
+        return 10.0 * log10(value); // for power ratio
+    }
+    else
+    {
+        return 20.0 * log10(value); // for amplitude/voltage ratio
+    }
+}
+
+// Function to convert decibels back to power/amplitude ratio
+float fromDecibel(float dB, bool isPower)
+{
+    if (isPower)
+    {
+        return pow(10.0, dB / 10.0); // converting back to power ratio
+    }
+    else
+    {
+        return pow(10.0, dB / 20.0); // converting back to amplitude/voltage ratio
+    }
+}

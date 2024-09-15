@@ -3,6 +3,7 @@
 
 #include "pch.hpp"
 #include "log_macros.hpp"
+#include "utility.hpp"
 
 class MQTTClient : public mqtt::callback
 {
@@ -30,6 +31,9 @@ public:
 
     std::string getCurrentTimeString() const;
     bool pause_callbacks = false;
+
+    std::string timestamp_float_data(const float &data);
+    std::string timestamp_str_data(const std::string &data);
 
 private:
     // Private constructor with fixed server address

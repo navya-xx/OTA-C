@@ -153,3 +153,15 @@ std::string MQTTClient::getCurrentTimeString() const
     oss << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
     return oss.str();
 }
+
+std::string MQTTClient::timestamp_float_data(const float &data)
+{
+    std::string text = "{'value':" + floatToStringWithPrecision(data, 8) + ", 'time': " + getCurrentTimeString() + "}";
+    return text;
+}
+
+std::string MQTTClient::timestamp_str_data(const std::string &data)
+{
+    std::string text = "{'value':" + data + ", 'time': " + getCurrentTimeString() + "}";
+    return text;
+}

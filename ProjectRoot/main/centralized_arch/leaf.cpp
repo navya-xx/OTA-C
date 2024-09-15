@@ -226,7 +226,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
         catch (const json::parse_error &e)
         {
-            LOG_WARN_FMT("MQTT >> JSON parsing error: ", e.what());
+            LOG_WARN_FMT("MQTT >> JSON parsing error: %1%", e.what());
         }
     };
 
