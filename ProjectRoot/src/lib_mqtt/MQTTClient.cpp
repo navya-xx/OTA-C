@@ -20,13 +20,18 @@ MQTTClient &MQTTClient::getInstance(const std::string &clientId)
 
 // Private constructor with fixed server address
 MQTTClient::MQTTClient(const std::string &clientId)
-    : client(serverAddress, clientId)
+    : client(serverAddress, clientId), topics(nullptr)
 {
     connectOptions.set_clean_session(true);
     connectOptions.set_keep_alive_interval(60);
     client.set_message_callback([this](mqtt::const_message_ptr msg)
                                 { onMessage(msg->get_topic(), msg->to_string()); });
     connect();
+
+    // topics parser
+    auto homePath = get_home_dir();
+    std::string topics_config_file = homePath + "/OTA-C/ProjectRoot/config/mqtt_topics.conf";
+    topics = std::make_unique<ConfigParser>(topics_config_file);
 }
 
 // Connect to the MQTT broker
@@ -164,4 +169,46 @@ std::string MQTTClient::timestamp_str_data(const std::string &data)
 {
     std::string text = "{'value':" + data + ", 'time': " + getCurrentTimeString() + "}";
     return text;
+}
+
+/**
+ * @brief Listens temporarily for the last value published on a specified MQTT topic.
+ *
+ * This function subscribes to the specified MQTT topic and listens for the last value for a specified duration.
+ *
+ * @param[out] val A reference to a string that will store the last received value from the MQTT topic.
+ * @param[in] topic The MQTT topic to subscribe to and listen for the last published value.
+ * @param[in] wait_count The maximum number of attempts to listen for the value before timing out.
+ * @param[in] wait_time The time (in milliseconds) to wait between each listening attempt.
+ *
+ * @return true if a value is successfully received within the waiting time, false otherwise.
+ */
+bool MQTTClient::temporary_listen_for_last_value(std::string &val, const std::string &topic, const float &wait_count, const size_t &wait_time)
+{
+    // create a callback
+    bool got_val;
+    std::function<void(const std::string &)> callback = [&val, &got_val](const std::string &payload)
+    {
+        // Parse the JSON payload
+        json jdata;
+        try
+        {
+            jdata = json::parse(payload);
+            val = jdata["value"];
+            got_val = true;
+        }
+        catch (json::parse_error &e)
+        {
+            LOG_WARN_FMT("JSON parse error : %1%", e.what());
+        }
+    };
+    setCallback(topic, callback);
+    size_t timer = 0;
+    while (got_val == false && timer < wait_count)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait_time));
+        timer++;
+    }
+    unsubscribe(topic);
+    return got_val;
 }

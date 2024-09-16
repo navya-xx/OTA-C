@@ -20,7 +20,7 @@ endif()
 option(UHD_USE_STATIC_LIBS OFF)
 
 # To add UHD as a dependency to this project, add a line such as this:
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS chrono)
 find_package(UHD 4.2.0 REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
@@ -96,15 +96,15 @@ endfunction()
 # add_library(lib_usrp STATIC src/lib_usrp/USRPclass.cpp)
 # enable_precompiled_headers(lib_usrp)
 
-SET(executables_list CA_leaf CA_cent_test CA_calib rx_to_file)
-SET(files_list main/centralized_arch/leaf.cpp main/centralized_arch/cent_sync_test.cpp main/calibration/calibration.cpp main/analysis/rx_to_file.cpp)
+SET(executables_list otac_cent)
+SET(files_list main/centralized_otac.cpp)
 SET(counter 0)
 
 ### Make the executable #######################################################
 foreach(executable ${executables_list})
     list(GET files_list ${counter} file_loc)
-    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_fft/FFTWrapper.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp src/lib_mqtt/MQTTClient.cpp)
-    target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} PahoMqttCpp::paho-mqttpp3 PkgConfig::FFTW ${FFTW_DOUBLE_THREADS_LIB})
+    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_fft/FFTWrapper.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp src/lib_mqtt/MQTTClient.cpp src/lib_cal/calibration.cpp)
+    target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} Boost::chrono PahoMqttCpp::paho-mqttpp3 PkgConfig::FFTW ${FFTW_DOUBLE_THREADS_LIB})
     math(EXPR counter "${counter} + 1")
     enable_precompiled_headers(${executable})
 endforeach()

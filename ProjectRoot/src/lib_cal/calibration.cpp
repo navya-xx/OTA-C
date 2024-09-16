@@ -1,9 +1,25 @@
 #include "calibration.hpp"
 
-Calibration::Calibration(USRP_class &usrp_obj_, ConfigParser &parser_, bool &signal_stop_called_) : usrp_obj(usrp_obj_), parser(parser_), signal_stop_called(signal_stop_called_), csd_obj(nullptr), peak_det_obj(nullptr), ref_waveform(), rand_waveform(), stop_flag(false)
+Calibration::Calibration(
+    USRP_class &usrp_obj_,
+    ConfigParser &parser_,
+    const std::string &device_id_,
+    const std::string device_type_,
+    bool &signal_stop_called_) : usrp_obj(usrp_obj_),
+                                 parser(parser_),
+                                 device_id(device_id_),
+                                 device_type(device_type_),
+                                 signal_stop_called(signal_stop_called_),
+                                 csd_obj(nullptr),
+                                 peak_det_obj(nullptr),
+                                 ref_waveform(),
+                                 rand_waveform()
 {
-    leaf_id = parser.getValue_str("device-id");
-    cent_id = parser.getValue_str("cent-id");
+    if (device_type_ == "cent")
+        cent_id = device_id;
+    else if (device_type_ == "leaf")
+        leaf_id = device_id;
+
     num_samps_sync = parser.getValue_int("Ref-N-zfc") * parser.getValue_int("Ref-R-zfc") * 10;
     tx_rand_wait = size_t(parser.getValue_float("start-tx-wait-microsec") / 1e3);
 
@@ -17,8 +33,6 @@ Calibration::Calibration(USRP_class &usrp_obj_, ConfigParser &parser_, bool &sig
 
 Calibration::~Calibration()
 {
-    stop_flag.store(true);
-    signal_stop_called = true;
 
     if (producer_thread.joinable())
         producer_thread.join();
@@ -56,6 +70,8 @@ void Calibration::generate_waveform()
 
 bool Calibration::initialize()
 {
+    stop_flag = false;
+    calibration_successful = false;
     try
     {
         initialize_peak_det_obj();
@@ -70,7 +86,7 @@ bool Calibration::initialize()
     }
 };
 
-void Calibration::run_sync()
+void Calibration::run()
 {
     std::string device_type = parser.getValue_str("device-type");
     if (device_type == "leaf")
@@ -81,14 +97,17 @@ void Calibration::run_sync()
     consumer_thread = boost::thread(&Calibration::consumer, this);
 };
 
-/** Producer for the leaf node -- Detect REF, est. RSSI, and update TX gains.
- *
- * The leaf node listens for REF and at successful reception captures subsequent samples sent at full-scale.
- * Then, leaf node starts first by transmitting REF followed by full-scale signal.
- * The cent detects REF, est. Rx power, and send the value over MQTT to the leaf node.
- * Leaf node compares this value with Rx power est. of signal from the cent, and updates its TX gain to match at the cent.
- * This process is repeated until a reasonable accuracy is achieved.
- */
+void Calibration::stop()
+{
+    stop_flag.store(true);
+    signal_stop_called = true;
+
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+
+    LOG_INFO("Deleting Calibration Class object!");
+    delete this;
+}
+
 void Calibration::producer_leaf()
 {
     // reception/producer params
@@ -118,9 +137,9 @@ void Calibration::producer_leaf()
     };
 
     float ctol_rssi = 0.0, ltoc_rssi = 0.0;
-    bool calibration_successful = false, recv_success = false;
+    bool recv_success = false;
 
-    std::function<void(const std::string &)> update_ltoc_rssi = [&ltoc_rssi, &ctol_rssi, &calibration_successful, &recv_success, &proximity_check](const std::string &payload)
+    std::function<void(const std::string &)> update_ltoc_rssi = [this, &ltoc_rssi, &ctol_rssi, &recv_success, &proximity_check](const std::string &payload)
     {
         try
         {
@@ -226,12 +245,6 @@ void Calibration::producer_leaf()
     }
 };
 
-/** Producer for cent node -- Tx REF, Detect and Rx REF, send Rx pow value
- *
- * The cent node is a passive participant in the calibratoin process.
- * It updates the Rx power of the signal from leaf, and informs the leaf.
- *
- */
 void Calibration::producer_cent()
 {
     std::string client_id = cent_id;
@@ -304,8 +317,7 @@ void Calibration::producer_cent()
             break;
 
         // capture signal after a specific duration from the last sample
-        float wait_time = csd_obj->tx_wait_microsec;
-        uhd::time_spec_t rx_timer = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(wait_time);
+        auto rx_timer = csd_obj->get_wait_time();
         auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
         // estimate signal strength
         float min_sigpow_ratio = 0.05;

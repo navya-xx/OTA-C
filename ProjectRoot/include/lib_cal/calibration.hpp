@@ -1,8 +1,7 @@
-#ifndef SYNC_TEST
-#define SYNC_TEST
+#ifndef CALIBRATION
+#define CALIBRATION
 
 #include "pch.hpp"
-#include <boost/chrono.hpp>
 #include "log_macros.hpp"
 #include "usrp_class.hpp"
 #include "config_parser.hpp"
@@ -10,18 +9,33 @@
 #include "cyclestartdetector.hpp"
 #include "waveforms.hpp"
 
+/**Calibration class to perform calibration between pair of leaf and cent nodes.
+ *
+ * Note that device serial and type (cent or leaf) are specified as "device_id" and "device_type".
+ * Initialize the class with "initialize()" and then run "run()" to conduct calibration.
+ *
+ */
 class Calibration
 {
 public:
-    Calibration(USRP_class &usrp_obj, ConfigParser &parser, bool &signal_stop_called);
+    /** Class initialization
+     *
+     * @param USRP_class         object for USRP
+     * @param ConfigParser       object for parsing configurations
+     * @param device_id          USRP serial number
+     * @param device_type        "cent" or "leaf"
+     * @param signal_stop_called to manage clean exit of program via SIGINT
+     */
+    Calibration(USRP_class &usrp_obj, ConfigParser &parser, const std::string &device_id, const std::string device_type, bool &signal_stop_called);
 
     ~Calibration();
 
     bool initialize();
 
-    void run_sync();
+    void run();
+    void stop();
 
-    bool signal_stop_called;
+    bool signal_stop_called, calibration_successful;
 
 private:
     USRP_class &usrp_obj;
@@ -37,8 +51,28 @@ private:
     std::atomic<bool> stop_flag;
     boost::thread producer_thread, consumer_thread;
 
-    void consumer(), producer_leaf(), producer_cent();
+    void consumer();
 
+    /** Producer for the leaf node -- Detect REF, est. RSSI, and update TX gains.
+     *
+     * The leaf node listens for REF and at successful reception captures subsequent samples sent at full-scale.
+     * Then, leaf node starts first by transmitting REF followed by full-scale signal.
+     * The cent detects REF, est. Rx power, and send the value over MQTT to the leaf node.
+     * Leaf node compares this value with Rx power est. of signal from the cent, and updates its TX gain to match at the cent.
+     * This process is repeated until a reasonable accuracy is achieved.
+     *
+     */
+    void producer_leaf();
+
+    /** Producer for cent node -- Tx REF, Detect and Rx REF, send Rx pow value
+     *
+     * The cent node is a passive participant in the calibratoin process.
+     * It updates the Rx power of the signal from leaf, and informs the leaf.
+     *
+     */
+    void producer_cent();
+
+    std::string device_id, device_type;
     std::string leaf_id, cent_id;
     std::string CFO_topic, flag_topic, ctol_rxpow_topic, ltoc_rxpow_topic, calibrated_tx_gain_topic, calibrated_rx_gain_topic;
     size_t num_samps_sync;
@@ -46,7 +80,7 @@ private:
     float max_tx_gain = 86.0, max_rx_gain = 70.0;
 };
 
-#endif // SYNC_TEST
+#endif // CALIBRATION
 
 // get gains of cent dev
 // std::atomic<bool> got_data(false);

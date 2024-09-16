@@ -4,6 +4,7 @@
 #include "pch.hpp"
 #include "log_macros.hpp"
 #include "utility.hpp"
+#include "config_parser.hpp"
 
 class MQTTClient : public mqtt::callback
 {
@@ -34,6 +35,9 @@ public:
 
     std::string timestamp_float_data(const float &data);
     std::string timestamp_str_data(const std::string &data);
+
+    std::unique_ptr<ConfigParser> topics;
+    bool temporary_listen_for_last_value(std::string &val, const std::string &topic, const float &wait_count = 30, const size_t &wait_time = 50);
 
 private:
     // Private constructor with fixed server address
