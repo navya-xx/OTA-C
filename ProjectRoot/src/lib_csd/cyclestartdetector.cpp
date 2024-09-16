@@ -112,7 +112,6 @@ void CycleStartDetector::post_peak_det()
 
     // get wait time before transmission
     csd_wait_timer = get_wait_time();
-    // LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
 }
 
 void CycleStartDetector::update_peaks_info(const float &new_cfo)
