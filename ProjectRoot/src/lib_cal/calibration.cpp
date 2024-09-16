@@ -191,7 +191,7 @@ void Calibration::producer_leaf()
         auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
 
         // Leaf process rx_samples to obtain RSS value
-        float min_sigpow_ratio = 0.05;
+        float min_sigpow_ratio = 0.01;
         ctol_rssi = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio) - usrp_noise_power;
         if (ctol_rssi > 10 * usrp_noise_power)
         {
