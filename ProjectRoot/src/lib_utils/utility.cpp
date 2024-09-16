@@ -253,13 +253,12 @@ float calc_signal_power(const std::deque<std::complex<float>> &signal, const siz
 float meanSquareValue(const std::vector<std::complex<float>> &vec, const float lower_bound)
 {
     float sum = 0.0;
-    float sqr_val = 0.0;
     size_t counter = 0;
     for (const auto &num : vec)
     {
-        sqr_val = std::abs(num);
+        float sqr_val = std::abs(num);
         sqr_val = sqr_val * sqr_val;
-        if (lower_bound > 0.0 and sqr_val > lower_bound)
+        if (lower_bound > 0.0 and sqr_val < lower_bound)
             continue;
 
         sum += sqr_val;
@@ -276,7 +275,7 @@ float meanAbsoluteValue(const std::vector<std::complex<float>> &vec, const float
     for (const auto &num : vec)
     {
         abs_val = std::abs(num);
-        if (lower_bound > 0.0 and abs_val > lower_bound)
+        if (lower_bound > 0.0 and abs_val < lower_bound)
             continue;
 
         sum += abs_val;
