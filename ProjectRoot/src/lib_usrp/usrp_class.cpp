@@ -112,7 +112,7 @@ void USRP_class::initialize(bool perform_rxtx_tests)
 
     if (perform_rxtx_tests)
     {
-        perform_rx_tx_tests();
+        perform_rx_test(); // for estimating background noise
     }
 
     usrp->set_time_now(uhd::time_spec_t(0.0));
@@ -408,8 +408,7 @@ void USRP_class::setup_streamers()
     tx_sample_duration = 1 / tx_rate;
 }
 
-// TODO: separate Tx / Rx tests
-void USRP_class::perform_rx_tx_tests()
+void USRP_class::perform_tx_test()
 {
     std::vector<std::complex<float>> tx_buff(1000 * max_tx_packet_size, std::complex<float>(1.0, 1.0));
     bool dont_stop = false;
@@ -421,8 +420,11 @@ void USRP_class::perform_rx_tx_tests()
     {
         LOG_DEBUG("Test Tx -- failed");
     }
+}
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+void USRP_class::perform_rx_test()
+{
+    bool dont_stop = false;
 
     size_t num_pkts = 10;
     auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
