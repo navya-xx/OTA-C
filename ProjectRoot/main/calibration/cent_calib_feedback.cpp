@@ -100,7 +100,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             LOG_INFO_FMT("Producer success for round %1%!", round);
             json json_data;
             json_data["leaf-serial"] = leaf_serial;
-            json_data["amplitude"] = csd_obj.est_ref_sig_amp;
+            json_data["amplitude"] = csd_obj.est_ref_sig_pow;
             json_data["time"] = currentDateTime();
 
             mqttClient.publish(cent_feedback_topic, json_data.dump(4));

@@ -144,8 +144,8 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
         LOG_WARN("detected ref_start_index is incorrect");
 
     float sig_power = calc_signal_power(cfo_corrected_ref, ref_start_index, N_zfc * R_zfc);
-    est_ref_sig_amp = std::sqrt(sig_power - (peak_det_obj_ref.noise_ampl * peak_det_obj_ref.noise_ampl));
-    LOG_INFO_FMT("Estimated channel power is %1%.", est_ref_sig_amp);
+    est_ref_sig_pow = sig_power - (peak_det_obj_ref.noise_ampl * peak_det_obj_ref.noise_ampl);
+    LOG_INFO_FMT("Estimated signal power is %1%.", est_ref_sig_pow);
 
     // debug -- save data to a file for later analysis
     if (saved_ref_filename != "")
@@ -154,7 +154,7 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
         // std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
         // vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
         // vec_saved_ref.insert(vec_saved_ref.end(), cfo_corrected_ref.begin(), cfo_corrected_ref.end());
-        std::vector<std::complex<float>> vec_saved_ref(cfo_corrected_ref.begin(), cfo_corrected_ref.end());
+        std::vector<std::complex<float>> vec_saved_ref(cfo_corrected_ref.begin() + ref_start_index, cfo_corrected_ref.begin() + ref_start_index + N_zfc * R_zfc);
         vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
         vec_saved_ref.insert(vec_saved_ref.end(), cfo_corr_results.begin(), cfo_corr_results.end());
         vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));

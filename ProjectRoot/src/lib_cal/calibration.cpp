@@ -164,10 +164,18 @@ void Calibration::producer_leaf()
     mqttClient.setCallback(ltoc_rxpow_topic, update_ltoc_rssi);
 
     size_t round = 1, max_num_tx_rounds = 10;
+    bool save_ref_file = true;
 
     while (not signal_stop_called)
     {
         LOG_INFO_FMT("-------------- Receiving Round %1% ------------", round);
+
+        if (save_ref_file)
+        {
+            std::string homeDirStr = get_home_dir();
+            std::string curr_datetime = currentDateTimeFilename();
+            csd_obj->saved_ref_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/saved_ref_file_" + device_id + "_" + curr_datetime + ".dat";
+        }
 
         usrp_obj.reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 

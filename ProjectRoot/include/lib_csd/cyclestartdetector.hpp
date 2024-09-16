@@ -22,7 +22,7 @@ public:
     uhd::time_spec_t get_wait_time();
 
     uhd::time_spec_t csd_wait_timer;
-    float est_ref_sig_amp, tx_wait_microsec, calibration_ratio;
+    float est_ref_sig_pow, tx_wait_microsec, calibration_ratio;
     double cfo;
     bool is_correct_cfo;
     size_t cfo_counter, cfo_count_max = size_t(2 * M_PI) * std::numeric_limits<size_t>::max() / 10;

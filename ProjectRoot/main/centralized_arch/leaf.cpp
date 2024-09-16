@@ -87,7 +87,7 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
         // publish CFO value
         mqttClient.publish(CFO_topic, floatToStringWithPrecision(csd_obj.cfo, 8), true);
         // publish last scale factor used
-        float curr_scaling = min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_amp;
+        float curr_scaling = min_ch_scale / csd_obj.calibration_ratio / csd_obj.est_ref_sig_pow;
         mqttClient.publish(scale_topic, format_scale_data(curr_scaling), true);
 
         LOG_INFO_FMT("------------------ Producer finished for round %1%! --------------", round);

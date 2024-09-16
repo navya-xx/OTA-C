@@ -48,7 +48,7 @@ std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom()
     for (int i = 0; i < wf_len; ++i)
     {
         float phase = distribution(generator);
-        sequence.emplace_back(std::polar(scale, phase)); // Construct complex number with unit magnitude and phase
+        sequence[i] = std::polar(scale, phase); // Construct complex number with unit magnitude and phase
     }
 
     return sequence;

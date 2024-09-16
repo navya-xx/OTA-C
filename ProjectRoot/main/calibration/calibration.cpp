@@ -100,9 +100,9 @@ void producer_thread(USRP_class &usrp_obj, PeakDetectionClass &peakDet_obj, Cycl
             // append_value_with_timestamp(ref_calib_file, calib_file, floatToStringWithPrecision(csd_obj.est_ref_sig_amp, 8));
             std::string json_data;
             if (is_cent)
-                json_data = create_calib_data_str(parser.getValue_str("leaf-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
+                json_data = create_calib_data_str(parser.getValue_str("leaf-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_pow);
             else
-                json_data = create_calib_data_str(parser.getValue_str("cent-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_amp);
+                json_data = create_calib_data_str(parser.getValue_str("cent-id"), device_id, usrp_obj.tx_gain, usrp_obj.rx_gain, csd_obj.est_ref_sig_pow);
 
             mqttClient.publish(calib_topic, json_data);
             ++round;
