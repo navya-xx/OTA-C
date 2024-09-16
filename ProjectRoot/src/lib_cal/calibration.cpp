@@ -291,7 +291,7 @@ void Calibration::producer_cent()
     {
         csd_obj->produce(samples, sample_size, sample_time, signal_stop_called);
 
-        if (stop_flag && not retx_flag && not end_flag)
+        if (stop_flag || retx_flag || end_flag)
             return true;
         else
             return false;
@@ -310,7 +310,7 @@ void Calibration::producer_cent()
         {
             usrp_obj.transmission(ref_waveform, uhd::time_spec_t(0.0), signal_stop_called, true);
             usrp_obj.transmission(rand_waveform, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_rand_wait_microsec / 1e6), signal_stop_called, true);
-            boost::this_thread::sleep_for(boost::chrono::milliseconds(subseq_tx_wait));
+            boost::this_thread::sleep_for(boost::chrono::microseconds(tx_rand_wait_microsec));
         }
 
         if (signal_stop_called || end_flag)
