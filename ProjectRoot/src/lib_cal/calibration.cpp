@@ -177,7 +177,7 @@ void Calibration::producer_leaf()
 
         // capture signal after a specific duration from the peak
         uhd::time_spec_t rx_timer = csd_obj->get_wait_time();
-        auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
+        auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, false);
 
         // Leaf process rx_samples to obtain RSS value
         float min_sigpow_ratio = 0.05;
