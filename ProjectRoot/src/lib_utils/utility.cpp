@@ -238,14 +238,18 @@ float calc_signal_power(const std::vector<std::complex<float>> &signal, const si
         min_ampl = findMaxAbsValue(signal) * min_ampl_ratio;
 
     float sig_pow = 0.0, s_amp = 0.0;
+    size_t true_L = 0;
     for (int i = 0; i < L; ++i)
     {
         s_amp = std::abs(signal[start_index + i]);
         if (s_amp > min_ampl)
+        {
             sig_pow += (s_amp * s_amp);
+            true_L++;
+        }
     }
 
-    sig_pow = sig_pow / L;
+    sig_pow = sig_pow / true_L;
 
     return sig_pow;
 }
