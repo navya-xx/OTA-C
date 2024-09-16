@@ -113,6 +113,8 @@ void Calibration::producer_leaf()
     std::string client_id = leaf_id;
     MQTTClient &mqttClient = MQTTClient::getInstance(client_id);
 
+    float usrp_noise_power = usrp_obj.init_noise_ampl * usrp_obj.init_noise_ampl;
+
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [this](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
     {
@@ -182,8 +184,8 @@ void Calibration::producer_leaf()
 
         // Leaf process rx_samples to obtain RSS value
         float min_sigpow_ratio = 0.05;
-        ctol_rssi = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
-        if (ctol_rssi > 10 * usrp_obj.init_noise_ampl * usrp_obj.init_noise_ampl)
+        ctol_rssi = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio) - usrp_noise_power;
+        if (ctol_rssi > 10 * usrp_noise_power)
         {
             LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol_rssi);
             mqttClient.publish(ctol_rxpow_topic, mqttClient.timestamp_float_data(ctol_rssi), false);
