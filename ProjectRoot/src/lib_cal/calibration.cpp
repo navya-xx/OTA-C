@@ -21,7 +21,7 @@ Calibration::Calibration(
         leaf_id = device_id;
 
     num_samps_sync = parser.getValue_int("Ref-N-zfc") * parser.getValue_int("Ref-R-zfc") * 10;
-    tx_rand_wait = size_t(parser.getValue_float("start-tx-wait-microsec") / 1e3);
+    tx_rand_wait_microsec = size_t(parser.getValue_float("start-tx-wait-microsec"));
 
     CFO_topic = "calibration/CFO/" + leaf_id;
     flag_topic = "calibration/flag/" + leaf_id;
@@ -178,7 +178,7 @@ void Calibration::producer_leaf()
         // capture signal after a specific duration from the peak
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
         LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj.usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6);
-        auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, false);
+        auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
 
         // Leaf process rx_samples to obtain RSS value
         float min_sigpow_ratio = 0.05;
@@ -225,7 +225,7 @@ void Calibration::producer_leaf()
             // Transmit REF + full-scale signal
             LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
             usrp_obj.transmission(ref_waveform, uhd::time_spec_t(0.0), signal_stop_called, true);
-            usrp_obj.transmission(rand_waveform, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_rand_wait / 1e3), signal_stop_called, true);
+            usrp_obj.transmission(rand_waveform, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_rand_wait_microsec / 1e6), signal_stop_called, true);
 
             boost::this_thread::sleep_for(boost::chrono::milliseconds(subseq_tx_wait));
         }
@@ -299,7 +299,7 @@ void Calibration::producer_cent()
         while (not recv_flag and not signal_stop_called)
         {
             usrp_obj.transmission(ref_waveform, uhd::time_spec_t(0.0), signal_stop_called, true);
-            usrp_obj.transmission(rand_waveform, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_rand_wait / 1e3), signal_stop_called, true);
+            usrp_obj.transmission(rand_waveform, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_rand_wait_microsec / 1e6), signal_stop_called, true);
             boost::this_thread::sleep_for(boost::chrono::milliseconds(subseq_tx_wait));
         }
 

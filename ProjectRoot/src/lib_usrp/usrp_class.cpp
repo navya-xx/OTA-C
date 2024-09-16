@@ -408,6 +408,7 @@ void USRP_class::setup_streamers()
     tx_sample_duration = 1 / tx_rate;
 }
 
+// TODO: separate Tx / Rx tests
 void USRP_class::perform_rx_tx_tests()
 {
     std::vector<std::complex<float>> tx_buff(1000 * max_tx_packet_size, std::complex<float>(1.0, 1.0));
