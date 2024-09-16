@@ -111,8 +111,8 @@ void CycleStartDetector::post_peak_det()
     peak_det_obj_ref.print_peaks_data();
 
     // get wait time before transmission
-    csd_tx_start_timer = get_wait_time();
-    LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
+    csd_wait_timer = get_wait_time();
+    // LOG_INFO_FMT("Transmission is timed in %1% secs", csd_tx_start_timer.get_real_secs());
 }
 
 void CycleStartDetector::update_peaks_info(const float &new_cfo)
@@ -370,6 +370,6 @@ uhd::time_spec_t CycleStartDetector::get_wait_time()
     size_t ref_pad_len = parser.getValue_int("Ref-padding-mul");
     double peak_to_last_sample_duration = rx_sample_duration.get_real_secs() * (N_zfc * (sycn_with_peak_from_last + ref_pad_len));
     auto abs_peak_timer = peak_det_obj_ref.get_sync_time();
-    double wait_timer = peak_to_last_sample_duration + tx_wait_microsec / 1e6;
+    double wait_timer = peak_to_last_sample_duration + (tx_wait_microsec / 1e6);
     return abs_peak_timer + uhd::time_spec_t(wait_timer);
 }

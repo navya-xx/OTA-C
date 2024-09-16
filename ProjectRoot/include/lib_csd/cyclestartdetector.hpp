@@ -21,7 +21,7 @@ public:
 
     uhd::time_spec_t get_wait_time();
 
-    uhd::time_spec_t csd_tx_start_timer;
+    uhd::time_spec_t csd_wait_timer;
     float est_ref_sig_amp, tx_wait_microsec, calibration_ratio;
     double cfo;
     bool is_correct_cfo;

@@ -176,7 +176,7 @@ void Calibration::producer_leaf()
         // mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
 
         // capture signal after a specific duration from the peak
-        uhd::time_spec_t rx_timer = csd_obj->get_wait_time();
+        uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
         LOG_DEBUG_FMT("Reception timed in %1% microsecs", (rx_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6);
         auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, false);
 
