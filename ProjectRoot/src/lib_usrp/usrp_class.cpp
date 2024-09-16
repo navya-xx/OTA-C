@@ -451,7 +451,8 @@ void USRP_class::publish_usrp_data()
     json_data["noise-level"] = init_noise_ampl;
     json_data["time"] = currentDateTime();
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-    mqttClient.publish("usrp/init_data/" + device_id, json_data.dump(4), true);
+    std::string topic_init = mqttClient.topics->getValue_str("init-config") + device_id;
+    mqttClient.publish(topic_init, json_data.dump(4), true);
 }
 
 bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
