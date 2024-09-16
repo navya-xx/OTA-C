@@ -197,7 +197,7 @@ bool MQTTClient::temporary_listen_for_last_value(std::string &val, const std::st
             val = jdata["value"];
             got_val = true;
         }
-        catch (json::parse_error &e)
+        catch (json::exception &e)
         {
             LOG_WARN_FMT("JSON parse error : %1%", e.what());
         }

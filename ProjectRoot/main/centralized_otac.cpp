@@ -51,7 +51,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::string val = "";
     std::string topic_cfo = mqttClient.topics->getValue_str("CFO") + device_id;
     mqttClient.temporary_listen_for_last_value(val, topic_cfo, 10, 100);
-    if (val == "")
+    if (val != "")
         parser.set_value("cfo", val, "float", "CFO-value from calibrated data");
 
     // get last tx-gain
@@ -89,7 +89,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     auto control_calibration_callback = [&calib_class_obj](const std::string &payload)
     {
-        json jdata = json::parse(payload);
+        json jdata;
+        try
+        {
+            jdata = json::parse(payload);
+        }
+        catch (json::exception &e)
+        {
+            LOG_WARN_FMT("JSON error : %1%", e.what());
+            LOG_WARN_FMT("Incorrect format of control message = %1%", payload);
+            return;
+        }
         std::string msg = jdata["value"];
         if (msg == "start")
         {
@@ -103,7 +113,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
     };
 
-    mqttClient.setCallback(mqttClient.topics->getValue_str("calibration"), control_calibration_callback);
+    auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
+    mqttClient.setCallback(control_calib_topic, control_calibration_callback);
 
     while (not stop_signal_called)
     {

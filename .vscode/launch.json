@@ -5,71 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) TX_calib",
+            "name": "(gdb) OTAC",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/ProjectRoot/build/TX_calib",
+            "program": "${workspaceRoot}/ProjectRoot/build/otac_cent",
             "args": [
-                "32B1728"
-            ],
-            "stopAtEntry": false,
-            "cwd": "${fileDirname}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-        {
-            "name": "Python Debugger: Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "(gdb) CA_cent_test",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/ProjectRoot/build/CA_cent_test",
-            "args": [
-                "32B1728",
-                "10"
-            ],
-            "stopAtEntry": false,
-            "cwd": "${fileDirname}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-        {
-            "name": "(gdb) CA_leaf",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/ProjectRoot/build/CA_leaf",
-            "args": [
+                "cent",
                 "3237C3E"
             ],
             "stopAtEntry": false,
@@ -90,55 +31,5 @@
                 }
             ]
         },
-        {
-            "name": "(gdb) CSD Test",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/ProjectRoot/build/exp_csd",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "${fileDirname}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-        {
-            "name": "(gdb) centleaf",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceRoot}/ProjectRoot/build/centralized_arch_leaf",
-            "args": [
-                "32C79C6"
-            ],
-            "stopAtEntry": false,
-            "cwd": "${fileDirname}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
-        }
     ]
 }
