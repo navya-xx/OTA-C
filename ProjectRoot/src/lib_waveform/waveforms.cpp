@@ -42,7 +42,7 @@ std::vector<std::complex<float>> WaveformGenerator::generateUnitCircleRandom()
     std::uniform_real_distribution<> distribution(0.0, 2 * M_PI); // Uniform distribution for phase
 
     // Vector to store complex numbers
-    std::vector<std::complex<float>> sequence;
+    std::vector<std::complex<float>> sequence(wf_len);
 
     // Generate random phases and construct complex numbers
     for (int i = 0; i < wf_len; ++i)
