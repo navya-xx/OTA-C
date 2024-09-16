@@ -88,7 +88,6 @@ bool Calibration::initialize()
 
 void Calibration::run()
 {
-    std::string device_type = parser.getValue_str("device-type");
     if (device_type == "leaf")
         producer_thread = boost::thread(&Calibration::producer_leaf, this);
     else if (device_type == "cent")
