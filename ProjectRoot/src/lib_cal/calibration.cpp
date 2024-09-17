@@ -164,7 +164,8 @@ void Calibration::callback_update_ltoc(const std::string &payload)
         json jsonData = json::parse(payload);
         if (jsonData.contains("value"))
         {
-            ltoc = jsonData["value"].get<float>();
+            std::string temp_ltoc = jsonData["value"];
+            ltoc = std::stof(temp_ltoc);
             LOG_DEBUG_FMT("MQTT >> LTOC received = %1%", ltoc);
             recv_success = true;
             if (ctol < 0)
