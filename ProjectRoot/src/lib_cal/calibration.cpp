@@ -4,31 +4,30 @@ Calibration::Calibration(
     USRP_class &usrp_obj_,
     ConfigParser &parser_,
     const std::string &device_id_,
-    const std::string device_type_,
+    const std::string &counterpart_id_,
+    const std::string &device_type_,
     bool &signal_stop_called_) : usrp_obj(usrp_obj_),
                                  parser(parser_),
                                  device_id(device_id_),
-                                 device_type(device_type_),
+                                 counterpart_id(counterpart_id_),
                                  signal_stop_called(signal_stop_called_),
                                  csd_obj(nullptr),
                                  peak_det_obj(nullptr),
                                  ref_waveform(),
                                  rand_waveform()
 {
-    if (device_type_ == "cent")
+    if (device_type == "cent")
+    {
         cent_id = device_id;
-    else if (device_type_ == "leaf")
+        leaf_id = counterpart_id;
+    }
+    else if (device_type == "leaf")
+    {
+        cent_id = counterpart_id;
         leaf_id = device_id;
-
+    }
     num_samps_sync = parser.getValue_int("Ref-N-zfc") * parser.getValue_int("Ref-R-zfc") * 10;
     tx_rand_wait_microsec = size_t(parser.getValue_float("start-tx-wait-microsec"));
-
-    CFO_topic = "calibration/CFO/" + leaf_id;
-    flag_topic = "calibration/flag/" + leaf_id;
-    ctol_rxpow_topic = "calibration/ctol/" + leaf_id;
-    ltoc_rxpow_topic = "calibration/ltoc/" + cent_id;
-    calibrated_tx_gain_topic = "calibration/tx_gain/" + leaf_id;
-    calibrated_rx_gain_topic = "calibration/rx_gain/" + leaf_id;
 };
 
 Calibration::~Calibration()
@@ -43,7 +42,7 @@ Calibration::~Calibration()
 void Calibration::initialize_peak_det_obj()
 {
     peak_det_obj = std::make_unique<PeakDetectionClass>(parser, usrp_obj.init_noise_ampl);
-};
+}
 
 void Calibration::initialize_csd_obj()
 {
@@ -51,7 +50,25 @@ void Calibration::initialize_csd_obj()
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
     uhd::time_spec_t rx_sample_duration = uhd::time_spec_t(rx_sample_duration_float);
     csd_obj = std::make_unique<CycleStartDetector>(parser, capacity, rx_sample_duration, *peak_det_obj);
-};
+}
+
+void Calibration::get_mqtt_topics()
+{
+    if (device_type == "leaf")
+        client_id = leaf_id;
+    else if (device_type == "cent")
+        client_id = cent_id;
+
+    MQTTClient &mqttClient = MQTTClient::getInstance(client_id); // for publishing data
+
+    // populate topics
+    CFO_topic = mqttClient.topics->getValue_str("CFO") + client_id;
+    flag_topic = mqttClient.topics->getValue_str("control-flags") + leaf_id; // flags are set by the leaf
+
+    ltoc_topic = mqttClient.topics->getValue_str("calib-ltoc") + cent_id; // ltoc sigpow is sent by cent
+    tx_gain_topic = mqttClient.topics->getValue_str("tx-gain") + device_id;
+    rx_gain_topic = mqttClient.topics->getValue_str("rx-gain") + device_id;
+}
 
 void Calibration::generate_waveform()
 {
@@ -70,18 +87,19 @@ void Calibration::generate_waveform()
 
 bool Calibration::initialize()
 {
-    stop_flag = false;
+    csd_success_flag = false;
     calibration_successful = false;
     try
     {
         initialize_peak_det_obj();
         initialize_csd_obj();
         generate_waveform();
+        get_mqtt_topics();
         return true;
     }
     catch (std::exception &e)
     {
-        LOG_WARN_FMT("SyncTest Initialization failed with ERROR: %1%", e.what());
+        LOG_WARN_FMT("Calibration Initialization failed with ERROR: %1%", e.what());
         return false;
     }
 };
@@ -98,8 +116,7 @@ void Calibration::run()
 
 void Calibration::stop()
 {
-    stop_flag.store(true);
-    signal_stop_called = true;
+    csd_success_flag.store(true);
 
     boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
 
@@ -110,23 +127,22 @@ void Calibration::stop()
 void Calibration::producer_leaf()
 {
     // reception/producer params
-    std::string client_id = leaf_id;
-    MQTTClient &mqttClient = MQTTClient::getInstance(client_id);
+    MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
 
     float usrp_noise_power = usrp_obj.init_noise_ampl * usrp_obj.init_noise_ampl;
 
-    // This function is called by the receiver as a callback everytime a frame is received
+    // This function is used as a callback in USRP receiver to detect CSD success event
     auto producer_wrapper = [this](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
     {
         csd_obj->produce(samples, sample_size, sample_time, signal_stop_called);
 
-        if (stop_flag)
+        if (csd_success_flag)
             return true;
         else
             return false;
     };
 
-    // callback to update ltoc_rssi value
+    // checks whether two values are close to each other, based on tolerance value set inside the function
     std::function<bool(const float &, const float &)> proximity_check = [](const float &val1, const float &val2)
     {
         float tolerance = 5e-2;
@@ -137,20 +153,21 @@ void Calibration::producer_leaf()
             return false;
     };
 
-    float ctol_rssi = 0.0, ltoc_rssi = 0.0;
+    float ctol = 0.0, ltoc = 0.0;
     bool recv_success = false;
 
-    std::function<void(const std::string &)> update_ltoc_rssi = [this, &ltoc_rssi, &ctol_rssi, &recv_success, &proximity_check](const std::string &payload)
+    // callback to update ltoc value
+    std::function<void(const std::string &)> update_ltoc = [this, &ltoc, &ctol, &recv_success, &proximity_check](const std::string &payload)
     {
         try
         {
             json jsonData = json::parse(payload);
             if (jsonData.contains("value"))
             {
-                ltoc_rssi = jsonData["value"].get<float>();
-                LOG_DEBUG_FMT("MQTT >> LTOC RSSI received = %1%", ltoc_rssi);
+                ltoc = jsonData["value"].get<float>();
+                LOG_DEBUG_FMT("MQTT >> LTOC received = %1%", ltoc);
                 recv_success = true;
-                if (proximity_check(ctol_rssi, ltoc_rssi))
+                if (proximity_check(ctol, ltoc))
                     calibration_successful = true;
             }
         }
@@ -161,7 +178,7 @@ void Calibration::producer_leaf()
     };
 
     // subscribe to MQTT topic
-    mqttClient.setCallback(ltoc_rxpow_topic, update_ltoc_rssi);
+    mqttClient.setCallback(ltoc_topic, update_ltoc);
 
     size_t round = 1, max_num_tx_rounds = 10;
     bool save_ref_file = true;
@@ -183,7 +200,7 @@ void Calibration::producer_leaf()
             break;
 
         // publish CFO value
-        // mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
+        mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
 
         // capture signal after a specific duration from the peak
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
@@ -192,27 +209,28 @@ void Calibration::producer_leaf()
 
         // Leaf process rx_samples to obtain RSS value
         float min_sigpow_ratio = 0.01;
-        ctol_rssi = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio) - usrp_noise_power;
-        if (ctol_rssi > 10 * usrp_noise_power)
+        ctol = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
+        if (ctol > 10 * usrp_noise_power)
         {
-            LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol_rssi);
-            mqttClient.publish(ctol_rxpow_topic, mqttClient.timestamp_float_data(ctol_rssi), false);
+            LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol);
+            // mqttClient.publish(ctol_rxpow_topic, mqttClient.timestamp_float_data(ctol_rssi), false);
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("recv"), false);
         }
         else
         {
             LOG_WARN("Received Rx power of the signal is too low");
-            continue; // skip transmission and receive again
+            csd_success_flag = false;
+            continue; // skip transmission and move to CSD again
         }
 
-        // In loop
+        // Transmit to cent, and update Tx/Rx gains based on ltoc values obtained
         float leaf_tx_round = 1;
         while (not signal_stop_called && not calibration_successful && leaf_tx_round++ < max_num_tx_rounds)
         {
             // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
-            if (ltoc_rssi > 0 && recv_success)
+            if (ltoc > 0 && recv_success)
             {
-                float new_tx_gain = toDecibel(ctol_rssi, true) - toDecibel(ltoc_rssi, true) + usrp_obj.tx_gain;
+                float new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj.tx_gain;
                 // If TX gain has reached maximum, start by increasing RX gain of leaf
                 if (new_tx_gain > max_tx_gain)
                 {
@@ -230,35 +248,34 @@ void Calibration::producer_leaf()
                     usrp_obj.set_tx_gain(new_tx_gain);
                     recv_success = false;
                 }
+
+                // sleep to let USRP setup gains
+                boost::this_thread::sleep_for(boost::chrono::microseconds(size_t(100e3)));
             }
 
             // Transmit REF + full-scale signal
             LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
-            usrp_obj.transmission(ref_waveform, uhd::time_spec_t(0.0), signal_stop_called, true);
-            usrp_obj.transmission(rand_waveform, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_rand_wait_microsec / 1e6), signal_stop_called, true);
-
-            boost::this_thread::sleep_for(boost::chrono::milliseconds(subseq_tx_wait));
+            transmit_waveform();
         }
 
         if (calibration_successful)
         {
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("end"), false);
             LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB", usrp_obj.tx_gain, usrp_obj.rx_gain);
-            LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol_rssi, ltoc_rssi);
-            mqttClient.publish(calibrated_tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj.tx_gain), true);
-            mqttClient.publish(calibrated_rx_gain_topic, mqttClient.timestamp_float_data(usrp_obj.rx_gain), true);
+            LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol, ltoc);
+            mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj.tx_gain), true);
+            mqttClient.publish(rx_gain_topic, mqttClient.timestamp_float_data(usrp_obj.rx_gain), true);
             break;
         }
 
         // move to next round
-        stop_flag = false;
+        csd_success_flag = false;
     }
 };
 
 void Calibration::producer_cent()
 {
-    std::string client_id = cent_id;
-    MQTTClient &mqttClient = MQTTClient::getInstance(client_id);
+    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
     bool recv_flag = false, retx_flag = false, end_flag = false;
 
     std::function<void(const std::string &)> detect_flags = [&recv_flag, &retx_flag, &end_flag](const std::string &payload)
@@ -291,7 +308,7 @@ void Calibration::producer_cent()
     {
         csd_obj->produce(samples, sample_size, sample_time, signal_stop_called);
 
-        if (stop_flag || retx_flag || end_flag)
+        if (csd_success_flag || retx_flag || end_flag)
             return true;
         else
             return false;
@@ -308,9 +325,7 @@ void Calibration::producer_cent()
         // Transmit REF
         while (not recv_flag and not signal_stop_called)
         {
-            usrp_obj.transmission(ref_waveform, uhd::time_spec_t(0.0), signal_stop_called, true);
-            usrp_obj.transmission(rand_waveform, usrp_obj.usrp->get_time_now() + uhd::time_spec_t(tx_rand_wait_microsec / 1e6), signal_stop_called, true);
-            boost::this_thread::sleep_for(boost::chrono::microseconds(tx_rand_wait_microsec));
+            transmit_waveform();
         }
 
         if (signal_stop_called || end_flag)
@@ -336,7 +351,7 @@ void Calibration::producer_cent()
         {
             LOG_INFO_FMT("Rx power of signal from cent = %1%", ltoc_rssi);
             // publish
-            mqttClient.publish(ltoc_rxpow_topic, mqttClient.timestamp_float_data(ltoc_rssi), false);
+            mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc_rssi), false);
         }
         else
         {
@@ -350,10 +365,19 @@ void Calibration::consumer()
 {
     while (not signal_stop_called)
     {
-        csd_obj->consume(stop_flag, signal_stop_called);
-        if (stop_flag)
+        csd_obj->consume(csd_success_flag, signal_stop_called);
+        if (csd_success_flag)
         {
             LOG_INFO("***Successful CSD!");
         }
     }
 };
+
+void Calibration::transmit_waveform()
+{
+    auto tx_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(5e-3);
+    usrp_obj.transmission(ref_waveform, tx_time, signal_stop_called, true);
+    auto tx_time_next = tx_time + uhd::time_spec_t((tx_rand_wait_microsec / 1e6) + (ref_waveform.size() / usrp_obj.tx_rate));
+    usrp_obj.transmission(rand_waveform, tx_time_next, signal_stop_called, true);
+    boost::this_thread::sleep_for(boost::chrono::microseconds(tx_rand_wait_microsec + size_t(10e3)));
+}

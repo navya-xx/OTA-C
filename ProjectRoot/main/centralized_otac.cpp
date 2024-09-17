@@ -20,6 +20,72 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
+void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::string &counterpard_id, const bool &is_cent = false)
+{
+    int choice;
+
+    // Present options to the user
+    LOG_INFO("Choose from the following options:");
+    LOG_INFO("(1) Calibrate a leaf device.");
+    LOG_INFO("(2) Analyse time synchronization performance.");
+    LOG_INFO("(3) Analyse OTAC-based consensus performance.");
+    LOG_INFO("(4) Exit program.");
+    LOG_INFO("Enter choice (1-4):");
+
+    // Take input from the user
+    std::cin >> choice;
+
+    // Run code based on user input
+    switch (choice)
+    {
+    case 1:
+    {
+        std::string cent_id, leaf_id;
+        if (is_cent)
+        {
+            cent_id = device_id;
+            LOG_INFO("Enter serial of leaf device:");
+            std::cin >> leaf_id;
+            counterpard_id = leaf_id;
+        }
+        else
+        {
+            cent_id = counterpard_id;
+            leaf_id = device_id;
+        }
+        std::string topic_calib = mqttClient.topics->getValue_str("calibration");
+        json jstring;
+        jstring["message"] = "start";
+        jstring["leaf-id"] = leaf_id;
+        jstring["cent-id"] = cent_id;
+        jstring["time"] = currentDateTime();
+        mqttClient.publish(topic_calib + cent_id, jstring.dump(4), false);
+        mqttClient.publish(topic_calib + leaf_id, jstring.dump(4), false);
+        break;
+    }
+    case 2:
+    {
+        LOG_INFO("Not implemented yet!");
+        break;
+    }
+    case 3:
+    {
+        LOG_INFO("Not implemented yet!");
+        break;
+    }
+    case 4:
+    {
+        stop_signal_called = true;
+        break;
+    }
+    default:
+    {
+        LOG_INFO("Invalid choice. Please enter a number between 1 and 4.");
+        break;
+    }
+    }
+}
+
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     /*------ Initialize ---------------*/
@@ -28,7 +94,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::string curr_time_str = currentDateTimeFilename();
 
     if (argc < 3)
-        throw std::invalid_argument("Insufficient arguments! Program requires 2 arguments - device_type (cent or leaf) and device_id (USRP serial)");
+        throw std::invalid_argument("Insufficient arguments! Program requires 3 arguments - device_type (cent or leaf) and device_id (USRP serial)");
 
     std::string device_type = argv[1];
     std::string device_id = argv[2];
@@ -50,21 +116,21 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // get last CFO
     std::string val = "";
     std::string topic_cfo = mqttClient.topics->getValue_str("CFO") + device_id;
-    mqttClient.temporary_listen_for_last_value(val, topic_cfo, 10, 100);
+    mqttClient.temporary_listen_for_last_value(val, topic_cfo, 15, 20);
     if (val != "")
         parser.set_value("cfo", val, "float", "CFO-value from calibrated data");
 
     // get last tx-gain
     val = "";
     std::string topic_tx_gain = mqttClient.topics->getValue_str("tx-gain") + device_id;
-    mqttClient.temporary_listen_for_last_value(val, topic_tx_gain, 10, 100);
+    mqttClient.temporary_listen_for_last_value(val, topic_tx_gain, 15, 20);
     if (val != "")
         parser.set_value("tx-gain", val, "float", "Tx-value from calibrated data");
 
     // get last rx-gain
     val = "";
     std::string topic_rx_gain = mqttClient.topics->getValue_str("rx-gain") + device_id;
-    mqttClient.temporary_listen_for_last_value(val, topic_rx_gain, 10, 100);
+    mqttClient.temporary_listen_for_last_value(val, topic_rx_gain, 15, 20);
     if (val != "")
         parser.set_value("rx-gain", val, "float", "Rx-value from calibrated data");
 
@@ -81,13 +147,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     /*-------- Subscribe to Control topics ---------*/
     // Calibration
-    Calibration calib_class_obj(usrp_obj, parser, device_id, device_type, stop_signal_called);
-    if (!calib_class_obj.initialize())
-    {
-        LOG_WARN("Calibration Class object initilization FAILED!");
-    }
+    bool calibration_success = false;
+    bool program_ends = false;
 
-    auto control_calibration_callback = [&calib_class_obj](const std::string &payload)
+    auto control_calibration_callback = [&](const std::string &payload)
     {
         json jdata;
         try
@@ -98,27 +161,51 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         {
             LOG_WARN_FMT("JSON error : %1%", e.what());
             LOG_WARN_FMT("Incorrect format of control message = %1%", payload);
+            program_ends = true;
             return;
         }
-        std::string msg = jdata["value"];
+        std::string msg = jdata["message"];
+        std::string cent_id = jdata["cent-id"];
+        std::string leaf_id = jdata["leaf-id"];
+
+        std::unique_ptr<Calibration> calib_class_obj;
+        if (device_type == "cent")
+            calib_class_obj = std::make_unique<Calibration>(usrp_obj, parser, cent_id, leaf_id, device_type, stop_signal_called);
+        else if (device_type == "leaf")
+            calib_class_obj = std::make_unique<Calibration>(usrp_obj, parser, leaf_id, cent_id, device_type, stop_signal_called);
+
+        if (!calib_class_obj->initialize())
+        {
+            LOG_WARN("Calibration Class object initilization FAILED!");
+            program_ends = true;
+            return;
+        }
+
         if (msg == "start")
         {
             LOG_INFO("Starting Calibration routine...");
-            calib_class_obj.run();
+            calib_class_obj->run();
         }
         else if (msg == "stop")
         {
             LOG_INFO("Stopping Calibration routine...");
-            calib_class_obj.stop();
+            calib_class_obj->stop();
         }
+
+        program_ends = true;
     };
 
     auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
     mqttClient.setCallback(control_calib_topic, control_calibration_callback);
 
-    while (not stop_signal_called)
+    std::string counterpart_id;
+    if (device_type == "leaf")
+        counterpart_id = parser.getValue_str("cent-id");
+    bool is_cent = device_type == "cent";
+
+    while (not stop_signal_called && not program_ends)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        gen_mqtt_control_msg(mqttClient, device_id, counterpart_id, is_cent);
     }
     return EXIT_SUCCESS;
 };

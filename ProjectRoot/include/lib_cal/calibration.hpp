@@ -26,7 +26,7 @@ public:
      * @param device_type        "cent" or "leaf"
      * @param signal_stop_called to manage clean exit of program via SIGINT
      */
-    Calibration(USRP_class &usrp_obj, ConfigParser &parser, const std::string &device_id, const std::string device_type, bool &signal_stop_called);
+    Calibration(USRP_class &usrp_obj, ConfigParser &parser, const std::string &device_id, const std::string &counterpart_id, const std::string &device_type, bool &signal_stop_called);
 
     ~Calibration();
 
@@ -47,8 +47,11 @@ private:
     void initialize_peak_det_obj();
     void initialize_csd_obj();
     void generate_waveform();
+    void get_mqtt_topics();
 
-    std::atomic<bool> stop_flag;
+    void transmit_waveform();
+
+    std::atomic<bool> csd_success_flag;
     boost::thread producer_thread, consumer_thread;
 
     void consumer();
@@ -72,9 +75,8 @@ private:
      */
     void producer_cent();
 
-    std::string device_id, device_type;
-    std::string leaf_id, cent_id;
-    std::string CFO_topic, flag_topic, ctol_rxpow_topic, ltoc_rxpow_topic, calibrated_tx_gain_topic, calibrated_rx_gain_topic;
+    std::string device_id, counterpart_id, leaf_id, cent_id, device_type, client_id;
+    std::string CFO_topic, flag_topic, ltoc_topic, tx_gain_topic, rx_gain_topic;
     size_t num_samps_sync;
     size_t subseq_tx_wait = 50, tx_rand_wait_microsec; // millisec
     float max_tx_gain = 86.0, max_rx_gain = 70.0;

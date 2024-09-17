@@ -154,7 +154,7 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
         // std::vector<std::complex<float>> vec_saved_ref(saved_ref.begin(), saved_ref.end());
         // vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
         // vec_saved_ref.insert(vec_saved_ref.end(), cfo_corrected_ref.begin(), cfo_corrected_ref.end());
-        std::vector<std::complex<float>> vec_saved_ref(cfo_corrected_ref.begin() + ref_start_index, cfo_corrected_ref.begin() + ref_start_index + N_zfc * R_zfc);
+        std::vector<std::complex<float>> vec_saved_ref(cfo_corrected_ref.begin(), cfo_corrected_ref.end());
         vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
         vec_saved_ref.insert(vec_saved_ref.end(), cfo_corr_results.begin(), cfo_corr_results.end());
         vec_saved_ref.insert(vec_saved_ref.end(), N_zfc, std::complex<float>(0.0, 0.0));
