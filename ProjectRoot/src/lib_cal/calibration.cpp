@@ -170,6 +170,7 @@ void Calibration::callback_update_ltoc(const std::string &payload)
     catch (const json::parse_error &e)
     {
         LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
+        LOG_WARN_FMT("Incorrect JSON string = %1%", payload);
     }
 }
 
@@ -307,6 +308,7 @@ void Calibration::callback_detect_flags(const std::string &payload)
     catch (const json::parse_error &e)
     {
         LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
+        LOG_WARN_FMT("Incorrect JSON string = %1%", payload);
     }
 }
 
