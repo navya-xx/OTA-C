@@ -192,7 +192,7 @@ std::string MQTTClient::getCurrentTimeString() const
 
 std::string MQTTClient::timestamp_float_data(const float &data)
 {
-    std::string text = "{\"value\": " + floatToStringWithPrecision(data, 8) + ", \"time\": \"" + getCurrentTimeString() + "\"}";
+    std::string text = "{\"value\": \"" + floatToStringWithPrecision(data, 8) + "\", \"time\": \"" + getCurrentTimeString() + "\"}";
     return text;
 }
 

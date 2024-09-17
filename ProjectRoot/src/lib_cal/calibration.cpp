@@ -242,13 +242,14 @@ void Calibration::producer_leaf()
         }
 
         // Transmit to cent, and update Tx/Rx gains based on ltoc values obtained
-        float leaf_tx_round = 1;
+        size_t leaf_tx_round = 1;
+        float new_tx_gain = 0.0;
         while (not signal_stop_called && not calibration_successful && leaf_tx_round++ < max_num_tx_rounds)
         {
             // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
             if (ltoc > 0 && recv_success)
             {
-                float new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
+                new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
                 // If TX gain has reached maximum, start by increasing RX gain of leaf
                 if (new_tx_gain > max_tx_gain)
                 {
@@ -271,9 +272,11 @@ void Calibration::producer_leaf()
                 boost::this_thread::sleep_for(boost::chrono::microseconds(size_t(20e3)));
 
                 // TODO: adjust scale based on remainder gain
-                float remainder_gain = usrp_obj->tx_gain - toDecibel(ctol, true) + toDecibel(ltoc, true);
+                float remainder_gain = new_tx_gain - usrp_obj->tx_gain;
                 full_scale = sqrt(fromDecibel(remainder_gain, true));
                 LOG_INFO_FMT("Full scale value %1%", full_scale);
+                if (full_scale > 2.0)
+                    full_scale = 1.0;
                 mqttClient.publish(full_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
             }
 
