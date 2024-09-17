@@ -205,7 +205,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     while (not stop_signal_called && not program_ends)
     {
-        gen_mqtt_control_msg(mqttClient, device_id, counterpart_id, is_cent);
+        if (device_type == "cent")
+            gen_mqtt_control_msg(mqttClient, device_id, counterpart_id, is_cent);
+        else
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return EXIT_SUCCESS;
 };
