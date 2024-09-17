@@ -6,7 +6,7 @@ Calibration::Calibration(
     const std::string &device_id_,
     const std::string &counterpart_id_,
     const std::string &device_type_,
-    bool &signal_stop_called_) : usrp_obj(usrp_obj_),
+    bool &signal_stop_called_) : usrp_obj(&usrp_obj_),
                                  parser(parser_),
                                  device_id(device_id_),
                                  counterpart_id(counterpart_id_),
@@ -42,7 +42,7 @@ Calibration::~Calibration()
 
 void Calibration::initialize_peak_det_obj()
 {
-    peak_det_obj = std::make_unique<PeakDetectionClass>(parser, usrp_obj.init_noise_ampl);
+    peak_det_obj = std::make_unique<PeakDetectionClass>(parser, usrp_obj->init_noise_ampl);
 }
 
 void Calibration::initialize_csd_obj()
@@ -69,6 +69,7 @@ void Calibration::get_mqtt_topics()
     ltoc_topic = mqttClient.topics->getValue_str("calib-ltoc") + cent_id; // ltoc sigpow is sent by cent
     tx_gain_topic = mqttClient.topics->getValue_str("tx-gain") + device_id;
     rx_gain_topic = mqttClient.topics->getValue_str("rx-gain") + device_id;
+    full_scale_topic = mqttClient.topics->getValue_str("full-scale") + leaf_id; // flags are set by the leaf
 }
 
 void Calibration::generate_waveform()
@@ -91,7 +92,7 @@ bool Calibration::initialize()
     csd_success_flag = false;
     calibration_successful = false;
     calibration_ends = false;
-    ltoc = -1.0, ctol = -1.0;
+    ltoc = -1.0, ctol = -1.0, full_scale = 1.0;
     try
     {
         initialize_peak_det_obj();
@@ -109,6 +110,11 @@ bool Calibration::initialize()
         {
             mqttClient.setCallback(ltoc_topic, [this](const std::string &payload)
                                    { callback_update_ltoc(payload); });
+            std::string temp;
+            if (mqttClient.temporary_listen_for_last_value(temp, full_scale_topic, 10, 30))
+            {
+                full_scale = std::stof(temp);
+            }
         }
         return true;
     }
@@ -179,7 +185,7 @@ void Calibration::producer_leaf()
     // reception/producer params
     MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
 
-    float usrp_noise_power = usrp_obj.init_noise_ampl * usrp_obj.init_noise_ampl;
+    float usrp_noise_power = usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl;
 
     // This function is used as a callback in USRP receiver to detect CSD success event
     auto producer_wrapper = [this](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -206,7 +212,7 @@ void Calibration::producer_leaf()
             csd_obj->saved_ref_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/saved_ref_file_" + device_id + "_" + curr_datetime + ".dat";
         }
 
-        usrp_obj.reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+        usrp_obj->reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
         if (signal_stop_called)
             break;
@@ -216,8 +222,8 @@ void Calibration::producer_leaf()
 
         // capture signal after a specific duration from the peak
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
-        LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj.usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6);
-        auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
+        LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj->usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj->usrp->get_time_now()).get_real_secs() * 1e6);
+        auto rx_samples = usrp_obj->reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
 
         // Leaf process rx_samples to obtain RSS value
         float min_sigpow_ratio = 0.01;
@@ -242,14 +248,14 @@ void Calibration::producer_leaf()
             // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
             if (ltoc > 0 && recv_success)
             {
-                float new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj.tx_gain;
+                float new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
                 // If TX gain has reached maximum, start by increasing RX gain of leaf
                 if (new_tx_gain > max_tx_gain)
                 {
-                    float new_rx_gain = usrp_obj.rx_gain + (max_tx_gain - new_tx_gain);
+                    float new_rx_gain = usrp_obj->rx_gain + (max_tx_gain - new_tx_gain);
                     new_tx_gain = max_tx_gain;
-                    usrp_obj.set_rx_gain(new_rx_gain);
-                    usrp_obj.set_tx_gain(new_tx_gain);
+                    usrp_obj->set_rx_gain(new_rx_gain);
+                    usrp_obj->set_tx_gain(new_tx_gain);
                     // inform cent to restart transmission
                     mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("retx"), false);
                     recv_success = false;
@@ -257,26 +263,32 @@ void Calibration::producer_leaf()
                 }
                 else
                 {
-                    usrp_obj.set_tx_gain(new_tx_gain);
+                    usrp_obj->set_tx_gain(new_tx_gain);
                     recv_success = false;
                 }
 
                 // sleep to let USRP setup gains
-                boost::this_thread::sleep_for(boost::chrono::microseconds(size_t(100e3)));
+                boost::this_thread::sleep_for(boost::chrono::microseconds(size_t(20e3)));
+
+                // TODO: adjust scale based on remainder gain
+                float remainder_gain = usrp_obj->tx_gain - toDecibel(ctol, true) + toDecibel(ltoc, true);
+                full_scale = sqrt(fromDecibel(remainder_gain, true));
+                LOG_INFO_FMT("Full scale value %1%", full_scale);
+                mqttClient.publish(full_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
             }
 
             // Transmit REF + full-scale signal
             LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
-            transmit_waveform();
+            transmit_waveform(full_scale);
         }
 
         if (calibration_successful)
         {
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("end"), false);
-            LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB", usrp_obj.tx_gain, usrp_obj.rx_gain);
+            LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB", usrp_obj->tx_gain, usrp_obj->rx_gain);
             LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol, ltoc);
-            mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj.tx_gain), true);
-            mqttClient.publish(rx_gain_topic, mqttClient.timestamp_float_data(usrp_obj.rx_gain), true);
+            mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->tx_gain), true);
+            mqttClient.publish(rx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->rx_gain), true);
             break;
         }
 
@@ -349,19 +361,19 @@ void Calibration::producer_cent()
             recv_flag = false;
 
         // start receiving REF signal
-        usrp_obj.reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+        usrp_obj->reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
         if (signal_stop_called || end_flag)
             break;
 
         // capture signal after a specific duration from the last sample
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
-        LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj.usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6);
-        auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
+        LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj->usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj->usrp->get_time_now()).get_real_secs() * 1e6);
+        auto rx_samples = usrp_obj->reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
         // estimate signal strength
         float min_sigpow_ratio = 0.05;
         ltoc = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
-        if (ltoc > 10 * usrp_obj.init_noise_ampl * usrp_obj.init_noise_ampl)
+        if (ltoc > 10 * usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl)
         {
             LOG_INFO_FMT("Rx power of signal from cent = %1%", ltoc);
             // publish
@@ -389,11 +401,25 @@ void Calibration::consumer()
     }
 };
 
-void Calibration::transmit_waveform()
+void Calibration::transmit_waveform(const float &scale)
 {
-    auto tx_time = usrp_obj.usrp->get_time_now() + uhd::time_spec_t(5e-3);
-    usrp_obj.transmission(ref_waveform, tx_time, signal_stop_called, true);
-    auto tx_time_next = tx_time + uhd::time_spec_t((tx_rand_wait_microsec / 1e6) + (ref_waveform.size() / usrp_obj.tx_rate));
-    usrp_obj.transmission(rand_waveform, tx_time_next, signal_stop_called, true);
+    auto tx_ref_waveform = ref_waveform;
+    auto tx_rand_waveform = rand_waveform;
+    if (scale != 1.0)
+    {
+        for (auto &elem : tx_ref_waveform)
+        {
+            elem *= scale;
+        }
+
+        for (auto &elem : tx_rand_waveform)
+        {
+            elem *= scale;
+        }
+    }
+    auto tx_time = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);
+    usrp_obj->transmission(tx_ref_waveform, tx_time, signal_stop_called, true);
+    auto tx_time_next = tx_time + uhd::time_spec_t((tx_rand_wait_microsec / 1e6) + (ref_waveform.size() / usrp_obj->tx_rate));
+    usrp_obj->transmission(tx_rand_waveform, tx_time_next, signal_stop_called, true);
     boost::this_thread::sleep_for(boost::chrono::microseconds(tx_rand_wait_microsec + size_t(10e3)));
 }

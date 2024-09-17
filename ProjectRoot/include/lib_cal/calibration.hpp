@@ -38,8 +38,8 @@ public:
     bool signal_stop_called, calibration_successful, calibration_ends;
 
 private:
-    USRP_class &usrp_obj;
     ConfigParser parser;
+    std::unique_ptr<USRP_class> usrp_obj;
     std::unique_ptr<CycleStartDetector> csd_obj;
     std::unique_ptr<PeakDetectionClass> peak_det_obj;
     std::vector<std::complex<float>> ref_waveform, rand_waveform;
@@ -49,7 +49,7 @@ private:
     void generate_waveform();
     void get_mqtt_topics();
 
-    void transmit_waveform();
+    void transmit_waveform(const float &scale = 1.0);
     bool proximity_check(const float &val1, const float &val2);
     void callback_detect_flags(const std::string &payload);
     void callback_update_ltoc(const std::string &payload);
@@ -79,13 +79,13 @@ private:
     void producer_cent();
 
     std::string device_id, counterpart_id, leaf_id, cent_id, device_type, client_id;
-    std::string CFO_topic, flag_topic, ltoc_topic, tx_gain_topic, rx_gain_topic;
+    std::string CFO_topic, flag_topic, full_scale_topic, ltoc_topic, tx_gain_topic, rx_gain_topic;
     size_t num_samps_sync;
     size_t subseq_tx_wait = 50, tx_rand_wait_microsec; // millisec
     float max_tx_gain = 86.0, max_rx_gain = 70.0;
 
     bool recv_success = false;
-    float ltoc, ctol;
+    float ltoc, ctol, full_scale;
     bool recv_flag = false, retx_flag = false, end_flag = false;
 };
 
