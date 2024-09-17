@@ -59,6 +59,7 @@ void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::s
         jstring["leaf-id"] = leaf_id;
         jstring["cent-id"] = cent_id;
         jstring["time"] = currentDateTime();
+        LOG_INFO_FMT("Data sent to topic %1% : %2%", topic_calib, jstring.dump(4));
         mqttClient.publish(topic_calib + cent_id, jstring.dump(4), false);
         mqttClient.publish(topic_calib + leaf_id, jstring.dump(4), false);
         break;
