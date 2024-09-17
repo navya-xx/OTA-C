@@ -23,7 +23,7 @@ public:
     void unsubscribe(const std::string &topic);
 
     // Set a callback for incoming messages
-    void setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback);
+    void setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback, bool run_in_thread = false);
 
     // Thread handler for MQTT message listening
     void startListening();
@@ -40,6 +40,10 @@ public:
     bool temporary_listen_for_last_value(std::string &val, const std::string &topic, const float &wait_count = 30, const size_t &wait_time = 50);
 
 private:
+    // Mutex for thread-safe implementation
+    static std::mutex mqtt_mutex;
+    static std::mutex callback_mutex;
+
     // Private constructor with fixed server address
     MQTTClient(const std::string &clientId);
 
@@ -58,7 +62,7 @@ private:
     mqtt::connect_options connectOptions;
 
     // Map to store topic and associated callback
-    std::map<std::string, std::function<void(const std::string &)>> callbacks;
+    std::unordered_map<std::string, std::pair<std::function<void(const std::string &)>, bool>> callbacks;
 
     // Static instance pointer
     static MQTTClient *instance;

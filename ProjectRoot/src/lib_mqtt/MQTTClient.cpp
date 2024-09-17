@@ -1,5 +1,8 @@
 #include "MQTTClient.hpp"
 
+std::mutex MQTTClient::mqtt_mutex;     // Define the static mutex
+std::mutex MQTTClient::callback_mutex; // Define the static mutex
+
 // Initialize the static instance pointer to nullptr
 MQTTClient *MQTTClient::instance = nullptr;
 
@@ -37,6 +40,7 @@ MQTTClient::MQTTClient(const std::string &clientId)
 // Connect to the MQTT broker
 bool MQTTClient::connect()
 {
+    std::lock_guard<std::mutex> lock(mqtt_mutex); // Lock the mutex for thread safety
     try
     {
         client.connect(connectOptions)->wait();
@@ -53,9 +57,15 @@ bool MQTTClient::connect()
 // Publish a message to a topic
 bool MQTTClient::publish(const std::string &topic, const std::string &message, bool retained)
 {
+    std::lock_guard<std::mutex> lock(mqtt_mutex); // Lock the mutex for thread safety
     try
     {
-        client.publish(topic, message, qos_level, retained)->wait();
+        auto token = client.publish(topic, message, qos_level, retained);
+        if (!token->wait_for(std::chrono::seconds(2)))
+        {
+            LOG_WARN("Publishing timed out!");
+            return false;
+        }
         LOG_INFO_FMT("Message published to topic:  %1%", topic);
         return true;
     }
@@ -69,9 +79,15 @@ bool MQTTClient::publish(const std::string &topic, const std::string &message, b
 // Subscribe to a topic
 bool MQTTClient::subscribe(const std::string &topic)
 {
+    std::lock_guard<std::mutex> lock(mqtt_mutex); // Lock the mutex for thread safety
     try
     {
-        client.subscribe(topic, qos_level)->wait();
+        auto token = client.subscribe(topic, qos_level);
+        if (!token->wait_for(std::chrono::seconds(2)))
+        {
+            LOG_WARN("Subscription timed out!");
+            return false;
+        }
         LOG_INFO_FMT("Subscribed to topic:  %1%", topic);
         return true;
     }
@@ -97,9 +113,10 @@ void MQTTClient::unsubscribe(const std::string &topic)
 }
 
 // Set a callback for incoming messages
-void MQTTClient::setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback)
+void MQTTClient::setCallback(const std::string &topic, const std::function<void(const std::string &)> &callback, bool run_in_thread)
 {
-    callbacks[topic] = callback;
+    std::lock_guard<std::mutex> lock(callback_mutex); // Lock the static mutex for thread safety
+    callbacks[topic] = std::make_pair(callback, run_in_thread);
     if (!subscribe(topic))
         callbacks.erase(topic);
 }
@@ -107,11 +124,25 @@ void MQTTClient::setCallback(const std::string &topic, const std::function<void(
 // Internal callback function that processes incoming messages
 void MQTTClient::onMessage(const std::string &topic, const std::string &payload)
 {
+    std::lock_guard<std::mutex> lock(callback_mutex); // Lock the static mutex for thread safety
     auto it = callbacks.find(topic);
     if (it != callbacks.end())
     {
         if (!pause_callbacks)
-            it->second(payload); // Call the stored callback function
+        { // Check if this callback should run in a separate thread
+            if (it->second.second)
+            {
+                // Run the callback in a separate thread
+                std::thread([callback = it->second.first, payload]()
+                            { callback(payload); })
+                    .detach(); // Detach the thread to let it run independently
+            }
+            else
+            {
+                // Run the callback on the main thread (blocking)
+                it->second.first(payload);
+            }
+        }
         else
             LOG_WARN("Callback are pause for the moment...");
     }

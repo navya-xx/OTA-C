@@ -59,8 +59,9 @@ void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::s
         jstring["leaf-id"] = leaf_id;
         jstring["cent-id"] = cent_id;
         jstring["time"] = currentDateTime();
-        LOG_INFO_FMT("Data sent to topic %1% : %2%", topic_calib, jstring.dump(4));
+        LOG_INFO_FMT("Sending data to topic %1% : %2%", topic_calib + cent_id, jstring.dump(4));
         mqttClient.publish(topic_calib + cent_id, jstring.dump(4), false);
+        LOG_INFO_FMT("Sending data to topic %1% : %2%", topic_calib + leaf_id, jstring.dump(4));
         mqttClient.publish(topic_calib + leaf_id, jstring.dump(4), false);
         break;
     }
@@ -149,7 +150,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*-------- Subscribe to Control topics ---------*/
     // Calibration
     bool calibration_success = false;
-    bool program_ends = false;
+    bool program_ends = true;
 
     auto control_calibration_callback = [&](const std::string &payload)
     {
@@ -165,17 +166,23 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             program_ends = true;
             return;
         }
+
         std::string msg = jdata["message"];
-        std::string cent_id = jdata["cent-id"];
-        std::string leaf_id = jdata["leaf-id"];
-
-        std::unique_ptr<Calibration> calib_class_obj;
+        std::string main_dev, c_dev;
         if (device_type == "cent")
-            calib_class_obj = std::make_unique<Calibration>(usrp_obj, parser, cent_id, leaf_id, device_type, stop_signal_called);
+        {
+            main_dev = jdata["cent-id"];
+            c_dev = jdata["leaf-id"];
+        }
         else if (device_type == "leaf")
-            calib_class_obj = std::make_unique<Calibration>(usrp_obj, parser, leaf_id, cent_id, device_type, stop_signal_called);
+        {
+            main_dev = jdata["leaf-id"];
+            c_dev = jdata["cent-id"];
+        }
 
-        if (!calib_class_obj->initialize())
+        Calibration calib_class_obj(usrp_obj, parser, main_dev, c_dev, device_type, stop_signal_called);
+
+        if (!calib_class_obj.initialize())
         {
             LOG_WARN("Calibration Class object initilization FAILED!");
             program_ends = true;
@@ -185,31 +192,41 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         if (msg == "start")
         {
             LOG_INFO("Starting Calibration routine...");
-            calib_class_obj->run();
+            calib_class_obj.run();
         }
         else if (msg == "stop")
         {
             LOG_INFO("Stopping Calibration routine...");
-            calib_class_obj->stop();
+            calib_class_obj.stop();
+        }
+
+        while (!calib_class_obj.calibration_ends)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
 
         program_ends = true;
     };
 
     auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
-    mqttClient.setCallback(control_calib_topic, control_calibration_callback);
+    mqttClient.setCallback(control_calib_topic, control_calibration_callback, true);
 
+    // run contoller on a separate thread
     std::string counterpart_id;
     if (device_type == "leaf")
         counterpart_id = parser.getValue_str("cent-id");
     bool is_cent = device_type == "cent";
 
-    while (not stop_signal_called && not program_ends)
+    while (not stop_signal_called)
     {
-        if (device_type == "cent")
-            gen_mqtt_control_msg(mqttClient, device_id, counterpart_id, is_cent);
-        else
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (device_type == "cent" && program_ends)
+        {
+            program_ends = false;
+            std::thread input_thread([&]()
+                                     { gen_mqtt_control_msg(mqttClient, device_id, counterpart_id, is_cent); });
+            input_thread.join();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return EXIT_SUCCESS;
 };

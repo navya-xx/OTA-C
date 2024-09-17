@@ -7,6 +7,7 @@ import time
 
 list_of_topics = [
     "calibration/#",
+    "control/#",
     "config/run_config_info",
     "otac/#",
     "usrp/#"

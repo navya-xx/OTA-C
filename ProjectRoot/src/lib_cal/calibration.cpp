@@ -10,6 +10,7 @@ Calibration::Calibration(
                                  parser(parser_),
                                  device_id(device_id_),
                                  counterpart_id(counterpart_id_),
+                                 device_type(device_type_),
                                  signal_stop_called(signal_stop_called_),
                                  csd_obj(nullptr),
                                  peak_det_obj(nullptr),
@@ -89,12 +90,26 @@ bool Calibration::initialize()
 {
     csd_success_flag = false;
     calibration_successful = false;
+    calibration_ends = false;
+    ltoc = -1.0, ctol = -1.0;
     try
     {
         initialize_peak_det_obj();
         initialize_csd_obj();
         generate_waveform();
         get_mqtt_topics();
+
+        MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+        if (device_type == "cent")
+        {
+            mqttClient.setCallback(flag_topic, [this](const std::string &payload)
+                                   { callback_detect_flags(payload); });
+        }
+        else if (device_type == "leaf")
+        {
+            mqttClient.setCallback(ltoc_topic, [this](const std::string &payload)
+                                   { callback_update_ltoc(payload); });
+        }
         return true;
     }
     catch (std::exception &e)
@@ -124,6 +139,40 @@ void Calibration::stop()
     delete this;
 }
 
+// checks whether two values are close to each other, based on tolerance value set inside the function
+bool Calibration::proximity_check(const float &val1, const float &val2)
+{
+    float tolerance = 5e-2;
+    float dist_2norm = (val1 - val2) * (val1 - val2) / (val1 * val1);
+    if (dist_2norm < tolerance)
+        return true;
+    else
+        return false;
+}
+
+// callback to update ltoc value
+void Calibration::callback_update_ltoc(const std::string &payload)
+{
+    try
+    {
+        json jsonData = json::parse(payload);
+        if (jsonData.contains("value"))
+        {
+            ltoc = jsonData["value"].get<float>();
+            LOG_DEBUG_FMT("MQTT >> LTOC received = %1%", ltoc);
+            recv_success = true;
+            if (ctol < 0)
+                LOG_WARN("CTOL is not updated yet!");
+            else if (proximity_check(ctol, ltoc))
+                calibration_successful = true;
+        }
+    }
+    catch (const json::parse_error &e)
+    {
+        LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
+    }
+}
+
 void Calibration::producer_leaf()
 {
     // reception/producer params
@@ -142,48 +191,10 @@ void Calibration::producer_leaf()
             return false;
     };
 
-    // checks whether two values are close to each other, based on tolerance value set inside the function
-    std::function<bool(const float &, const float &)> proximity_check = [](const float &val1, const float &val2)
-    {
-        float tolerance = 5e-2;
-        float dist_2norm = (val1 - val2) * (val1 - val2) / (val1 * val1);
-        if (dist_2norm < tolerance)
-            return true;
-        else
-            return false;
-    };
-
-    float ctol = 0.0, ltoc = 0.0;
-    bool recv_success = false;
-
-    // callback to update ltoc value
-    std::function<void(const std::string &)> update_ltoc = [this, &ltoc, &ctol, &recv_success, &proximity_check](const std::string &payload)
-    {
-        try
-        {
-            json jsonData = json::parse(payload);
-            if (jsonData.contains("value"))
-            {
-                ltoc = jsonData["value"].get<float>();
-                LOG_DEBUG_FMT("MQTT >> LTOC received = %1%", ltoc);
-                recv_success = true;
-                if (proximity_check(ctol, ltoc))
-                    calibration_successful = true;
-            }
-        }
-        catch (const json::parse_error &e)
-        {
-            LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
-        }
-    };
-
-    // subscribe to MQTT topic
-    mqttClient.setCallback(ltoc_topic, update_ltoc);
-
-    size_t round = 1, max_num_tx_rounds = 10;
+    size_t round = 1, max_total_round = 10, max_num_tx_rounds = 10;
     bool save_ref_file = true;
 
-    while (not signal_stop_called)
+    while (not signal_stop_called && round++ < max_total_round)
     {
         LOG_INFO_FMT("-------------- Receiving Round %1% ------------", round);
 
@@ -271,40 +282,40 @@ void Calibration::producer_leaf()
         // move to next round
         csd_success_flag = false;
     }
+
+    calibration_ends = true;
 };
+
+void Calibration::callback_detect_flags(const std::string &payload)
+{
+    try
+    {
+        json jsonData = json::parse(payload);
+        if (jsonData.contains("value"))
+        {
+            std::string flag_value = jsonData["value"];
+            if (flag_value == "recv")
+                recv_flag = true;
+            else if (flag_value == "retx")
+                retx_flag = true;
+            else if (flag_value == "end")
+                end_flag = true;
+            else
+                LOG_WARN_FMT("MQTT >> Flag %1% does not match any.", jsonData["value"]);
+        }
+    }
+    catch (const json::parse_error &e)
+    {
+        LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
+    }
+}
 
 void Calibration::producer_cent()
 {
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-    bool recv_flag = false, retx_flag = false, end_flag = false;
-
-    std::function<void(const std::string &)> detect_flags = [&recv_flag, &retx_flag, &end_flag](const std::string &payload)
-    {
-        try
-        {
-            json jsonData = json::parse(payload);
-            if (jsonData.contains("value"))
-            {
-                std::string flag_value = jsonData["value"];
-                if (flag_value == "recv")
-                    recv_flag = true;
-                else if (flag_value == "retx")
-                    retx_flag = true;
-                else if (flag_value == "end")
-                    end_flag = true;
-                else
-                    LOG_WARN_FMT("MQTT >> Flag %1% does not match any.", jsonData["value"]);
-            }
-        }
-        catch (const json::parse_error &e)
-        {
-            LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
-        }
-    };
-    mqttClient.setCallback(flag_topic, detect_flags);
 
     // This function is called by the receiver as a callback everytime a frame is received
-    auto producer_wrapper = [this, &retx_flag, &end_flag](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
+    auto producer_wrapper = [this](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
     {
         csd_obj->produce(samples, sample_size, sample_time, signal_stop_called);
 
@@ -315,15 +326,15 @@ void Calibration::producer_cent()
     };
 
     // reception/producer params
-    size_t round = 1;
-    float ltoc_rssi = 0.0;
+    size_t round = 1, total_max_rounds = 10;
+    float ltoc = 0.0;
 
-    while (not signal_stop_called && not end_flag)
+    while (not signal_stop_called && not end_flag && round++ < total_max_rounds)
     {
         LOG_INFO_FMT("-------------- Transmit Round %1% ------------", round);
 
         // Transmit REF
-        while (not recv_flag and not signal_stop_called)
+        while (not recv_flag && not signal_stop_called)
         {
             transmit_waveform();
         }
@@ -342,16 +353,17 @@ void Calibration::producer_cent()
             break;
 
         // capture signal after a specific duration from the last sample
-        auto rx_timer = csd_obj->get_wait_time();
+        uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
+        LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj.usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj.usrp->get_time_now()).get_real_secs() * 1e6);
         auto rx_samples = usrp_obj.reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
         // estimate signal strength
         float min_sigpow_ratio = 0.05;
-        ltoc_rssi = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
-        if (ltoc_rssi > 10 * usrp_obj.init_noise_ampl * usrp_obj.init_noise_ampl)
+        ltoc = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
+        if (ltoc > 10 * usrp_obj.init_noise_ampl * usrp_obj.init_noise_ampl)
         {
-            LOG_INFO_FMT("Rx power of signal from cent = %1%", ltoc_rssi);
+            LOG_INFO_FMT("Rx power of signal from cent = %1%", ltoc);
             // publish
-            mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc_rssi), false);
+            mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc), false);
         }
         else
         {
@@ -359,6 +371,8 @@ void Calibration::producer_cent()
             recv_flag = true; // skip transmission and receive again
         }
     }
+
+    calibration_ends = true;
 }
 
 void Calibration::consumer()

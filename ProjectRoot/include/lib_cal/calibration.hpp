@@ -35,7 +35,7 @@ public:
     void run();
     void stop();
 
-    bool signal_stop_called, calibration_successful;
+    bool signal_stop_called, calibration_successful, calibration_ends;
 
 private:
     USRP_class &usrp_obj;
@@ -50,6 +50,9 @@ private:
     void get_mqtt_topics();
 
     void transmit_waveform();
+    bool proximity_check(const float &val1, const float &val2);
+    void callback_detect_flags(const std::string &payload);
+    void callback_update_ltoc(const std::string &payload);
 
     std::atomic<bool> csd_success_flag;
     boost::thread producer_thread, consumer_thread;
@@ -80,6 +83,10 @@ private:
     size_t num_samps_sync;
     size_t subseq_tx_wait = 50, tx_rand_wait_microsec; // millisec
     float max_tx_gain = 86.0, max_rx_gain = 70.0;
+
+    bool recv_success = false;
+    float ltoc, ctol;
+    bool recv_flag = false, retx_flag = false, end_flag = false;
 };
 
 #endif // CALIBRATION
