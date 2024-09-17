@@ -63,7 +63,7 @@ void Calibration::get_mqtt_topics()
 
     // populate topics
     CFO_topic = mqttClient.topics->getValue_str("CFO") + client_id;
-    flag_topic = mqttClient.topics->getValue_str("control-flags") + leaf_id; // flags are set by the leaf
+    flag_topic = mqttClient.topics->getValue_str("calib-flags") + leaf_id; // flags are set by the leaf
 
     ltoc_topic = mqttClient.topics->getValue_str("calib-ltoc") + cent_id; // ltoc sigpow is sent by cent
     tx_gain_topic = mqttClient.topics->getValue_str("tx-gain") + device_id;
