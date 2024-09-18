@@ -83,6 +83,7 @@ private:
     size_t num_samps_sync;
     size_t subseq_tx_wait = 50, tx_rand_wait_microsec; // millisec
     size_t total_reps_cal = 10, current_reps_cal = 0;
+    size_t max_total_round = 100, max_num_tx_rounds = 20;
     float max_tx_gain = 86.0, max_rx_gain = 70.0;
 
     bool recv_success = false;

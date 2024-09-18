@@ -156,7 +156,7 @@ void Calibration::stop()
 // checks whether two values are close to each other, based on tolerance value set inside the function
 bool Calibration::proximity_check(const float &val1, const float &val2)
 {
-    float tolerance = 5e-3;
+    float tolerance = 2e-2;
     float dist_2norm = (val1 - val2) * (val1 - val2) / (val1 * val1);
     if (dist_2norm < tolerance)
     {
@@ -218,7 +218,7 @@ void Calibration::producer_leaf()
             return false;
     };
 
-    size_t round = 1, max_total_round = 100, max_num_tx_rounds = 20;
+    size_t round = 1;
     bool save_ref_file = true;
 
     while (not signal_stop_called && round++ < max_total_round)
@@ -378,10 +378,10 @@ void Calibration::producer_cent()
     };
 
     // reception/producer params
-    size_t round = 1, total_max_rounds = 10;
+    size_t round = 1;
     float ltoc = 0.0;
 
-    while (not signal_stop_called && not end_flag && round++ < total_max_rounds)
+    while (not signal_stop_called && not end_flag && round++ < max_total_round)
     {
         LOG_INFO_FMT("-------------- Transmit Round %1% ------------", round);
 
