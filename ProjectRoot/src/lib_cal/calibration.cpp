@@ -200,6 +200,31 @@ void Calibration::callback_update_ltoc(const std::string &payload)
     }
 }
 
+void Calibration::callback_detect_flags(const std::string &payload)
+{
+    try
+    {
+        json jsonData = json::parse(payload);
+        if (jsonData.contains("value"))
+        {
+            std::string flag_value = jsonData["value"];
+            if (flag_value == "recv")
+                recv_flag = true;
+            else if (flag_value == "retx")
+                retx_flag = true;
+            else if (flag_value == "end")
+                end_flag = true;
+            else
+                LOG_WARN_FMT("MQTT >> Flag %1% does not match any.", jsonData["value"]);
+        }
+    }
+    catch (const json::parse_error &e)
+    {
+        LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
+        LOG_WARN_FMT("Incorrect JSON string = %1%", payload);
+    }
+}
+
 void Calibration::producer_leaf()
 {
     // reception/producer params
@@ -219,7 +244,7 @@ void Calibration::producer_leaf()
     };
 
     size_t round = 1;
-    bool save_ref_file = true;
+    bool save_ref_file = false;
 
     while (not signal_stop_called && round++ < max_total_round)
     {
@@ -306,7 +331,7 @@ void Calibration::producer_leaf()
                 // sleep to let USRP setup gains
                 boost::this_thread::sleep_for(boost::chrono::microseconds(size_t(20e3)));
 
-                // TODO: adjust scale based on remainder gain
+                // Adjust scale based on remainder gain
                 full_scale = fromDecibel(remainder_gain, false);
                 LOG_INFO_FMT("Full scale value %1%", full_scale);
                 if (full_scale > 2.0)
@@ -322,7 +347,6 @@ void Calibration::producer_leaf()
         if (calibration_successful)
         {
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("end"), false);
-            // TODO: Check why TX/RX gain values are not updated from preceding code
             LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB", usrp_obj->tx_gain, usrp_obj->rx_gain);
             LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol, ltoc);
             mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->tx_gain), true);
@@ -336,31 +360,6 @@ void Calibration::producer_leaf()
 
     calibration_ends = true;
 };
-
-void Calibration::callback_detect_flags(const std::string &payload)
-{
-    try
-    {
-        json jsonData = json::parse(payload);
-        if (jsonData.contains("value"))
-        {
-            std::string flag_value = jsonData["value"];
-            if (flag_value == "recv")
-                recv_flag = true;
-            else if (flag_value == "retx")
-                retx_flag = true;
-            else if (flag_value == "end")
-                end_flag = true;
-            else
-                LOG_WARN_FMT("MQTT >> Flag %1% does not match any.", jsonData["value"]);
-        }
-    }
-    catch (const json::parse_error &e)
-    {
-        LOG_WARN_FMT("MQTT >> JSON parsing error : %1%", e.what());
-        LOG_WARN_FMT("Incorrect JSON string = %1%", payload);
-    }
-}
 
 void Calibration::producer_cent()
 {
@@ -386,7 +385,7 @@ void Calibration::producer_cent()
         LOG_INFO_FMT("-------------- Transmit Round %1% ------------", round);
 
         // Transmit REF
-        while (not recv_flag && not signal_stop_called)
+        while (not recv_flag && not end_flag && not signal_stop_called)
         {
             transmit_waveform();
         }

@@ -210,7 +210,7 @@ void USRP_class::set_device_parameters()
     set_master_clock_rate();
     set_sample_rate();
     set_center_frequency();
-    set_gains();
+    set_initial_gains();
     set_bandwidth();
     apply_additional_settings();
 }
@@ -265,41 +265,61 @@ void USRP_class::set_center_frequency()
     LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
 }
 
-void USRP_class::set_gains()
+void USRP_class::set_initial_gains()
 {
-    bool mgmt_flat = parser.getValue_str("gain-mgmt") == "gain";
-    float rx_gain_input, tx_gain_input;
+    float tx_gain_input, rx_gain_input;
 
-    if (mgmt_flat)
-    {
-        rx_gain_input = parser.getValue_float("rx-gain");
-        tx_gain_input = parser.getValue_float("tx-gain");
-    }
+    // Tx gains
+    // check if calibrated gains are available
+    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+    std::string tx_gain_topic = mqttClient.topics->getValue_str("tx-gain");
+    std::string temp = "";
+    if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
+        tx_gain_input = std::stof(temp);
     else
     {
-        LOG_DEBUG("Setting Gain via calibration data and power reference.");
-        auto retval = query_calibration_data();
-
-        if (retval.first == -100.0)
-            rx_gain_input = parser.getValue_float("rx-gain");
-        else
-            rx_gain_input = retval.first;
-
-        if (retval.second == -100.0)
+        if (parser.getValue_str("gain-mgmt") == "gain")
             tx_gain_input = parser.getValue_float("tx-gain");
-        else
-            tx_gain_input = retval.second;
+        else if (parser.getValue_str("gain-mgmt") == "power")
+        {
+            auto retval = query_calibration_data();
+
+            if (retval.second == -100.0)
+                tx_gain_input = parser.getValue_float("tx-gain");
+            else
+                tx_gain_input = retval.second;
+        }
+    }
+
+    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", tx_gain_input);
+    usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
+    tx_gain = usrp->get_tx_gain(0);
+    LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
+
+    // Rx-gain
+    std::string rx_gain_topic = mqttClient.topics->getValue_str("rx-gain");
+    temp = "";
+    if (mqttClient.temporary_listen_for_last_value(temp, rx_gain_topic, 10, 30))
+        rx_gain_input = std::stof(temp);
+    else
+    {
+        if (parser.getValue_str("gain-mgmt") == "gain")
+            rx_gain_input = parser.getValue_float("rx-gain");
+        else if (parser.getValue_str("gain-mgmt") == "power")
+        {
+            auto retval = query_calibration_data();
+
+            if (retval.first == -100.0)
+                rx_gain_input = parser.getValue_float("rx-gain");
+            else
+                rx_gain_input = retval.first;
+        }
     }
 
     LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", rx_gain_input);
     usrp->set_rx_gain(rx_gain_input, 0); // Assuming channel 0
     rx_gain = usrp->get_rx_gain(0);
     LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
-
-    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", tx_gain_input);
-    usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
-    tx_gain = usrp->get_tx_gain(0);
-    LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
 };
 
 void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
