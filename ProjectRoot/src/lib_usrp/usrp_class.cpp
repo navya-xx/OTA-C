@@ -302,7 +302,7 @@ void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
 {
     LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", _tx_gain);
     usrp->set_tx_gain(_tx_gain, channel);
-    float tx_gain = usrp->get_tx_gain(channel);
+    tx_gain = usrp->get_tx_gain(channel);
     LOG_DEBUG_FMT("Actual TX Gain: %1% dB...", tx_gain);
 };
 
@@ -310,7 +310,7 @@ void USRP_class::set_rx_gain(const float &_rx_gain, const int &channel)
 {
     LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", _rx_gain);
     usrp->set_rx_gain(_rx_gain, channel);
-    float rx_gain = usrp->get_rx_gain(channel);
+    rx_gain = usrp->get_rx_gain(channel);
     LOG_DEBUG_FMT("Actual RX Gain: %1% dB...", rx_gain);
 };
 
