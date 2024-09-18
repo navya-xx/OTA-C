@@ -27,7 +27,7 @@ Calibration::Calibration(
         cent_id = counterpart_id;
         leaf_id = device_id;
     }
-    num_samps_sync = parser.getValue_int("Ref-N-zfc") * parser.getValue_int("Ref-R-zfc") * 10;
+    num_samps_sync = usrp_obj->max_rx_packet_size * 50;
     tx_rand_wait_microsec = size_t(parser.getValue_float("start-tx-wait-microsec"));
 };
 
