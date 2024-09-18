@@ -215,6 +215,12 @@ void Calibration::producer_leaf()
 
         usrp_obj->reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
 
+        if (!csd_success_flag)
+        {
+            LOG_WARN("Reception ended without CSD success! Skip this round and transmit again.");
+            continue;
+        }
+
         if (signal_stop_called)
             break;
 
@@ -257,12 +263,12 @@ void Calibration::producer_leaf()
             {
                 float remainder_gain = 0.0;
                 new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
-                float impl_tx_gain = std::floor(new_tx_gain * 2) / 2;
+                float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2;
                 // If TX gain has reached maximum, start by increasing RX gain of leaf
                 if (impl_tx_gain > max_tx_gain)
                 {
                     float new_rx_gain = usrp_obj->rx_gain + (max_tx_gain - new_tx_gain);
-                    float impl_rx_gain = std::floor(new_rx_gain);
+                    float impl_rx_gain = std::ceil(new_rx_gain);
                     usrp_obj->set_rx_gain(impl_rx_gain);
                     new_tx_gain = max_tx_gain;
                     usrp_obj->set_tx_gain(new_tx_gain);
@@ -275,7 +281,7 @@ void Calibration::producer_leaf()
                 {
                     usrp_obj->set_tx_gain(impl_tx_gain);
                     recv_success = false;
-                    remainder_gain = impl_tx_gain - usrp_obj->tx_gain;
+                    remainder_gain = new_tx_gain - usrp_obj->tx_gain;
                 }
 
                 // sleep to let USRP setup gains
@@ -375,6 +381,12 @@ void Calibration::producer_cent()
 
         // start receiving REF signal
         usrp_obj->reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+
+        if (!csd_success_flag)
+        {
+            LOG_WARN("Reception ended without CSD success! Skip this round and transmit again.");
+            continue;
+        }
 
         if (signal_stop_called || end_flag)
             break;
