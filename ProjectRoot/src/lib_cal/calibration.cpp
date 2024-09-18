@@ -156,7 +156,7 @@ void Calibration::stop()
 // checks whether two values are close to each other, based on tolerance value set inside the function
 bool Calibration::proximity_check(const float &val1, const float &val2)
 {
-    float tolerance = 2e-2;
+    float tolerance = 5e-3;
     float dist_2norm = (val1 - val2) * (val1 - val2) / (val1 * val1);
     if (dist_2norm < tolerance)
     {
