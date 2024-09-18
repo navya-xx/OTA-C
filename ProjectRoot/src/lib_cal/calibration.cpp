@@ -289,6 +289,7 @@ void Calibration::producer_leaf()
         if (calibration_successful)
         {
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("end"), false);
+            // TODO: Check why TX/RX gain values are not updated from preceding code
             LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB", usrp_obj->tx_gain, usrp_obj->rx_gain);
             LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol, ltoc);
             mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->tx_gain), true);
