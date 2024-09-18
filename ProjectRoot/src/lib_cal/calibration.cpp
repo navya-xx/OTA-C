@@ -218,13 +218,18 @@ void Calibration::producer_leaf()
         if (signal_stop_called)
             break;
 
-        // publish CFO value
-        mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
-
         // capture signal after a specific duration from the peak
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
+        if (rx_timer.get_real_secs() > 1.0)
+        {
+            LOG_WARN_FMT("Estimated Rx timer is too large = %1%. Repeat CSD step...", rx_timer.get_real_secs());
+            continue;
+        }
         LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj->usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj->usrp->get_time_now()).get_real_secs() * 1e6);
         auto rx_samples = usrp_obj->reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
+
+        // publish CFO value
+        mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
 
         // Leaf process rx_samples to obtain RSS value
         float min_sigpow_ratio = 0.01;
@@ -250,13 +255,16 @@ void Calibration::producer_leaf()
             // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
             if (ltoc > 0 && recv_success)
             {
+                float remainder_gain = 0.0;
                 new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
+                float impl_tx_gain = std::floor(new_tx_gain * 2) / 2;
                 // If TX gain has reached maximum, start by increasing RX gain of leaf
-                if (new_tx_gain > max_tx_gain)
+                if (impl_tx_gain > max_tx_gain)
                 {
                     float new_rx_gain = usrp_obj->rx_gain + (max_tx_gain - new_tx_gain);
+                    float impl_rx_gain = std::floor(new_rx_gain);
+                    usrp_obj->set_rx_gain(impl_rx_gain);
                     new_tx_gain = max_tx_gain;
-                    usrp_obj->set_rx_gain(new_rx_gain);
                     usrp_obj->set_tx_gain(new_tx_gain);
                     // inform cent to restart transmission
                     mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("retx"), false);
@@ -265,16 +273,16 @@ void Calibration::producer_leaf()
                 }
                 else
                 {
-                    usrp_obj->set_tx_gain(new_tx_gain);
+                    usrp_obj->set_tx_gain(impl_tx_gain);
                     recv_success = false;
+                    remainder_gain = impl_tx_gain - usrp_obj->tx_gain;
                 }
 
                 // sleep to let USRP setup gains
                 boost::this_thread::sleep_for(boost::chrono::microseconds(size_t(20e3)));
 
                 // TODO: adjust scale based on remainder gain
-                float remainder_gain = new_tx_gain - usrp_obj->tx_gain;
-                full_scale = sqrt(fromDecibel(remainder_gain, true));
+                full_scale = fromDecibel(remainder_gain, false);
                 LOG_INFO_FMT("Full scale value %1%", full_scale);
                 if (full_scale > 2.0)
                     full_scale = 1.0;
@@ -373,6 +381,11 @@ void Calibration::producer_cent()
 
         // capture signal after a specific duration from the last sample
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
+        if (rx_timer.get_real_secs() > 1.0)
+        {
+            LOG_WARN_FMT("Estimated Rx timer is too large = %1%. Repeat transmit and CSD steps...", rx_timer.get_real_secs());
+            continue;
+        }
         LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj->usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj->usrp->get_time_now()).get_real_secs() * 1e6);
         auto rx_samples = usrp_obj->reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
         // estimate signal strength
@@ -380,7 +393,7 @@ void Calibration::producer_cent()
         ltoc = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
         if (ltoc > 10 * usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl)
         {
-            LOG_INFO_FMT("Rx power of signal from cent = %1%", ltoc);
+            LOG_INFO_FMT("Rx power of signal from leaf = %1%", ltoc);
             // publish
             mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc), false);
         }
