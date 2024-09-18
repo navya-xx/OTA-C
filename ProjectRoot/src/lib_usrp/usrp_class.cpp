@@ -110,10 +110,14 @@ void USRP_class::initialize(bool perform_rxtx_tests)
 
     setup_streamers();
 
-    if (perform_rxtx_tests)
-    {
-        perform_rx_test(); // for estimating background noise
-    }
+    float noise_power = estimate_background_noise_power();
+    init_noise_ampl = std::sqrt(noise_power);
+    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
+
+    // if (perform_rxtx_tests)
+    // {
+    //     perform_rx_test(); // for estimating background noise
+    // }
 
     usrp->set_time_now(uhd::time_spec_t(0.0));
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -440,6 +444,24 @@ void USRP_class::perform_rx_test()
     float noise_power = calc_signal_power(rx_samples);
     init_noise_ampl = std::sqrt(noise_power);
     LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
+}
+
+float USRP_class::estimate_background_noise_power()
+{
+    bool dont_stop = false;
+
+    size_t num_pkts = 50;
+    auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
+    if (rx_samples.size() == max_rx_packet_size * num_pkts)
+    {
+        LOG_DEBUG_FMT("Reception successful! Total %1% samples received.", rx_samples.size());
+    }
+    else
+    {
+        LOG_WARN("Reception test Failed!");
+    }
+
+    return calc_signal_power(rx_samples);
 }
 
 void USRP_class::publish_usrp_data()

@@ -127,6 +127,14 @@ bool Calibration::initialize()
 
 void Calibration::run()
 {
+    // warm up the device
+    for (int i = 0; i < 5; ++i)
+    {
+        usrp_obj->perform_tx_test();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     if (device_type == "leaf")
         producer_thread = boost::thread(&Calibration::producer_leaf, this);
     else if (device_type == "cent")
@@ -151,9 +159,20 @@ bool Calibration::proximity_check(const float &val1, const float &val2)
     float tolerance = 5e-3;
     float dist_2norm = (val1 - val2) * (val1 - val2) / (val1 * val1);
     if (dist_2norm < tolerance)
-        return true;
+    {
+        if (current_reps_cal < total_reps_cal)
+        {
+            current_reps_cal++;
+            return false;
+        }
+        else
+            return true;
+    }
     else
+    {
+        current_reps_cal = 0;
         return false;
+    }
 }
 
 // callback to update ltoc value
