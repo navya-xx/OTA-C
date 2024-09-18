@@ -220,7 +220,7 @@ void Calibration::producer_leaf()
 
         // capture signal after a specific duration from the peak
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
-        if (rx_timer.get_real_secs() > 1.0)
+        if (rx_timer > usrp_obj->usrp->get_time_now() + uhd::time_spec_t(1.0))
         {
             LOG_WARN_FMT("Estimated Rx timer is too large = %1%. Repeat CSD step...", rx_timer.get_real_secs());
             continue;
@@ -381,7 +381,7 @@ void Calibration::producer_cent()
 
         // capture signal after a specific duration from the last sample
         uhd::time_spec_t rx_timer = csd_obj->csd_wait_timer;
-        if (rx_timer.get_real_secs() > 1.0)
+        if (rx_timer > usrp_obj->usrp->get_time_now() + uhd::time_spec_t(1.0))
         {
             LOG_WARN_FMT("Estimated Rx timer is too large = %1%. Repeat transmit and CSD steps...", rx_timer.get_real_secs());
             continue;
