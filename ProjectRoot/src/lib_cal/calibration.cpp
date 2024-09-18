@@ -218,7 +218,7 @@ void Calibration::producer_leaf()
             return false;
     };
 
-    size_t round = 1, max_total_round = 10, max_num_tx_rounds = 10;
+    size_t round = 1, max_total_round = 100, max_num_tx_rounds = 20;
     bool save_ref_file = true;
 
     while (not signal_stop_called && round++ < max_total_round)

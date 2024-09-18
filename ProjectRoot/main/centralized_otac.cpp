@@ -205,6 +205,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
 
+        LOG_INFO("Calbration ended.");
+
         program_ends = true;
     };
 
