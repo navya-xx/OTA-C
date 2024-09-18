@@ -272,7 +272,7 @@ void USRP_class::set_initial_gains()
     // Tx gains
     // check if calibrated gains are available
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-    std::string tx_gain_topic = mqttClient.topics->getValue_str("tx-gain");
+    std::string tx_gain_topic = mqttClient.topics->getValue_str("tx-gain") + device_id;
     std::string temp = "";
     if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
         tx_gain_input = std::stof(temp);
@@ -297,7 +297,7 @@ void USRP_class::set_initial_gains()
     LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
 
     // Rx-gain
-    std::string rx_gain_topic = mqttClient.topics->getValue_str("rx-gain");
+    std::string rx_gain_topic = mqttClient.topics->getValue_str("rx-gain") + device_id;
     temp = "";
     if (mqttClient.temporary_listen_for_last_value(temp, rx_gain_topic, 10, 30))
         rx_gain_input = std::stof(temp);
