@@ -566,9 +566,9 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
     {
         float mc_temp = dist(gen);
         size_t mc_round_temp = mc_round;
-        LOG_DEBUG_FMT("MC Round %1% : Starting POW_CALIB test with signal of amplitude = %2%", mc_round, mc_temp);
         while (mc_round == mc_round_temp and tx_counter++ < 10)
         {
+            LOG_DEBUG_FMT("MC Round %1% : transmitting signal of amplitude = %2%", mc_round, mc_temp);
             transmission(mc_temp / calib_sig_scale);
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
