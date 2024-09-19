@@ -15,7 +15,6 @@
 #include <boost/exception_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/date_time.hpp>
-#include <boost/chrono.hpp>
 #include <atomic>
 #include <chrono>
 #include <complex>
