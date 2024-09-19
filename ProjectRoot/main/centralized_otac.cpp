@@ -233,7 +233,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             input_thread.join();
         }
         else if (device_type == "leaf" && program_ends)
+        {
             LOG_INFO("Waiting for command from central node ...");
+            program_ends = false;
+        }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
