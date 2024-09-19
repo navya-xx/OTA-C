@@ -153,6 +153,7 @@ void Calibration::stop()
 bool Calibration::proximity_check(const float &val1, const float &val2)
 {
     float dist_norm = sqrt((val1 - val2) * (val1 - val2) / (val1 * val1));
+    LOG_DEBUG_FMT("Error - tol : %1% - %2% = %3%", dist_norm, proximity_tol, dist_norm - proximity_tol);
     if (dist_norm < proximity_tol)
     {
         if (current_reps_cal < total_reps_cal)
@@ -297,7 +298,7 @@ void Calibration::producer_leaf()
         }
 
         // increase proximity_tol to counter randomness
-        proximity_tol = proximity_tol * std::min(1.0, std::ceil(double(round / 10)));
+        proximity_tol = proximity_tol * std::max(1.0, std::ceil(double(round / 10)));
 
         // move to next round
         csd_success_flag = false;
