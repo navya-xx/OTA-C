@@ -28,6 +28,8 @@ Calibration::Calibration(
     }
     num_samps_sync = usrp_obj->max_rx_packet_size * 50;
     tx_rand_wait_microsec = size_t(parser.getValue_float("start-tx-wait-microsec"));
+
+    parser.set_value("Ref-R-zfc", "50", "int", "New R-zfc for calibration");
 };
 
 Calibration::~Calibration()
@@ -80,7 +82,7 @@ void Calibration::generate_waveform()
     WaveformGenerator wf_gen;
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
-    size_t reps_zfc = parser.getValue_int("Ref-R-zfc") * 5; // extra long ref signal for stability
+    size_t reps_zfc = parser.getValue_int("Ref-R-zfc"); // extra long ref signal for stability
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
 
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, calib_sig_scale, 0);

@@ -110,12 +110,6 @@ foreach(executable ${executables_list})
 endforeach()
 
 set(CMAKE_BUILD_TYPE "Debug")
-message(STATUS "******************************************************************************")
-message(STATUS "* NOTE: When building your own app, you probably need all kinds of different  ")
-message(STATUS "* compiler flags. This is just an example, so it's unlikely these settings    ")
-message(STATUS "* exactly match what you require. Make sure to double-check compiler and     ")
-message(STATUS "* linker flags to make sure your specific requirements are included.          ")
-message(STATUS "******************************************************************************")
 
 # Shared library case: All we need to do is link against the library, and
 # anything else we need (in this case, some Boost libraries):
