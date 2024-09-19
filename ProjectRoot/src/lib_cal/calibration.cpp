@@ -314,7 +314,7 @@ void Calibration::producer_leaf()
             if (ltoc > 0 && recv_success)
             {
                 float remainder_gain = 0.0;
-                new_tx_gain = toDecibel(ctol / (half_scale * half_scale), true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
+                new_tx_gain = toDecibel(ctol / (half_scale * half_scale), true) - toDecibel(ltoc / (half_scale * half_scale), true) + usrp_obj->tx_gain;
                 float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2;
                 // If TX gain has reached maximum, start by increasing RX gain of leaf
                 if (impl_tx_gain > max_tx_gain)
