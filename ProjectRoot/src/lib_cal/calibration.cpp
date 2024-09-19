@@ -382,6 +382,9 @@ void Calibration::producer_cent()
     if (end_flag)
     {
         LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
+        size_t total_wait = 50, count = 0;
+        while (count++ < total_wait)
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         size_t mc_round = 0;
         bool receive_flag = false;
         float mc_temp;
@@ -396,9 +399,17 @@ void Calibration::producer_cent()
                     LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            if (not receive_flag or mc_temp == 0.0)
+            if (not receive_flag)
             {
                 LOG_WARN("All attempts for Reception of REF signal failed! Restart reception.");
+                csd_success_flag = false;
+                continue;
+            }
+            else if (mc_temp == 0.0)
+            {
+                LOG_WARN("Estimated rx pow incorrect!");
+                csd_success_flag = false;
+                receive_flag = false;
                 continue;
             }
             else
@@ -406,9 +417,8 @@ void Calibration::producer_cent()
                 LOG_INFO_FMT("Received signal power = %1%", mc_temp);
                 mqttClient.publish(mctest_topic, mqttClient.timestamp_float_data(mc_temp));
                 receive_flag = false;
+                csd_success_flag = false;
             }
-
-            csd_success_flag = false;
         }
     }
 
@@ -524,11 +534,7 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
     LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
     size_t total_wait = 50, count = 0;
     while (count++ < total_wait)
-    {
-        std::cout << "wait for " << (total_wait - count) * 100 << " millisecs..." << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    std::cout << std::endl;
 
     size_t mc_round = 0;
     std::random_device rd;
