@@ -263,6 +263,7 @@ void Calibration::producer_leaf()
             LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol);
             // publish
             mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol), false);
+            mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("recv"), false);
         }
         else
         {
