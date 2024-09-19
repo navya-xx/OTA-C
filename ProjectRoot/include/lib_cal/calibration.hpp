@@ -84,10 +84,10 @@ private:
     size_t subseq_tx_wait = 50, tx_rand_wait_microsec; // millisec
     size_t total_reps_cal = 10, current_reps_cal = 0;
     size_t max_total_round = 100, max_num_tx_rounds = 20;
-    float max_tx_gain = 86.0, max_rx_gain = 70.0;
+    float max_tx_gain = 86.0, max_rx_gain = 50.0;
 
     bool recv_success = false;
-    float ltoc, ctol, full_scale = 1.0, half_scale = 0.5;
+    float ltoc, ctol, full_scale = 1.0, half_scale = 0.5, min_sigpow_mul = 100;
     bool recv_flag = false, retx_flag = false, end_flag = false;
 };
 

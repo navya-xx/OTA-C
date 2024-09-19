@@ -287,9 +287,8 @@ void Calibration::producer_leaf()
         mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
 
         // Leaf process rx_samples to obtain RSS value
-        float min_sigpow_ratio = 0.01;
-        ctol = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
-        if (ctol > 10 * usrp_noise_power)
+        ctol = calc_signal_power(rx_samples, 0, 0, min_sigpow_mul * usrp_noise_power);
+        if (ctol > min_sigpow_mul * usrp_noise_power)
         {
             LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol);
             LOG_DEBUG_FMT("Diff in estimated channel power from ZFC sig and UnitRand sig : %1% - %2% = %3%",
@@ -374,6 +373,7 @@ void Calibration::producer_leaf()
 void Calibration::producer_cent()
 {
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+    float usrp_noise_power = usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl;
 
     // This function is called by the receiver as a callback everytime a frame is received
     auto producer_wrapper = [this](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
@@ -429,9 +429,8 @@ void Calibration::producer_cent()
         LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj->usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj->usrp->get_time_now()).get_real_secs() * 1e6);
         auto rx_samples = usrp_obj->reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
         // estimate signal strength
-        float min_sigpow_ratio = 0.05;
-        ltoc = calc_signal_power(rx_samples, 0, 0, min_sigpow_ratio);
-        if (ltoc > 10 * usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl)
+        ltoc = calc_signal_power(rx_samples, 0, 0, min_sigpow_mul * usrp_noise_power);
+        if (ltoc > min_sigpow_mul * usrp_noise_power)
         {
             LOG_INFO_FMT("Rx power of signal from leaf = %1%", ltoc);
             // publish
