@@ -227,7 +227,8 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
     }
     else
     {
-        // auto start = std::chrono::high_resolution_clock::now();
+        est_ref_sig_pow = 0.0;
+
         for (int i = 0; i < corr_seq_len; ++i)
         {
             std::complex<float> sample;

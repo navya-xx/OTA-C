@@ -265,7 +265,7 @@ void USRP_class::set_center_frequency()
     LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
 }
 
-void USRP_class::set_initial_gains()
+void USRP_class::set_initial_gains(const bool &use_calib_gains)
 {
     float tx_gain_input, rx_gain_input;
 
@@ -274,8 +274,11 @@ void USRP_class::set_initial_gains()
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
     std::string tx_gain_topic = mqttClient.topics->getValue_str("tx-gain") + device_id;
     std::string temp = "";
-    if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
-        tx_gain_input = std::stof(temp);
+    if (use_calib_gains)
+    {
+        if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
+            tx_gain_input = std::stof(temp);
+    }
     else
     {
         if (parser.getValue_str("gain-mgmt") == "gain")
@@ -299,8 +302,11 @@ void USRP_class::set_initial_gains()
     // Rx-gain
     std::string rx_gain_topic = mqttClient.topics->getValue_str("rx-gain") + device_id;
     temp = "";
-    if (mqttClient.temporary_listen_for_last_value(temp, rx_gain_topic, 10, 30))
-        rx_gain_input = std::stof(temp);
+    if (use_calib_gains)
+    {
+        if (mqttClient.temporary_listen_for_last_value(temp, rx_gain_topic, 10, 30))
+            rx_gain_input = std::stof(temp);
+    }
     else
     {
         if (parser.getValue_str("gain-mgmt") == "gain")

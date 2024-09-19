@@ -23,7 +23,7 @@ public:
     void set_master_clock_rate();
     void set_sample_rate();
     void set_center_frequency();
-    void set_initial_gains();
+    void set_initial_gains(const bool &use_calib_gains = false);
     void set_bandwidth();
     void apply_additional_settings();
 
