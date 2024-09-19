@@ -458,6 +458,7 @@ bool Calibration::reception(float &rx_sig_pow)
 
 bool Calibration::calibrate_gains(MQTTClient &mqttClient)
 {
+    LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
     float new_tx_gain = toDecibel(ctol / (calib_sig_scale * calib_sig_scale), true) - toDecibel(ltoc / (calib_sig_scale * calib_sig_scale), true) + usrp_obj->tx_gain;
     float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2;
     float remainder_gain = 0.0;
