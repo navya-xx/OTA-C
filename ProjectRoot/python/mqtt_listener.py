@@ -8,6 +8,7 @@ import time
 list_of_topics = [
     "calibration/#",
     "control/#",
+    "telemetry/#",
     "config/run_config_info",
     "otac/#",
     "usrp/#"

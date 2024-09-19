@@ -382,16 +382,22 @@ void Calibration::producer_cent()
     if (end_flag)
     {
         LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
+        LOG_INFO("Wait for 5 seconds...");
+
         size_t total_wait = 50, count = 0;
         while (count++ < total_wait)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
         size_t mc_round = 0;
         bool receive_flag = false;
+        end_flag = false;
         float mc_temp;
         while (mc_round++ < max_mctest_rounds)
         {
             size_t recv_counter = 0;
             mc_temp = 0.0;
+            receive_flag = false;
+            csd_success_flag = false;
             while (not receive_flag and recv_counter++ < 10)
             {
                 receive_flag = reception(mc_temp);
@@ -402,22 +408,17 @@ void Calibration::producer_cent()
             if (not receive_flag)
             {
                 LOG_WARN("All attempts for Reception of REF signal failed! Restart reception.");
-                csd_success_flag = false;
                 continue;
             }
             else if (mc_temp == 0.0)
             {
                 LOG_WARN("Estimated rx pow incorrect!");
-                csd_success_flag = false;
-                receive_flag = false;
                 continue;
             }
             else
             {
                 LOG_INFO_FMT("Received signal power = %1%", mc_temp);
                 mqttClient.publish(mctest_topic, mqttClient.timestamp_float_data(mc_temp));
-                receive_flag = false;
-                csd_success_flag = false;
             }
         }
     }
@@ -541,7 +542,7 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0.0, 1.0);
 
-    std::string tele_scaling_topic = mqttClient.topics->getValue_str("tele-powcalib");
+    std::string tele_scaling_topic = mqttClient.topics->getValue_str("tele-powcalib") + device_id;
 
     size_t tx_counter = 0;
     float mctest_pow = 0.0;
