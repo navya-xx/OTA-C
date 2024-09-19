@@ -573,6 +573,8 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
 
+        tx_counter = 0;
+
         if (mctest_pow == 0.0)
         {
             LOG_WARN("No data received from cent.");
