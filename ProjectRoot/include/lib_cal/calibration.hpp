@@ -96,7 +96,7 @@ private:
     float max_tx_gain = 86.0, max_rx_gain = 50.0;
 
     bool recv_success = false;
-    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.5, min_sigpow_mul = 100, proximity_tol = 1e-2;
+    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 1.0, min_sigpow_mul = 100, proximity_tol = 5e-2;
     bool recv_flag = false, retx_flag = false, end_flag = false;
 };
 
