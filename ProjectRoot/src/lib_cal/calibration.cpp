@@ -297,7 +297,7 @@ void Calibration::producer_leaf()
         }
 
         // increase proximity_tol to counter randomness
-        proximity_tol = proximity_tol * std::ceil(round / 10);
+        proximity_tol = proximity_tol * std::ceil(float(round / 10));
 
         // move to next round
         csd_success_flag = false;
