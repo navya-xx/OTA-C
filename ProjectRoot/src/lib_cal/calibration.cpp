@@ -381,6 +381,7 @@ void Calibration::producer_cent()
     // on calib success -- start receiving signal for power meter test
     if (end_flag)
     {
+        LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
         size_t mc_round = 0;
         bool receive_flag = false;
         while (mc_round++ < max_mctest_rounds)
@@ -470,7 +471,6 @@ bool Calibration::reception(float &rx_sig_pow)
 
 bool Calibration::calibrate_gains(MQTTClient &mqttClient)
 {
-    LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
     float new_tx_gain = toDecibel(ctol / (calib_sig_scale * calib_sig_scale), true) - toDecibel(ltoc / (calib_sig_scale * calib_sig_scale), true) + usrp_obj->tx_gain;
     float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2; // tx gains are implemented in 0.5dB steps
     float remainder_gain = 0.0;
@@ -519,7 +519,15 @@ void Calibration::on_calib_success(MQTTClient &mqttClient)
 
 void Calibration::run_scaling_tests(MQTTClient &mqttClient)
 {
-    LOG_INFO("Starting power calibration round...");
+    LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
+    size_t total_wait = 50, count = 0;
+    while (count++ < total_wait)
+    {
+        std::cout << "wait for " << (total_wait - count) * 100 << " millisecs..." << std::flush;
+        sleep_100ms();
+    }
+    std::cout << std::endl;
+
     size_t mc_round = 0;
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -554,8 +562,6 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
 
     mqttClient.setCallback(mctest_topic, callback_mctest, true);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
     while (mc_round < max_mctest_rounds)
     {
         float mc_temp = dist(gen);
@@ -564,7 +570,7 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
         while (mc_round == mc_round_temp and tx_counter++ < 10)
         {
             transmission(mc_temp / calib_sig_scale);
-            sleep_100ms();
+            sleep_1000ms();
         }
 
         if (mctest_pow == 0.0)
