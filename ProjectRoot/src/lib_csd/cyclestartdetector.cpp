@@ -145,7 +145,7 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
 
     float sig_power = calc_signal_power(cfo_corrected_ref, ref_start_index, N_zfc * R_zfc);
     est_ref_sig_pow = sig_power - (peak_det_obj_ref.noise_ampl * peak_det_obj_ref.noise_ampl);
-    LOG_INFO_FMT("Estimated signal power is %1%.", est_ref_sig_pow);
+    LOG_INFO_FMT("Estimated ref signal power is %1%.", est_ref_sig_pow);
 
     // debug -- save data to a file for later analysis
     if (saved_ref_filename != "")

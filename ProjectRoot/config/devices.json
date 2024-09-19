@@ -6,62 +6,36 @@
     },
     "leaf-nodes": [
         {
+            "serial": "32B1708",
+            "id": 1,
+            "hostname": "rpi4m1",
+            "IP address": "192.168.5.241"
+        },
+        {
             "serial": "32C79BE",
-            "id": 89,
+            "id": 2,
             "hostname": "nuc01",
-            "IP address": "192.168.5.248",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
+            "IP address": "192.168.5.248"
         }
     ],
-    "unused-nodes": [
+    "disabled-leaf-nodes": [
         {
             "serial": "32B172B",
             "id": 23,
             "hostname": "rpi4m1",
-            "IP address": "192.168.5.241",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
+            "IP address": "192.168.5.241"
         },
         {
             "serial": "32C793E",
             "id": 37,
             "hostname": "rpi4m2",
-            "IP address": "192.168.5.242",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
+            "IP address": "192.168.5.242"
         },
         {
             "serial": "32B1708",
             "id": 53,
             "hostname": "rpi4m3",
-            "IP address": "192.168.5.243",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
+            "IP address": "192.168.5.243"
         },
         {
             "serial": "337D42D",
@@ -95,43 +69,19 @@
             "serial": "32C79BE",
             "id": 211,
             "hostname": "rpi4compute",
-            "IP address": "192.168.5.246",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
+            "IP address": "192.168.5.246"
         },
         {
             "serial": "32C79C6",
             "id": 241,
             "hostname": "nuc01",
-            "IP address": "192.168.5.248",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
+            "IP address": "192.168.5.248"
         },
         {
             "serial": "32C79F7",
             "id": 151,
             "hostname": "nuc",
-            "IP address": "192.168.5.247",
-            "calibration": {
-                "last_calibration": "12:36:00 18.08.2024",
-                "scaling_factor": 1.0
-            },
-            "parameters": {
-                "last_noise_level": 0.01,
-                "last_CFO": 0.0
-            }
+            "IP address": "192.168.5.247"
         }
     ]
 }

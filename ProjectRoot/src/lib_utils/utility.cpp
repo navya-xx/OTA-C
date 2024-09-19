@@ -225,7 +225,7 @@ float findMaxAbsValue(const std::vector<std::complex<float>> &vec)
     return max_abs_value;
 }
 
-float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_ampl_ratio)
+float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_ampl)
 {
     size_t L;
     if (length == 0)
@@ -233,38 +233,30 @@ float calc_signal_power(const std::vector<std::complex<float>> &signal, const si
     else
         L = length;
 
-    float min_ampl = 0.0;
-    if (min_ampl_ratio > 0.0)
-        min_ampl = findMaxAbsValue(signal) * min_ampl_ratio;
-
-    std::vector<std::complex<float>> vector(signal.begin() + start_index, signal.begin() + start_index + L);
-
-    auto sig_pow = meanSquareValue(vector, min_ampl * min_ampl);
+    auto sig_pow = meanSquareValue(signal, start_index, start_index + L, min_ampl * min_ampl);
 
     return sig_pow;
 }
 
-float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_ampl_ratio)
+float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_ampl)
 {
     std::vector<std::complex<float>> vector(signal.begin(), signal.end());
-    return calc_signal_power(vector, start_index, length, min_ampl_ratio);
+    return calc_signal_power(vector, start_index, length, min_ampl);
 }
 
-float meanSquareValue(const std::vector<std::complex<float>> &vec, const float lower_bound)
+float meanSquareValue(const std::vector<std::complex<float>> &vec, const size_t &start_index, const size_t &end_index, const float lower_bound)
 {
     float sum = 0.0;
-    size_t counter = 0;
-    for (const auto &num : vec)
+    for (size_t i = start_index; i < end_index; ++i)
     {
-        float sqr_val = std::abs(num);
+        float sqr_val = std::abs(vec[i]);
         sqr_val = sqr_val * sqr_val;
         if (lower_bound > 0.0 and sqr_val < lower_bound)
             continue;
 
         sum += sqr_val;
-        counter++;
     }
-    return counter == 0 ? 0.0 : sum / counter;
+    return sum / (end_index - start_index);
 }
 
 float meanAbsoluteValue(const std::vector<std::complex<float>> &vec, const float lower_bound)

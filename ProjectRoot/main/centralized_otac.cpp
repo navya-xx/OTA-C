@@ -213,6 +213,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
     mqttClient.setCallback(control_calib_topic, control_calibration_callback, true);
 
+    // TODO: Synchronization routine
+
+    // TODO: OTAC routine
+
     // run contoller on a separate thread
     std::string counterpart_id;
     if (device_type == "leaf")
@@ -228,6 +232,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                                      { gen_mqtt_control_msg(mqttClient, device_id, counterpart_id, is_cent); });
             input_thread.join();
         }
+        else if (device_type == "leaf" && program_ends)
+            LOG_INFO("Waiting for command from central node ...");
+
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return EXIT_SUCCESS;

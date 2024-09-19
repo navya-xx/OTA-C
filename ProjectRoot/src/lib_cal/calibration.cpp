@@ -1,5 +1,7 @@
 #include "calibration.hpp"
 
+// TODO: Adjust ctol-ltoc tolerance -- adapt calibration accuracy
+
 Calibration::Calibration(
     USRP_class &usrp_obj_,
     ConfigParser &parser_,
@@ -66,7 +68,10 @@ void Calibration::get_mqtt_topics()
     CFO_topic = mqttClient.topics->getValue_str("CFO") + client_id;
     flag_topic = mqttClient.topics->getValue_str("calib-flags") + leaf_id; // flags are set by the leaf
 
-    ltoc_topic = mqttClient.topics->getValue_str("calib-ltoc") + cent_id; // ltoc sigpow is sent by cent
+    ltoc_topic = mqttClient.topics->getValue_str("calib-ltoc") + cent_id;       // ltoc sigpow is sent by cent
+    ctol_topic = mqttClient.topics->getValue_str("calib-ctol") + leaf_id;       // ctol sigpow is sent by cent
+    cal_scale_topic = mqttClient.topics->getValue_str("calib-scale") + leaf_id; // flags are set by the leaf
+
     tx_gain_topic = mqttClient.topics->getValue_str("tx-gain") + device_id;
     rx_gain_topic = mqttClient.topics->getValue_str("rx-gain") + device_id;
     full_scale_topic = mqttClient.topics->getValue_str("full-scale") + leaf_id; // flags are set by the leaf
@@ -80,10 +85,10 @@ void Calibration::generate_waveform()
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
 
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, 1.0, 0);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, full_scale, 0);
     ref_waveform = wf_gen.generate_waveform();
 
-    wf_gen.initialize(wf_gen.UNIT_RAND, num_samps_sync, 1, 0, 0, 1, 1.0, 123);
+    wf_gen.initialize(wf_gen.UNIT_RAND, num_samps_sync, 1, 0, 0, 1, half_scale, 123);
     rand_waveform = wf_gen.generate_waveform();
 }
 
@@ -92,7 +97,7 @@ bool Calibration::initialize()
     csd_success_flag = false;
     calibration_successful = false;
     calibration_ends = false;
-    ltoc = -1.0, ctol = -1.0, full_scale = 1.0;
+    ltoc = -1.0, ctol = -1.0;
     try
     {
         initialize_peak_det_obj();
@@ -244,7 +249,7 @@ void Calibration::producer_leaf()
     };
 
     size_t round = 1;
-    bool save_ref_file = false;
+    bool save_ref_file = true;
 
     while (not signal_stop_called && round++ < max_total_round)
     {
@@ -287,7 +292,11 @@ void Calibration::producer_leaf()
         if (ctol > 10 * usrp_noise_power)
         {
             LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol);
-            // mqttClient.publish(ctol_rxpow_topic, mqttClient.timestamp_float_data(ctol_rssi), false);
+            LOG_DEBUG_FMT("Diff in estimated channel power from ZFC sig and UnitRand sig : %1% - %2% = %3%",
+                          csd_obj->est_ref_sig_pow,
+                          ctol / (half_scale * half_scale),
+                          csd_obj->est_ref_sig_pow - ctol / (half_scale * half_scale));
+            mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol), false);
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("recv"), false);
         }
         else
@@ -306,7 +315,7 @@ void Calibration::producer_leaf()
             if (ltoc > 0 && recv_success)
             {
                 float remainder_gain = 0.0;
-                new_tx_gain = toDecibel(ctol, true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
+                new_tx_gain = toDecibel(ctol / (half_scale * half_scale), true) - toDecibel(ltoc, true) + usrp_obj->tx_gain;
                 float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2;
                 // If TX gain has reached maximum, start by increasing RX gain of leaf
                 if (impl_tx_gain > max_tx_gain)
@@ -336,7 +345,7 @@ void Calibration::producer_leaf()
                 LOG_INFO_FMT("Full scale value %1%", full_scale);
                 if (full_scale > 2.0)
                     full_scale = 1.0;
-                mqttClient.publish(full_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
+                mqttClient.publish(cal_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
             }
 
             // Transmit REF + full-scale signal
@@ -347,10 +356,11 @@ void Calibration::producer_leaf()
         if (calibration_successful)
         {
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("end"), false);
-            LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB", usrp_obj->tx_gain, usrp_obj->rx_gain);
             LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol, ltoc);
+            LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB -- and scale = %3%", usrp_obj->tx_gain, usrp_obj->rx_gain, full_scale);
             mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->tx_gain), true);
             mqttClient.publish(rx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->rx_gain), true);
+            mqttClient.publish(full_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
             break;
         }
 
