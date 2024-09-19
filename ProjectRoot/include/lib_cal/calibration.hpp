@@ -84,16 +84,6 @@ private:
      */
     void producer_cent();
 
-    void sleep_100ms()
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    };
-
-    void sleep_1000ms()
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    };
-
     std::string device_id, counterpart_id, leaf_id, cent_id, device_type, client_id;
     std::string CFO_topic, flag_topic, cal_scale_topic, full_scale_topic, ltoc_topic, ctol_topic, tx_gain_topic, rx_gain_topic, mctest_topic;
     size_t total_reps_cal = 0, current_reps_cal = 0;

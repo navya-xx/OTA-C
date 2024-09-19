@@ -129,7 +129,7 @@ void Calibration::run()
         usrp_obj->perform_tx_test();
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    sleep_100ms();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     if (device_type == "leaf")
         producer_thread = boost::thread(&Calibration::producer_leaf, this);
@@ -288,7 +288,7 @@ void Calibration::producer_leaf()
             LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
             if (not transmission(full_scale))
                 LOG_WARN("Transmission failed! Repeat...");
-            sleep_100ms();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         if (calibration_successful)
@@ -326,7 +326,7 @@ void Calibration::producer_cent()
         while (not recv_flag && not end_flag && not signal_stop_called)
         {
             transmission();
-            sleep_100ms();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         if (signal_stop_called || end_flag)
@@ -348,7 +348,7 @@ void Calibration::producer_cent()
             receive_flag = reception(ltoc_temp);
             if (not receive_flag)
                 LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
-            sleep_100ms();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         if (not receive_flag)
@@ -375,7 +375,7 @@ void Calibration::producer_cent()
             recv_flag = true; // skip transmission and receive again
         }
 
-        sleep_100ms();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     // on calib success -- start receiving signal for power meter test
@@ -393,7 +393,7 @@ void Calibration::producer_cent()
                 receive_flag = reception(mc_temp);
                 if (not receive_flag)
                     LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
-                sleep_100ms();
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             if (not receive_flag)
             {
@@ -524,7 +524,7 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
     while (count++ < total_wait)
     {
         std::cout << "wait for " << (total_wait - count) * 100 << " millisecs..." << std::flush;
-        sleep_100ms();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::cout << std::endl;
 
@@ -570,7 +570,7 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
         while (mc_round == mc_round_temp and tx_counter++ < 10)
         {
             transmission(mc_temp / calib_sig_scale);
-            sleep_1000ms();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
 
         if (mctest_pow == 0.0)
