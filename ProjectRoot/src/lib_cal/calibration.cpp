@@ -384,10 +384,11 @@ void Calibration::producer_cent()
         LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
         size_t mc_round = 0;
         bool receive_flag = false;
+        float mc_temp;
         while (mc_round++ < max_mctest_rounds)
         {
             size_t recv_counter = 0;
-            float mc_temp = 0.0;
+            mc_temp = 0.0;
             while (not receive_flag and recv_counter++ < 10)
             {
                 receive_flag = reception(mc_temp);
@@ -395,15 +396,16 @@ void Calibration::producer_cent()
                     LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            if (not receive_flag)
+            if (not receive_flag or mc_temp == 0.0)
             {
-                LOG_WARN("All attempts for Reception of REF signal failed! Restart transmission.");
+                LOG_WARN("All attempts for Reception of REF signal failed! Restart reception.");
                 continue;
             }
             else
             {
                 LOG_INFO_FMT("Received signal power = %1%", mc_temp);
                 mqttClient.publish(mctest_topic, mqttClient.timestamp_float_data(mc_temp));
+                receive_flag = false;
             }
 
             csd_success_flag = false;
@@ -537,6 +539,7 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
 
     size_t tx_counter = 0;
     float mctest_pow = 0.0;
+    size_t mc_round_temp;
 
     // Callback to listen for mctest result from cent
     auto callback_mctest = [&tx_counter, &mc_round, &mctest_pow](const std::string &payload)
@@ -565,7 +568,7 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
     while (mc_round < max_mctest_rounds)
     {
         float mc_temp = dist(gen);
-        size_t mc_round_temp = mc_round;
+        mc_round_temp = mc_round;
         while (mc_round == mc_round_temp and tx_counter++ < 10)
         {
             LOG_DEBUG_FMT("MC Round %1% : transmitting signal of amplitude = %2%", mc_round, mc_temp);
