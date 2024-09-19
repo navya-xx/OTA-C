@@ -143,10 +143,10 @@ void CycleStartDetector::update_peaks_info(const float &new_cfo)
     if (ref_start_index + N_zfc * R_zfc > save_ref_len)
         LOG_WARN("detected ref_start_index is incorrect");
 
-    // float sig_power = calc_signal_power(cfo_corrected_ref, ref_start_index, N_zfc * R_zfc);
+    est_ref_sig_pow = calc_signal_power(cfo_corrected_ref, ref_start_index, N_zfc * R_zfc);
     // est_ref_sig_pow = sig_power - (peak_det_obj_ref.noise_ampl * peak_det_obj_ref.noise_ampl);
-    est_ref_sig_pow = peak_det_obj_ref.largest_peak_val;
-    est_ref_sig_pow *= est_ref_sig_pow;
+    // est_ref_sig_pow = peak_det_obj_ref.largest_peak_val;
+    // est_ref_sig_pow *= est_ref_sig_pow;
     LOG_INFO_FMT("Estimated ref signal power is %1%.", est_ref_sig_pow);
 
     // debug -- save data to a file for later analysis
