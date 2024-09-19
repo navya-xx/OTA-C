@@ -249,7 +249,7 @@ void Calibration::producer_leaf()
     };
 
     size_t round = 1;
-    bool save_ref_file = true;
+    bool save_ref_file = false;
 
     while (not signal_stop_called && round++ < max_total_round)
     {
@@ -281,7 +281,7 @@ void Calibration::producer_leaf()
             continue;
         }
         LOG_INFO_FMT("Wait timer is %1% secs and USRP current timer is %2% secs | diff %3% microsecs", rx_timer.get_real_secs(), usrp_obj->usrp->get_time_now().get_real_secs(), (rx_timer - usrp_obj->usrp->get_time_now()).get_real_secs() * 1e6);
-        auto rx_samples = usrp_obj->reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, true);
+        auto rx_samples = usrp_obj->reception(signal_stop_called, num_samps_sync, 0.0, rx_timer, false);
 
         // publish CFO value
         mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
@@ -476,7 +476,10 @@ void Calibration::transmit_waveform(const float &scale)
     }
     auto tx_time = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);
     usrp_obj->transmission(tx_ref_waveform, tx_time, signal_stop_called, true);
+
     auto tx_time_next = tx_time + uhd::time_spec_t((tx_rand_wait_microsec / 1e6) + (ref_waveform.size() / usrp_obj->tx_rate));
+    if ((tx_time_next - usrp_obj->usrp->get_time_now()).get_real_secs() > 0.1)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     usrp_obj->transmission(tx_rand_waveform, tx_time_next, signal_stop_called, true);
-    boost::this_thread::sleep_for(boost::chrono::microseconds(tx_rand_wait_microsec + size_t(10e3)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
