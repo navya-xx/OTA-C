@@ -382,19 +382,30 @@ void Calibration::producer_cent()
     if (end_flag)
     {
         size_t mc_round = 0;
+        bool receive_flag = false;
         while (mc_round++ < max_mctest_rounds)
         {
             size_t recv_counter = 0;
             float mc_temp = 0.0;
-            while (not reception(mc_temp) and recv_counter++ < 10)
-                LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
-            if (mc_temp == 0.0)
+            while (not receive_flag and recv_counter++ < 10)
+            {
+                receive_flag = reception(mc_temp);
+                if (not receive_flag)
+                    LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
+                sleep_100ms();
+            }
+            if (not receive_flag)
             {
                 LOG_WARN("All attempts for Reception of REF signal failed! Restart transmission.");
                 continue;
             }
             else
+            {
+                LOG_INFO_FMT("Received signal power = %1%", mc_temp);
                 mqttClient.publish(mctest_topic, mqttClient.timestamp_float_data(mc_temp));
+            }
+
+            csd_success_flag = false;
         }
     }
 
@@ -508,6 +519,7 @@ void Calibration::on_calib_success(MQTTClient &mqttClient)
 
 void Calibration::run_scaling_tests(MQTTClient &mqttClient)
 {
+    LOG_INFO("Starting power calibration round...");
     size_t mc_round = 0;
     std::random_device rd;
     std::mt19937 gen(rd());
