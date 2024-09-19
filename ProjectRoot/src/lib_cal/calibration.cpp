@@ -85,7 +85,7 @@ void Calibration::generate_waveform()
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t wf_pad = size_t(parser.getValue_int("Ref-padding-mul") * N_zfc);
 
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, full_scale, 0);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, half_scale, 0);
     ref_waveform = wf_gen.generate_waveform();
 
     wf_gen.initialize(wf_gen.UNIT_RAND, num_samps_sync, 1, 0, 0, 1, half_scale, 123);
@@ -292,9 +292,7 @@ void Calibration::producer_leaf()
         {
             LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol);
             LOG_DEBUG_FMT("Diff in estimated channel power from ZFC sig and UnitRand sig : %1% - %2% = %3%",
-                          csd_obj->est_ref_sig_pow,
-                          ctol / (half_scale * half_scale),
-                          csd_obj->est_ref_sig_pow - ctol / (half_scale * half_scale));
+                          csd_obj->est_ref_sig_pow, ctol, csd_obj->est_ref_sig_pow - ctol);
             mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol), false);
             mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("recv"), false);
         }
