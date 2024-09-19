@@ -26,8 +26,6 @@ Calibration::Calibration(
         cent_id = counterpart_id;
         leaf_id = device_id;
     }
-    num_samps_sync = usrp_obj->max_rx_packet_size * 50;
-    tx_rand_wait_microsec = size_t(parser.getValue_float("start-tx-wait-microsec"));
 };
 
 Calibration::~Calibration()
@@ -95,9 +93,6 @@ bool Calibration::initialize()
     ltoc = -1.0, ctol = -1.0;
     try
     {
-        // calibration uses longer ref signal
-        parser.set_value("Ref-R-zfc", "50", "int", "New R-zfc for calibration");
-
         initialize_peak_det_obj();
         initialize_csd_obj();
         generate_waveform();
@@ -275,7 +270,7 @@ void Calibration::producer_leaf()
             break;
 
         // publish CFO value
-        mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
+        // mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
 
         // Update Tx/Rx gains based on ltoc values obtained
         size_t leaf_tx_round = 1;
@@ -350,7 +345,8 @@ void Calibration::producer_cent()
         while (not receive_flag and not csd_success_flag and recv_counter++ < 10)
         {
             receive_flag = reception(ltoc_temp);
-            LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
+            if (not receive_flag)
+                LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
             sleep_100ms();
         }
 
