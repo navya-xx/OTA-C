@@ -321,11 +321,13 @@ int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_v
     for (int i = 0; i < total_num_peaks; ++i)
     {
         peak_vals[i] = abs_corr_vals[final_fpi + (i * ref_seq_len)] / ref_seq_len / noise_ampl;
+        if (abs_corr_vals[final_fpi + (i * ref_seq_len)] / ref_seq_len > largest_peak_val)
+            largest_peak_val = abs_corr_vals[final_fpi + (i * ref_seq_len)] / ref_seq_len;
         peak_times[i] = new_timer[final_fpi + (i * ref_seq_len)];
         peak_indices[i] = i * ref_seq_len;
     }
 
-    // int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);
+        // int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);
 
     return final_fpi;
 }

@@ -42,7 +42,7 @@ public:
 
     size_t peaks_count;
     size_t prev_peak_index;
-    float prev_peak_val, curr_pnr_threshold;
+    float prev_peak_val, curr_pnr_threshold, largest_peak_val = 0.0;
     size_t samples_from_first_peak;
     bool detection_flag;
 
