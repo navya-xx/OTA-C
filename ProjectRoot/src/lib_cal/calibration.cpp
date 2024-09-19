@@ -346,20 +346,25 @@ void Calibration::producer_cent()
         float ltoc_temp = 0.0;
         size_t recv_counter = 0;
         csd_success_flag = false;
-        while (not reception(ltoc_temp) and not csd_success_flag and recv_counter++ < 10)
+        bool receive_flag = false;
+        while (not receive_flag and not csd_success_flag and recv_counter++ < 10)
         {
+            receive_flag = reception(ltoc_temp);
             LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
             sleep_100ms();
         }
 
-        if (ltoc_temp == 0.0)
+        if (not receive_flag)
         {
             LOG_WARN("All attempts for Reception of REF signal failed! Restart transmission.");
             csd_success_flag = false;
             continue;
         }
         else
+        {
+            LOG_INFO_FMT("Received signal power = %1%", ltoc_temp);
             ltoc = ltoc_temp;
+        }
 
         if (ltoc > min_sigpow_mul * usrp_noise_power)
         {
@@ -449,6 +454,8 @@ bool Calibration::reception(float &rx_sig_pow)
     }
 
     rx_sig_pow = csd_obj->est_ref_sig_pow;
+
+    csd_obj->est_ref_sig_pow = 0.0;
 
     return true;
 }
