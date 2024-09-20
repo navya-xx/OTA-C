@@ -61,7 +61,6 @@ void Calibration::get_mqtt_topics()
 
     // populate topics
     CFO_topic = mqttClient.topics->getValue_str("CFO") + client_id;
-    flag_topic_cent = mqttClient.topics->getValue_str("calib-flags") + cent_id; // flags are set by the leaf
     flag_topic_leaf = mqttClient.topics->getValue_str("calib-flags") + leaf_id; // flags are set by the leaf
     mctest_topic = mqttClient.topics->getValue_str("calib-mctest") + cent_id;
 
@@ -109,8 +108,6 @@ bool Calibration::initialize()
         {
             mqttClient.setCallback(ltoc_topic, [this](const std::string &payload)
                                    { callback_update_ltoc(payload); });
-            mqttClient.setCallback(flag_topic_cent, [this](const std::string &payload)
-                                   { callback_detect_flags(payload); });
             // std::string temp;
             // if (mqttClient.temporary_listen_for_last_value(temp, full_scale_topic, 10, 30))
             //     full_scale = std::stof(temp);
@@ -311,9 +308,18 @@ void Calibration::producer_leaf()
 
         // Update Tx/Rx gains based on ltoc values obtained
         size_t leaf_tx_round = 1;
+        recv_success = false;
         while (not signal_stop_called && not calibration_successful && leaf_tx_round++ < max_num_tx_rounds)
         {
             LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
+
+            // Transmit scaled REF
+            while (not recv_success)
+            {
+                transmission(full_scale);
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+
             // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
             if (ltoc > 0 && recv_success)
             {
@@ -323,13 +329,7 @@ void Calibration::producer_leaf()
                     break; // tx_gain adjustment alone is not sufficient -- break and restart with reception again
             }
 
-            // Transmit scaled REF
-            while (not recv_flag)
-            {
-                transmission(full_scale);
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            recv_flag = false;
+            recv_success = false;
         }
 
         if (calibration_successful)

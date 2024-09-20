@@ -87,7 +87,7 @@ private:
     void producer_cent();
 
     std::string device_id, counterpart_id, leaf_id, cent_id, device_type, client_id;
-    std::string CFO_topic, flag_topic_cent, flag_topic_leaf, cal_scale_topic, full_scale_topic, ltoc_topic, ctol_topic, tx_gain_topic, rx_gain_topic, mctest_topic;
+    std::string CFO_topic, flag_topic_leaf, cal_scale_topic, full_scale_topic, ltoc_topic, ctol_topic, tx_gain_topic, rx_gain_topic, mctest_topic;
     size_t max_total_round = 100, max_num_tx_rounds = 20, max_mctest_rounds = 100;
     float max_tx_gain = 86.0, max_rx_gain = 50.0;
 
