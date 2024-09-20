@@ -61,7 +61,8 @@ void Calibration::get_mqtt_topics()
 
     // populate topics
     CFO_topic = mqttClient.topics->getValue_str("CFO") + client_id;
-    flag_topic = mqttClient.topics->getValue_str("calib-flags") + leaf_id; // flags are set by the leaf
+    flag_topic_cent = mqttClient.topics->getValue_str("calib-flags") + cent_id; // flags are set by the leaf
+    flag_topic_leaf = mqttClient.topics->getValue_str("calib-flags") + leaf_id; // flags are set by the leaf
     mctest_topic = mqttClient.topics->getValue_str("calib-mctest") + cent_id;
 
     ltoc_topic = mqttClient.topics->getValue_str("calib-ltoc") + cent_id;       // ltoc sigpow is sent by cent
@@ -101,13 +102,15 @@ bool Calibration::initialize()
         MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
         if (device_type == "cent")
         {
-            mqttClient.setCallback(flag_topic, [this](const std::string &payload)
+            mqttClient.setCallback(flag_topic_leaf, [this](const std::string &payload)
                                    { callback_detect_flags(payload); });
         }
         else if (device_type == "leaf")
         {
             mqttClient.setCallback(ltoc_topic, [this](const std::string &payload)
                                    { callback_update_ltoc(payload); });
+            mqttClient.setCallback(flag_topic_cent, [this](const std::string &payload)
+                                   { callback_detect_flags(payload); });
             // std::string temp;
             // if (mqttClient.temporary_listen_for_last_value(temp, full_scale_topic, 10, 30))
             //     full_scale = std::stof(temp);
@@ -266,7 +269,7 @@ void Calibration::producer_leaf()
         }
 
         // receive multiple signals to have a stable estimate
-        size_t num_est = 20, est_count = 0;
+        size_t num_est = 5, est_count = 0;
         std::vector<float> ctol_vec;
         bool reception_failed = false;
         while (est_count < num_est and not signal_stop_called)
@@ -301,7 +304,7 @@ void Calibration::producer_leaf()
             ctol_mean += val;
         ctol = ctol_mean / ctol_vec.size();
         LOG_INFO_FMT("Average Rx power of signal from cent = %1%", ctol);
-        mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("recv"), false);
+        mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("recv"), false);
 
         if (signal_stop_called)
             break;
@@ -319,9 +322,11 @@ void Calibration::producer_leaf()
 
             // Transmit scaled REF
             LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
-            if (not transmission(full_scale))
-                LOG_WARN("Transmission failed! Repeat...");
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            while (not signal_stop_called and not recv_flag)
+            {
+                transmission(full_scale);
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
         }
 
         if (calibration_successful)
@@ -332,9 +337,6 @@ void Calibration::producer_leaf()
 
         // increase proximity_tol to counter randomness
         proximity_tol = proximity_tol * std::max(1.0, std::ceil(double(round / 10)));
-
-        // move to next round
-        csd_success_flag = false;
     }
 
     calibration_ends = true;
@@ -373,39 +375,43 @@ void Calibration::producer_cent()
         size_t recv_counter = 0;
         csd_success_flag = false;
         bool receive_flag = false;
-        while (not receive_flag and not csd_success_flag and recv_counter++ < 10)
+        // receive multiple signals to have a stable estimate
+        size_t num_est = 5, est_count = 0;
+        std::vector<float> ltoc_vec;
+        bool reception_failed = false;
+        while (est_count < num_est and not signal_stop_called)
         {
-            receive_flag = reception(ltoc_temp);
-            if (not receive_flag)
+            float ltoc_temp;
+            size_t recv_counter = 0;
+            while (not reception(ltoc_temp) and recv_counter++ < 10)
                 LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
 
-        if (not receive_flag)
-        {
-            LOG_WARN("All attempts for Reception of REF signal failed! Restart transmission.");
+            if (ltoc_temp > min_sigpow_mul * usrp_noise_power)
+            {
+                ltoc_vec.emplace_back(ltoc_temp);
+                LOG_INFO_FMT("Rx power of signal from cent = %1%", ltoc_temp);
+                // publish
+                mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ltoc_temp), false);
+            }
+            else
+            {
+                LOG_WARN("Received Rx power of the signal is too low");
+                reception_failed = true;
+            }
+
+            est_count++;
             csd_success_flag = false;
+        }
+
+        if (reception_failed)
             continue;
-        }
-        else
-        {
-            LOG_INFO_FMT("Received signal power = %1%", ltoc_temp);
-            ltoc = ltoc_temp;
-        }
 
-        if (ltoc > min_sigpow_mul * usrp_noise_power)
-        {
-            LOG_INFO_FMT("Rx power of signal from leaf = %1%", ltoc);
-            // publish
-            mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc), false);
-        }
-        else
-        {
-            LOG_WARN("Received Rx power of the signal is too low");
-            recv_flag = true; // skip transmission and receive again
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        float ltoc_mean = 0.0;
+        for (auto val : ltoc_vec)
+            ltoc_mean += val;
+        ltoc = ltoc_mean / ltoc_vec.size();
+        LOG_INFO_FMT("Average Rx power of signal from leaf = %1%", ltoc);
+        mqttClient.publish(flag_topic_cent, mqttClient.timestamp_str_data("recv"), false);
     }
 
     calibration_ends = true;
@@ -419,7 +425,7 @@ void Calibration::consumer()
         if (csd_success_flag)
             LOG_INFO("***Successful CSD!");
     }
-};
+}
 
 bool Calibration::transmission(const float &scale)
 {
@@ -481,7 +487,7 @@ bool Calibration::calibrate_gains(MQTTClient &mqttClient)
         new_tx_gain = max_tx_gain;
         usrp_obj->set_tx_gain(new_tx_gain);
         // inform cent to restart transmission
-        mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("retx"), false);
+        mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false);
         recv_success = false;
         return false; // break to again receive new values from cent
     }
@@ -507,7 +513,7 @@ bool Calibration::calibrate_gains(MQTTClient &mqttClient)
 
 void Calibration::on_calib_success(MQTTClient &mqttClient)
 {
-    mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("end"), false);
+    mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("end"), false);
     LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol, ltoc);
     LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB -- and scale = %3%", usrp_obj->tx_gain, usrp_obj->rx_gain, full_scale);
     mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->tx_gain), true);
