@@ -310,27 +310,20 @@ void Calibration::producer_leaf()
         // Update Tx/Rx gains based on ltoc values obtained
         size_t leaf_tx_round = 1;
         recv_success = false;
-        while (not signal_stop_called && not calibration_successful && leaf_tx_round++ < max_num_tx_rounds)
+        // Transmit scaled REF
+        while (not signal_stop_called and not calibration_successful and not recv_success)
         {
-            LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
+            transmission(full_scale);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
 
-            // Transmit scaled REF
-            while (not recv_success)
-            {
-                transmission(full_scale);
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-
-            // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
-            if (ltoc > 0 && recv_success)
-            {
-                if (calibrate_gains(mqttClient))
-                    ltoc = 0.0;
-                else
-                    break; // tx_gain adjustment alone is not sufficient -- break and restart with reception again
-            }
-
-            recv_success = false;
+        // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
+        if (ltoc > 0 && recv_success)
+        {
+            if (calibrate_gains(mqttClient))
+                ltoc = 0.0;
+            else
+                LOG_WARN("Setting gains for calibration failed!"); // tx_gain adjustment alone is not sufficient -- break and restart with reception again
         }
 
         if (calibration_successful)
