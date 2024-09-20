@@ -265,38 +265,46 @@ void Calibration::producer_leaf()
             csd_obj->saved_ref_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/saved_ref_file_" + device_id + "_" + curr_datetime + ".dat";
         }
 
-        float ctol_temp;
-        size_t recv_counter = 0;
-        while (not reception(ctol_temp) and recv_counter++ < 10)
-            LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
+        // receive multiple signals to have a stable estimate
+        size_t num_est = 20, est_count = 0;
+        std::vector<float> ctol_vec;
+        bool reception_failed = false;
+        while (est_count < num_est and not signal_stop_called)
+        {
+            float ctol_temp;
+            size_t recv_counter = 0;
+            while (not reception(ctol_temp) and recv_counter++ < 10)
+                LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
 
-        if (ctol_temp == 0.0)
-        {
-            LOG_WARN("10 attempts for Reception of REF signal failed! Restart transmission.");
-            continue;
-        }
-        else
-            ctol = ctol_temp;
+            if (ctol_temp > min_sigpow_mul * usrp_noise_power)
+            {
+                ctol_vec.emplace_back(ctol_temp);
+                LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol_temp);
+                // publish
+                mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol_temp), false);
+            }
+            else
+            {
+                LOG_WARN("Received Rx power of the signal is too low");
+                reception_failed = true;
+            }
 
-        if (ctol > min_sigpow_mul * usrp_noise_power)
-        {
-            LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol);
-            // publish
-            mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol), false);
-            mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("recv"), false);
-        }
-        else
-        {
-            LOG_WARN("Received Rx power of the signal is too low");
+            est_count++;
             csd_success_flag = false;
-            continue; // skip transmission and move to CSD again
         }
+
+        if (reception_failed)
+            continue;
+
+        float ctol_mean = 0.0;
+        for (auto val : ctol_vec)
+            ctol_mean += val;
+        ctol = ctol_mean / ctol_vec.size();
+        LOG_INFO_FMT("Average Rx power of signal from cent = %1%", ctol);
+        mqttClient.publish(flag_topic, mqttClient.timestamp_str_data("recv"), false);
 
         if (signal_stop_called)
             break;
-
-        // publish CFO value
-        // mqttClient.publish(CFO_topic, mqttClient.timestamp_float_data(csd_obj->cfo), true);
 
         // Update Tx/Rx gains based on ltoc values obtained
         size_t leaf_tx_round = 1;
