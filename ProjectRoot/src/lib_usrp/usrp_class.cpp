@@ -265,7 +265,7 @@ void USRP_class::set_center_frequency()
     LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
 }
 
-void USRP_class::set_initial_gains(const bool &use_calib_gains)
+void USRP_class::set_initial_gains()
 {
     float tx_gain_input, rx_gain_input;
 
@@ -277,7 +277,10 @@ void USRP_class::set_initial_gains(const bool &use_calib_gains)
     if (use_calib_gains)
     {
         if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
+        {
+            LOG_INFO("Using Calibrated Tx Gain Value.");
             tx_gain_input = std::stof(temp);
+        }
     }
     else
     {
@@ -305,7 +308,10 @@ void USRP_class::set_initial_gains(const bool &use_calib_gains)
     if (use_calib_gains)
     {
         if (mqttClient.temporary_listen_for_last_value(temp, rx_gain_topic, 10, 30))
+        {
+            LOG_INFO("Using Calibrated Rx Gain Values.");
             rx_gain_input = std::stof(temp);
+        }
     }
     else
     {

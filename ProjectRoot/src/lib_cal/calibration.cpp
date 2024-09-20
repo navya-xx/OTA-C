@@ -554,7 +554,7 @@ void Calibration::run_scaling_tests_leaf()
         {
             LOG_DEBUG_FMT("MC Round %1% : transmitting signal of amplitude = %2%", mc_round, mc_temp);
             transmission(mc_temp / calib_sig_scale);
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         tx_counter = 0;
