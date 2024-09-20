@@ -313,25 +313,23 @@ void Calibration::producer_leaf()
         size_t leaf_tx_round = 1;
         while (not signal_stop_called && not calibration_successful && leaf_tx_round++ < max_num_tx_rounds)
         {
+            LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
             // based on ratio between ctol and ltoc rssi values, update TX gain of leaf node
             if (ltoc > 0 && recv_success)
             {
-                if (not calibrate_gains(mqttClient))
+                if (calibrate_gains(mqttClient))
+                    ltoc = 0.0;
+                else
                     break; // tx_gain adjustment alone is not sufficient -- break and restart with reception again
             }
 
             // Transmit scaled REF
-            LOG_INFO_FMT("-------------- Transmit Round %1% ------------", leaf_tx_round);
-            while (not signal_stop_called and not recv_flag)
+            while (not recv_flag)
             {
                 transmission(full_scale);
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-
-            if (recv_flag)
-                recv_flag = false;
-            else
-                LOG_WARN("Receive flag is not set! Should not reach here!!!");
+            recv_flag = false;
         }
 
         if (calibration_successful)
@@ -380,6 +378,7 @@ void Calibration::producer_cent()
         size_t recv_counter = 0;
         csd_success_flag = false;
         bool receive_flag = false;
+
         // receive multiple signals to have a stable estimate
         size_t num_est = 5, est_count = 0;
         std::vector<float> ltoc_vec;
