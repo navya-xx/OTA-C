@@ -327,6 +327,11 @@ void Calibration::producer_leaf()
                 transmission(full_scale);
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
+
+            if (recv_flag)
+                recv_flag = false;
+            else
+                LOG_WARN("Receive flag is not set! Should not reach here!!!");
         }
 
         if (calibration_successful)
