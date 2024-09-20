@@ -139,9 +139,34 @@ void Calibration::run()
     consumer_thread = boost::thread(&Calibration::consumer, this);
 };
 
+void Calibration::run_scaling_tests()
+{
+    scaling_test_ends = false;
+
+    // warm up the device
+    for (int i = 0; i < 5; ++i)
+    {
+        usrp_obj->perform_tx_test();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        usrp_obj->perform_rx_test();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    end_flag = false;
+
+    if (device_type == "leaf")
+        producer_thread = boost::thread(&Calibration::run_scaling_tests_leaf, this);
+    else if (device_type == "cent")
+        producer_thread = boost::thread(&Calibration::run_scaling_tests_cent, this);
+
+    consumer_thread = boost::thread(&Calibration::consumer, this);
+}
+
 void Calibration::stop()
 {
     csd_success_flag.store(true);
+    calibration_ends = true;
+    scaling_test_ends = true;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
@@ -304,9 +329,6 @@ void Calibration::producer_leaf()
         csd_success_flag = false;
     }
 
-    if (calibration_successful)
-        run_scaling_tests(mqttClient);
-
     calibration_ends = true;
 };
 
@@ -376,51 +398,6 @@ void Calibration::producer_cent()
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    // on calib success -- start receiving signal for power meter test
-    if (end_flag)
-    {
-        LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
-        LOG_INFO("Wait for 5 seconds...");
-
-        size_t total_wait = 50, count = 0;
-        while (count++ < total_wait)
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        size_t mc_round = 0;
-        bool receive_flag = false;
-        end_flag = false;
-        float mc_temp;
-        while (mc_round++ < max_mctest_rounds)
-        {
-            size_t recv_counter = 0;
-            mc_temp = 0.0;
-            receive_flag = false;
-            csd_success_flag = false;
-            while (not receive_flag and recv_counter++ < 10)
-            {
-                receive_flag = reception(mc_temp);
-                if (not receive_flag)
-                    LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            if (not receive_flag)
-            {
-                LOG_WARN("All attempts for Reception of REF signal failed! Restart reception.");
-                continue;
-            }
-            else if (mc_temp == 0.0)
-            {
-                LOG_WARN("Estimated rx pow incorrect!");
-                continue;
-            }
-            else
-            {
-                LOG_INFO_FMT("Received signal power = %1%", mc_temp);
-                mqttClient.publish(mctest_topic, mqttClient.timestamp_float_data(mc_temp));
-            }
-        }
     }
 
     calibration_ends = true;
@@ -530,13 +507,10 @@ void Calibration::on_calib_success(MQTTClient &mqttClient)
     mqttClient.publish(full_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
 }
 
-void Calibration::run_scaling_tests(MQTTClient &mqttClient)
+void Calibration::run_scaling_tests_leaf()
 {
-    LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
-    size_t total_wait = 50, count = 0;
-    while (count++ < total_wait)
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
+    LOG_INFO("-------------------- STARTING CALIBRATION PERFORMANCE TESTS ------------------------------");
+    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
     size_t mc_round = 0;
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -599,4 +573,48 @@ void Calibration::run_scaling_tests(MQTTClient &mqttClient)
             mctest_pow = 0.0;
         }
     }
+
+    scaling_test_ends = true;
+}
+
+void Calibration::run_scaling_tests_cent()
+{
+    LOG_INFO("-------------------- STARTING GAIN CALIBRATION TESTS ------------------------------");
+    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+
+    size_t mc_round = 0;
+    bool receive_flag = false;
+    end_flag = false;
+    float mc_temp;
+    while (mc_round++ < max_mctest_rounds)
+    {
+        size_t recv_counter = 0;
+        mc_temp = 0.0;
+        receive_flag = false;
+        csd_success_flag = false;
+        while (not receive_flag and recv_counter++ < 10)
+        {
+            receive_flag = reception(mc_temp);
+            if (not receive_flag)
+                LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (not receive_flag)
+        {
+            LOG_WARN("All attempts for Reception of REF signal failed! Restart reception.");
+            continue;
+        }
+        else if (mc_temp == 0.0)
+        {
+            LOG_WARN("Estimated rx pow incorrect!");
+            continue;
+        }
+        else
+        {
+            LOG_INFO_FMT("Received signal power = %1%", mc_temp);
+            mqttClient.publish(mctest_topic, mqttClient.timestamp_float_data(mc_temp));
+        }
+    }
+
+    scaling_test_ends = true;
 }

@@ -27,10 +27,11 @@ void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::s
     // Present options to the user
     LOG_INFO("Choose from the following options:");
     LOG_INFO("(1) Calibrate a leaf device.");
-    LOG_INFO("(2) Analyse time synchronization performance.");
-    LOG_INFO("(3) Analyse OTAC-based consensus performance.");
-    LOG_INFO("(4) Exit program.");
-    LOG_INFO("Enter choice (1-4):");
+    LOG_INFO("(2) Run scaling tests.");
+    LOG_INFO("(3) Analyse time synchronization performance.");
+    LOG_INFO("(4) Analyse OTAC-based consensus performance.");
+    LOG_INFO("(5) Exit program.");
+    LOG_INFO("Enter choice (1-5):");
 
     // Take input from the user
     std::cin >> choice;
@@ -67,7 +68,29 @@ void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::s
     }
     case 2:
     {
-        LOG_INFO("Not implemented yet!");
+        std::string cent_id, leaf_id;
+        if (is_cent)
+        {
+            cent_id = device_id;
+            LOG_INFO("Enter serial of leaf device:");
+            std::cin >> leaf_id;
+            counterpard_id = leaf_id;
+        }
+        else
+        {
+            cent_id = counterpard_id;
+            leaf_id = device_id;
+        }
+        std::string topic_scaling = mqttClient.topics->getValue_str("scaling-tests");
+        json jstring;
+        jstring["message"] = "start";
+        jstring["leaf-id"] = leaf_id;
+        jstring["cent-id"] = cent_id;
+        jstring["time"] = currentDateTime();
+        LOG_INFO_FMT("Sending data to topic %1% : %2%", topic_scaling + cent_id, jstring.dump(4));
+        mqttClient.publish(topic_scaling + cent_id, jstring.dump(4), false);
+        LOG_INFO_FMT("Sending data to topic %1% : %2%", topic_scaling + leaf_id, jstring.dump(4));
+        mqttClient.publish(topic_scaling + leaf_id, jstring.dump(4), false);
         break;
     }
     case 3:
@@ -77,12 +100,17 @@ void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::s
     }
     case 4:
     {
+        LOG_INFO("Not implemented yet!");
+        break;
+    }
+    case 5:
+    {
         stop_signal_called = true;
         break;
     }
     default:
     {
-        LOG_INFO("Invalid choice. Please enter a number between 1 and 4.");
+        LOG_INFO("Invalid choice. Please enter a number between 1 and 5.");
         break;
     }
     }
@@ -212,6 +240,67 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
     mqttClient.setCallback(control_calib_topic, control_calibration_callback, true);
+
+    auto control_scaling_test_callback = [&](const std::string &payload)
+    {
+        json jdata;
+        try
+        {
+            jdata = json::parse(payload);
+        }
+        catch (json::exception &e)
+        {
+            LOG_WARN_FMT("JSON error : %1%", e.what());
+            LOG_WARN_FMT("Incorrect format of control message = %1%", payload);
+            program_ends = true;
+            return;
+        }
+
+        std::string msg = jdata["message"];
+        std::string main_dev, c_dev;
+        if (device_type == "cent")
+        {
+            main_dev = jdata["cent-id"];
+            c_dev = jdata["leaf-id"];
+        }
+        else if (device_type == "leaf")
+        {
+            main_dev = jdata["leaf-id"];
+            c_dev = jdata["cent-id"];
+        }
+
+        Calibration calib_class_obj(usrp_obj, parser, main_dev, c_dev, device_type, stop_signal_called);
+
+        if (!calib_class_obj.initialize())
+        {
+            LOG_WARN("Calibration Class object initilization FAILED!");
+            program_ends = true;
+            return;
+        }
+
+        if (msg == "start")
+        {
+            LOG_INFO("Starting Calibration routine...");
+            calib_class_obj.run_scaling_tests();
+        }
+        else if (msg == "stop")
+        {
+            LOG_INFO("Stopping Calibration routine...");
+            calib_class_obj.stop();
+        }
+
+        while (!calib_class_obj.scaling_test_ends)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+
+        LOG_INFO("Calbration ended.");
+
+        program_ends = true;
+    };
+
+    auto control_scale_topic = mqttClient.topics->getValue_str("scaling-tests") + device_id;
+    mqttClient.setCallback(control_scale_topic, control_scaling_test_callback, true);
 
     // TODO: Synchronization routine
 

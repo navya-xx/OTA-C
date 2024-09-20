@@ -440,7 +440,7 @@ void USRP_class::setup_streamers()
 
 void USRP_class::perform_tx_test()
 {
-    std::vector<std::complex<float>> tx_buff(1000 * max_tx_packet_size, std::complex<float>(1.0, 1.0));
+    std::vector<std::complex<float>> tx_buff(100 * max_tx_packet_size, std::complex<float>(1.0, 1.0));
     bool dont_stop = false;
     if (transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop, true))
     {
@@ -456,7 +456,7 @@ void USRP_class::perform_rx_test()
 {
     bool dont_stop = false;
 
-    size_t num_pkts = 10;
+    size_t num_pkts = 100;
     auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
     if (rx_samples.size() == max_rx_packet_size * num_pkts)
     {

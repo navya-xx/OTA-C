@@ -33,9 +33,10 @@ public:
     bool initialize();
 
     void run();
+    void run_scaling_tests();
     void stop();
 
-    bool signal_stop_called, calibration_successful, calibration_ends;
+    bool signal_stop_called, calibration_successful, calibration_ends, scaling_test_ends;
 
 private:
     ConfigParser parser;
@@ -51,7 +52,8 @@ private:
 
     bool calibrate_gains(MQTTClient &mqttClient);
     void on_calib_success(MQTTClient &mqttClient);
-    void run_scaling_tests(MQTTClient &mqttClient);
+    void run_scaling_tests_cent();
+    void run_scaling_tests_leaf();
 
     bool transmission(const float &scale = 1.0);
     bool reception(float &rx_sig_pow);
@@ -86,12 +88,12 @@ private:
 
     std::string device_id, counterpart_id, leaf_id, cent_id, device_type, client_id;
     std::string CFO_topic, flag_topic, cal_scale_topic, full_scale_topic, ltoc_topic, ctol_topic, tx_gain_topic, rx_gain_topic, mctest_topic;
-    size_t total_reps_cal = 0, current_reps_cal = 0;
     size_t max_total_round = 100, max_num_tx_rounds = 20, max_mctest_rounds = 100;
     float max_tx_gain = 86.0, max_rx_gain = 50.0;
 
     bool recv_success = false;
-    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.5, min_sigpow_mul = 100, proximity_tol = 5e-2;
+    size_t total_reps_cal = 2, current_reps_cal = 0;
+    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.5, min_sigpow_mul = 100, proximity_tol = 2e-2;
     bool recv_flag = false, retx_flag = false, end_flag = false;
 };
 
