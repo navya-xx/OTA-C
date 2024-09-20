@@ -281,7 +281,7 @@ void Calibration::producer_leaf()
                 ctol_vec.emplace_back(ctol_temp);
                 LOG_INFO_FMT("Rx power of signal from cent = %1%", ctol_temp);
                 // publish
-                mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol_temp), false);
+                // mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol_temp), false);
             }
             else
             {
@@ -301,6 +301,7 @@ void Calibration::producer_leaf()
             ctol_mean += val;
         ctol = ctol_mean / ctol_vec.size();
         LOG_INFO_FMT("Average Rx power of signal from cent = %1%", ctol);
+        mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ctol), false);
         mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("recv"), false);
 
         if (signal_stop_called)
@@ -395,7 +396,7 @@ void Calibration::producer_cent()
                 ltoc_vec.emplace_back(ltoc_temp);
                 LOG_INFO_FMT("Rx power of signal from cent = %1%", ltoc_temp);
                 // publish
-                mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ltoc_temp), false);
+                // mqttClient.publish(ctol_topic, mqttClient.timestamp_float_data(ltoc_temp), false);
             }
             else
             {
@@ -415,7 +416,7 @@ void Calibration::producer_cent()
             ltoc_mean += val;
         ltoc = ltoc_mean / ltoc_vec.size();
         LOG_INFO_FMT("Average Rx power of signal from leaf = %1%", ltoc);
-        mqttClient.publish(flag_topic_cent, mqttClient.timestamp_str_data("recv"), false);
+        mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc), false);
     }
 
     calibration_ends = true;
