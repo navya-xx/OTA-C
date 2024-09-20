@@ -3,6 +3,7 @@ import json
 import matplotlib.pyplot as plt
 import sys
 import numpy as np
+from datetime import datetime
 
 # Database and table details
 DB_FILE = '/home/nuc/OTA-C/ProjectRoot/config/mosquitto/telemetry.db'
@@ -19,7 +20,7 @@ def get_data_from_db(serial):
     cursor = conn.cursor()
 
     # SQL query to select rows based on topic and is_processed = 0
-    query = f"SELECT id, payload FROM {TABLE_NAME} WHERE topic = ? AND is_processed = 1"
+    query = f"SELECT id, payload FROM {TABLE_NAME} WHERE topic = ? AND is_processed = 0"
     cursor.execute(query, (topic_pattern,))
 
     rows = cursor.fetchall()
@@ -72,7 +73,8 @@ def mark_rows_as_processed(ids):
 
 def plot_data(tx_scale, rx_pow, x_fit, y_fit, serial):
     """Plots tx_scale vs. rx_pow."""
-    filename = f"{serial}_calib_pow_plot.png"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{serial}_calib_pow_plot_{timestamp}.png"
     plt.figure(figsize=(8, 6))
     plt.scatter(tx_scale, np.sqrt(rx_pow), color='blue', label="data points")
     plt.plot(x_fit, y_fit, label=f'Polynomial Fit (degree=4)', color='green')
