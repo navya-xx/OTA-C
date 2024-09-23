@@ -283,10 +283,13 @@ void Calibration::callback_detect_flags(const std::string &payload)
 
 bool Calibration::check_ctol()
 {
-    if (ctol > 50 * min_e2e_pow)
+    float upper_bound = 100 * min_e2e_pow;
+    float lower_bound = min_e2e_pow;
+    LOG_DEBUG_FMT("CTOL = %1%, Allowed bounds = (%2%, %3%)", ctol, lower_bound, upper_bound);
+    if (ctol > upper_bound)
     {
         // reduce the rx gain of leaf
-        float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / (50 * min_e2e_pow), true);
+        float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / upper_bound, true);
         float impl_rx_gain = std::ceil(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -294,10 +297,10 @@ bool Calibration::check_ctol()
         csd_obj->peak_det_obj_ref.noise_ampl = std::sqrt(noise_power);
         return false;
     }
-    else if (ctol < min_e2e_pow)
+    else if (ctol < lower_bound)
     {
         // increase the rx gain of leaf
-        float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / (min_e2e_pow), true);
+        float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / lower_bound, true);
         float impl_rx_gain = std::ceil(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
