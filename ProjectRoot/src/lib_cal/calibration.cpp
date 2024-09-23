@@ -289,6 +289,8 @@ bool Calibration::check_ctol()
         float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / (50 * min_e2e_pow), true);
         float impl_rx_gain = std::ceil(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        float noise_power = usrp_obj->estimate_background_noise_power();
         return false;
     }
     else if (ctol < min_e2e_pow)
@@ -297,6 +299,8 @@ bool Calibration::check_ctol()
         float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / (min_e2e_pow), true);
         float impl_rx_gain = std::ceil(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        float noise_power = usrp_obj->estimate_background_noise_power();
         return false;
     }
     else

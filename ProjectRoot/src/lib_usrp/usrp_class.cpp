@@ -111,8 +111,6 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     setup_streamers();
 
     float noise_power = estimate_background_noise_power();
-    init_noise_ampl = std::sqrt(noise_power);
-    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
 
     // if (perform_rxtx_tests)
     // {
@@ -502,7 +500,12 @@ float USRP_class::estimate_background_noise_power()
         LOG_WARN("Reception test Failed!");
     }
 
-    return calc_signal_power(rx_samples);
+    float noise_power = calc_signal_power(rx_samples);
+
+    init_noise_ampl = std::sqrt(noise_power);
+    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
+
+    return noise_power;
 }
 
 void USRP_class::publish_usrp_data()
