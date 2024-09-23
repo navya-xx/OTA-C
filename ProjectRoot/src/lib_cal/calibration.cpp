@@ -705,12 +705,13 @@ bool Calibration::calibrate_gains(MQTTClient &mqttClient)
     // If TX gain has reached maximum, start by increasing RX gain of leaf
     if (impl_tx_gain > max_tx_gain)
     {
-        float new_rx_gain = usrp_obj->rx_gain + (max_tx_gain - new_tx_gain);
-        float impl_rx_gain = std::ceil(new_rx_gain);
-        usrp_obj->set_rx_gain(impl_rx_gain);
-        new_tx_gain = max_tx_gain;
-        usrp_obj->set_tx_gain(new_tx_gain);
+        // float new_rx_gain = usrp_obj->rx_gain + (max_tx_gain - new_tx_gain);
+        // float impl_rx_gain = std::ceil(new_rx_gain);
+        // usrp_obj->set_rx_gain(impl_rx_gain);
+        // new_tx_gain = max_tx_gain;
+        // usrp_obj->set_tx_gain(new_tx_gain);
         // inform cent to restart transmission
+        LOG_WARN_FMT("Requested TX gain %1% is greater than maximum allowed gain %2%", impl_tx_gain, max_tx_gain);
         mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false);
         recv_success = false;
         return false; // break to again receive new values from cent
