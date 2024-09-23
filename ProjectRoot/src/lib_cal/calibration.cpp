@@ -473,7 +473,7 @@ void Calibration::producer_leaf_proto2()
     LOG_INFO("Implementing Calibration Protocol #2");
     MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
 
-    size_t round = 1;
+    size_t round = 0;
 
     while (not signal_stop_called && round++ < max_total_round)
     {
@@ -533,7 +533,7 @@ void Calibration::producer_cent_proto2()
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
 
     // reception/producer params
-    size_t round = 1;
+    size_t round = 0;
 
     while (not signal_stop_called && not end_flag && round++ < max_total_round)
     {
