@@ -726,6 +726,12 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     {
         LOG_DEBUG("Receiving WITH delay.");
         LOG_DEBUG_FMT("Rx delay : %.4f microsecs", (time_diff * 1e6));
+        if (std::floor(time_diff * 1e6) > 10000)
+        {
+            size_t wait_microsecs = std::floor(time_diff * 1e6) - 10000;
+            LOG_DEBUG_FMT("Rx wait for %1% microsecs", wait_microsecs);
+            std::this_thread::sleep_for(std::chrono::microseconds(wait_microsecs));
+        }
         stream_cmd.stream_now = false;
         stream_cmd.time_spec = rx_time;
     }
@@ -733,7 +739,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     rx_streamer->issue_stream_cmd(stream_cmd);
 
     const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_rx_packet_size / rx_rate));
-    double rx_delay = stream_cmd.stream_now ? 0.0 : time_diff;
+    double rx_delay = stream_cmd.stream_now ? 0.0 : (rx_time - usrp->get_time_now()).get_real_secs();
     double timeout = burst_pkt_time + rx_delay;
 
     std::vector<std::complex<float>> rx_samples;
@@ -775,7 +781,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
             success = false;
         }
 
-        // TODO: catch reception error gracefully without breaking
+        // Catch reception error gracefully without breaking
         if (not success)
         {
             LOG_WARN("*** Reception of stream data UNSUCCESSFUL! ***");
@@ -800,7 +806,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
             std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
             save_stream_to_file(filename, rx_save_stream, forward);
         }
-        
+
         if (fixed_reception_condition) // fixed number of samples -- save in a separate vector to return
             rx_samples.insert(rx_samples.end(), buff.begin(), buff.begin() + num_curr_rx_samps);
 
