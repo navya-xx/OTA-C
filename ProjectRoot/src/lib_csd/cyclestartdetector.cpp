@@ -367,5 +367,11 @@ float CycleStartDetector::est_e2e_ref_sig_amp()
 uhd::time_spec_t CycleStartDetector::get_wait_time()
 {
     double wait_timer = tx_wait_microsec / 1e6;
-    return peak_det_obj_ref.get_ref_start_time() + uhd::time_spec_t(wait_timer);
+    uhd::time_spec_t ref_start_timer = peak_det_obj_ref.get_ref_start_time();
+    if (ref_start_timer.get_real_secs() < 0.0)
+    {
+        LOG_WARN_FMT("Incorrect ref start timer %1%", ref_start_timer.get_real_secs());
+        return uhd::time_spec_t(0.0);
+    }
+    return ref_start_timer + uhd::time_spec_t(wait_timer);
 }

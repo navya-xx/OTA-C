@@ -497,6 +497,8 @@ void Calibration::producer_leaf_proto2()
 
             // transmit otac signal
             recv_success = false;
+            if (tx_timer <= uhd::time_spec_t(0.0))
+                tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(200e-6);
             float sig_scale = std::min<float>(full_scale / std::sqrt(ctol / min_e2e_pow), 1.0);
             LOG_DEBUG_FMT("Transmitting OTAC signal with scale %1%", sig_scale);
             bool tx_success = transmission_otac(sig_scale, tx_timer);

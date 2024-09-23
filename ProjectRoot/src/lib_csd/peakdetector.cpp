@@ -55,11 +55,12 @@ void PeakDetectionClass::print_peaks_data()
         LOG_DEBUG_FMT("*PeaksDet* : Peak %1% abs-val/noise = %2%", i + 1, peak_vals[i]);
         if (i < num_peaks_detected - 1)
             LOG_DEBUG_FMT("\t\t Comparing peaks %1% and %2%"
-                          " -- Index diff = %3% -- Time diff = %4% microsecs -- Val diff = %5%.",
+                          " -- Index diff = %3% -- Timer = %4% and %5% secs -- Val diff = %6%.",
                           i + 2,
                           i + 1,
                           peak_indices[i + 1] - peak_indices[i],
-                          (peak_times[i + 1] - peak_times[i]).get_real_secs() * 1e6,
+                          (peak_times[i + 1]).get_real_secs(),
+                          (peak_times[i]).get_real_secs(),
                           peak_vals[i + 1] - peak_vals[i]);
     }
 }
