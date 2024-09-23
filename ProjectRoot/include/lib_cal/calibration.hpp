@@ -59,6 +59,7 @@ private:
     bool proximity_check(const float &val1, const float &val2);
     void callback_detect_flags(const std::string &payload);
     void callback_update_ltoc(const std::string &payload);
+    bool check_ctol();
 
     std::atomic<bool> csd_success_flag;
     boost::thread producer_thread, consumer_thread;

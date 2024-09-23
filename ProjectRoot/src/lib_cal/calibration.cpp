@@ -281,6 +281,28 @@ void Calibration::callback_detect_flags(const std::string &payload)
     }
 }
 
+bool Calibration::check_ctol()
+{
+    if (ctol > 50 * min_e2e_pow)
+    {
+        // reduce the rx gain of leaf
+        float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / (50 * min_e2e_pow), true);
+        float impl_rx_gain = std::ceil(new_rx_gain);
+        usrp_obj->set_rx_gain(impl_rx_gain);
+        return false;
+    }
+    else if (ctol < min_e2e_pow)
+    {
+        // increase the rx gain of leaf
+        float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / (min_e2e_pow), true);
+        float impl_rx_gain = std::ceil(new_rx_gain);
+        usrp_obj->set_rx_gain(impl_rx_gain);
+        return false;
+    }
+    else
+        return true;
+}
+
 void Calibration::producer_leaf_proto1()
 {
     MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
@@ -494,6 +516,14 @@ void Calibration::producer_leaf_proto2()
                 LOG_INFO_FMT("Reception successful with ctol = %1% and timer = %2% secs", ctol, tx_timer.get_real_secs());
             else
                 continue;
+
+            // check if ctol is too large or too small
+            if (not check_ctol())
+            {
+                LOG_WARN("Repeat ref reception with new Rx gain!");
+                mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false); // restart
+                continue;
+            }
 
             // transmit otac signal
             recv_success = false;
