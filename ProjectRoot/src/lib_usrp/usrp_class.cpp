@@ -278,14 +278,17 @@ void USRP_class::set_initial_gains()
     {
         if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
         {
-            LOG_INFO("Using Calibrated Tx Gain Value.");
             tx_gain_input = std::stof(temp);
+            LOG_DEBUG_FMT("Using Calibrated Tx Gain Value = %1% dB.", tx_gain_input);
         }
     }
     else
     {
         if (parser.getValue_str("gain-mgmt") == "gain")
+        {
             tx_gain_input = parser.getValue_float("tx-gain");
+            LOG_DEBUG_FMT("Using Fixed Tx Gain Value = %1% dB.", tx_gain_input);
+        }
         else if (parser.getValue_str("gain-mgmt") == "power")
         {
             auto retval = query_calibration_data();
@@ -294,6 +297,7 @@ void USRP_class::set_initial_gains()
                 tx_gain_input = parser.getValue_float("tx-gain");
             else
                 tx_gain_input = retval.second;
+            LOG_DEBUG_FMT("Using Measurement-based Tx Gain Value = %1% dB.", tx_gain_input);
         }
     }
 
@@ -309,14 +313,17 @@ void USRP_class::set_initial_gains()
     {
         if (mqttClient.temporary_listen_for_last_value(temp, rx_gain_topic, 10, 30))
         {
-            LOG_INFO("Using Calibrated Rx Gain Values.");
             rx_gain_input = std::stof(temp);
+            LOG_DEBUG_FMT("Using Calibrated Rx Gain Value = %1% dB.", rx_gain_input);
         }
     }
     else
     {
         if (parser.getValue_str("gain-mgmt") == "gain")
+        {
             rx_gain_input = parser.getValue_float("rx-gain");
+            LOG_DEBUG_FMT("Using Fixed Rx Gain Value = %1% dB.", rx_gain_input);
+        }
         else if (parser.getValue_str("gain-mgmt") == "power")
         {
             auto retval = query_calibration_data();
@@ -325,6 +332,8 @@ void USRP_class::set_initial_gains()
                 rx_gain_input = parser.getValue_float("rx-gain");
             else
                 rx_gain_input = retval.first;
+
+            LOG_DEBUG_FMT("Using Measurement-based Rx Gain Value = %1% dB.", rx_gain_input);
         }
     }
 
