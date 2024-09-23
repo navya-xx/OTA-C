@@ -19,6 +19,8 @@ public:
 
     void consume(std::atomic<bool> &csd_success_signal, bool &stop_signal_called);
 
+    void consume_otac(std::atomic<bool> &csd_success_signal, bool &stop_signal_called);
+
     uhd::time_spec_t get_wait_time();
 
     uhd::time_spec_t csd_wait_timer;
@@ -32,6 +34,9 @@ public:
     std::string saved_ref_filename = "";
 
     size_t num_samples_without_peak = 0;
+
+    float otac_max_wms_value = 0.0;
+    uhd::time_spec_t otac_sig_start_timer;
 
 private:
     SyncedBufferManager<std::complex<float>, uhd::time_spec_t> synced_buffer; // contains both samples_buffer and timer_buffer
@@ -66,12 +71,21 @@ private:
     FFTWrapper fftw_wrapper, fftw_wrapper_LL;
     std::vector<std::complex<float>> zfc_seq_fft_conj, zfc_seq_fft_conj_LL;
     std::vector<std::complex<float>> fft_cross_correlate(const std::deque<std::complex<float>> &samples);
-    std::vector<std::complex<float>> fft_cross_correlate_LL(const std::deque<std::complex<float>> &samples);
+    std::vector<std::complex<float>> fft_post_crosscorr(const std::deque<std::complex<float>> &samples);
     void peak_detector(const std::vector<std::complex<float>> &corr_results, const std::vector<uhd::time_spec_t> &timer);
 
     bool update_noise_level = false;
-
     float max_pnr = 0.0;
+
+    // OTAC related
+    bool otac_detection_flag = false, otac_success_flag = false;
+    void otac_detector();
+    void post_otac_det();
+    void reset_otac();
+    size_t otac_buffer_len, otac_window_len, otac_high_counter = 0, otac_max_samp_index;
+    float otac_meansqr_threshold;
+    std::deque<std::complex<float>> otac_buffer;
+    std::vector<uhd::time_spec_t> otac_timer;
 };
 
 #endif // CSD_CLASS

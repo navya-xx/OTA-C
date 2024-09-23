@@ -45,6 +45,7 @@ void Calibration::initialize_peak_det_obj()
 void Calibration::initialize_csd_obj()
 {
     size_t capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
+    min_e2e_pow = std::norm(parser.getValue_float("min-e2e-amp"));
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
     uhd::time_spec_t rx_sample_duration = uhd::time_spec_t(rx_sample_duration_float);
     csd_obj = std::make_unique<CycleStartDetector>(parser, capacity, rx_sample_duration, *peak_det_obj);
@@ -83,6 +84,10 @@ void Calibration::generate_waveform()
 
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, wf_pad, q_zfc, calib_sig_scale, 0);
     ref_waveform = wf_gen.generate_waveform();
+
+    size_t otac_wf_len = parser.getValue_int("test-signal-len");
+    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, 0, 1, calib_sig_scale, 123);
+    otac_waveform = wf_gen.generate_waveform();
 }
 
 bool Calibration::initialize()
@@ -121,7 +126,7 @@ bool Calibration::initialize()
     }
 };
 
-void Calibration::run()
+void Calibration::run_proto1()
 {
     // warm up the device
     for (int i = 0; i < 1; ++i)
@@ -132,11 +137,37 @@ void Calibration::run()
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     if (device_type == "leaf")
-        producer_thread = boost::thread(&Calibration::producer_leaf, this);
+    {
+        producer_thread = boost::thread(&Calibration::producer_leaf_proto1, this);
+        consumer_thread = boost::thread(&Calibration::consumer_leaf_proto1, this);
+    }
     else if (device_type == "cent")
-        producer_thread = boost::thread(&Calibration::producer_cent, this);
+    {
+        producer_thread = boost::thread(&Calibration::producer_cent_proto1, this);
+        consumer_thread = boost::thread(&Calibration::consumer_cent_proto1, this);
+    }
+};
 
-    consumer_thread = boost::thread(&Calibration::consumer, this);
+void Calibration::run_proto2()
+{
+    // warm up the device
+    for (int i = 0; i < 1; ++i)
+    {
+        usrp_obj->perform_tx_test();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    if (device_type == "leaf")
+    {
+        producer_thread = boost::thread(&Calibration::producer_leaf_proto2, this);
+        consumer_thread = boost::thread(&Calibration::consumer_leaf_proto2, this);
+    }
+    else if (device_type == "cent")
+    {
+        producer_thread = boost::thread(&Calibration::producer_cent_proto2, this);
+        consumer_thread = boost::thread(&Calibration::consumer_cent_proto2, this);
+    }
 };
 
 void Calibration::run_scaling_tests()
@@ -155,11 +186,15 @@ void Calibration::run_scaling_tests()
     end_flag = false;
 
     if (device_type == "leaf")
+    {
         producer_thread = boost::thread(&Calibration::run_scaling_tests_leaf, this);
+        consumer_thread = boost::thread(&Calibration::consumer_leaf_proto1, this);
+    }
     else if (device_type == "cent")
+    {
         producer_thread = boost::thread(&Calibration::run_scaling_tests_cent, this);
-
-    consumer_thread = boost::thread(&Calibration::consumer, this);
+        consumer_thread = boost::thread(&Calibration::consumer_cent_proto1, this);
+    }
 }
 
 void Calibration::stop()
@@ -208,10 +243,10 @@ void Calibration::callback_update_ltoc(const std::string &payload)
             ltoc = std::stof(temp_ltoc);
             LOG_DEBUG_FMT("MQTT >> LTOC received = %1%", ltoc);
             recv_success = true;
-            if (ctol < 0)
+            if (ltoc < 0)
                 LOG_WARN("CTOL is not updated yet!");
-            else if (proximity_check(ctol, ltoc))
-                calibration_successful = true;
+            // else if (proximity_check(ctol, ltoc))
+            //     calibration_successful = true;
         }
     }
     catch (const json::parse_error &e)
@@ -246,7 +281,7 @@ void Calibration::callback_detect_flags(const std::string &payload)
     }
 }
 
-void Calibration::producer_leaf()
+void Calibration::producer_leaf_proto1()
 {
     MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
     float usrp_noise_power = usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl;
@@ -266,14 +301,15 @@ void Calibration::producer_leaf()
         }
 
         // receive multiple signals to have a stable estimate
-        size_t num_est = 5, est_count = 0;
+        size_t est_count = 0;
         std::vector<float> ctol_vec;
         bool reception_failed = false;
-        while (est_count < num_est and not signal_stop_called)
+        while (est_count < reps_total and not signal_stop_called)
         {
             float ctol_temp;
+            uhd::time_spec_t tmp_timer;
             size_t recv_counter = 0;
-            while (not reception(ctol_temp) and recv_counter++ < 10)
+            while (not reception_ref(ctol_temp, tmp_timer) and recv_counter++ < 10)
                 LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
 
             if (ctol_temp > min_sigpow_mul * usrp_noise_power)
@@ -313,7 +349,7 @@ void Calibration::producer_leaf()
         // Transmit scaled REF
         while (not signal_stop_called and not calibration_successful and not recv_success)
         {
-            transmission(full_scale);
+            transmission_ref(full_scale);
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
@@ -321,15 +357,11 @@ void Calibration::producer_leaf()
         if (ltoc > 0 && recv_success)
         {
             if (calibrate_gains(mqttClient))
+            {
                 ltoc = 0.0;
+            }
             else
                 LOG_WARN("Setting gains for calibration failed!"); // tx_gain adjustment alone is not sufficient -- break and restart with reception again
-        }
-
-        if (calibration_successful)
-        {
-            on_calib_success(mqttClient);
-            break;
         }
 
         // increase proximity_tol to counter randomness
@@ -339,7 +371,7 @@ void Calibration::producer_leaf()
     calibration_ends = true;
 };
 
-void Calibration::producer_cent()
+void Calibration::producer_cent_proto1()
 {
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
     float usrp_noise_power = usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl;
@@ -354,7 +386,7 @@ void Calibration::producer_cent()
         // Transmit REF
         while (not recv_flag && not end_flag && not signal_stop_called)
         {
-            transmission();
+            transmission_ref();
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
@@ -374,14 +406,15 @@ void Calibration::producer_cent()
         bool receive_flag = false;
 
         // receive multiple signals to have a stable estimate
-        size_t num_est = 5, est_count = 0;
+        size_t est_count = 0;
         std::vector<float> ltoc_vec;
         bool reception_failed = false;
-        while (est_count < num_est and not signal_stop_called)
+        while (est_count < reps_total and not signal_stop_called)
         {
             float ltoc_temp;
+            uhd::time_spec_t tmp_timer;
             size_t recv_counter = 0;
-            while (not reception(ltoc_temp) and recv_counter++ < 10)
+            while (not reception_ref(ltoc_temp, tmp_timer) and recv_counter++ < 10)
                 LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
 
             if (ltoc_temp > min_sigpow_mul * usrp_noise_power)
@@ -415,7 +448,107 @@ void Calibration::producer_cent()
     calibration_ends = true;
 }
 
-void Calibration::consumer()
+void Calibration::producer_leaf_proto2()
+{
+    MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
+
+    size_t round = 1;
+
+    while (not signal_stop_called && round++ < max_total_round)
+    {
+        LOG_INFO_FMT("-------------- Receiving Round %1% ------------", round);
+
+        // receive REF
+        uhd::time_spec_t tx_timer;
+        bool reception_successful = reception_ref(ctol, tx_timer);
+        if (not reception_successful)
+        {
+            LOG_WARN("Reception failed! Try again...");
+            continue;
+        }
+        else
+        {
+            LOG_INFO_FMT("Reception successful with ctol = %1% and timer = %2% secs", ctol, tx_timer.get_real_secs());
+            // transmit otac signal
+            recv_success = false;
+            float sig_scale = std::min<float>(full_scale / std::sqrt(ctol / min_e2e_pow), 1.0);
+            bool tx_success = transmission_otac(sig_scale, tx_timer);
+            if (not tx_success)
+            {
+                LOG_WARN("OTAC tranmission failed!");
+                mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false); // restart
+                continue;
+            }
+            else
+            {
+                size_t wait_counter = 0;
+                while (not recv_success && wait_counter++ < 20)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+                if (recv_success)
+                {
+                    // calibrate gains
+                    bool gains_calib_success = calibrate_gains(mqttClient);
+                    if (not gains_calib_success)
+                    {
+                        LOG_WARN("Gains calibration failed.");
+                        continue;
+                    }
+                }
+                else
+                {
+                    LOG_WARN("No info received from cent about ltoc. Start again!");
+                    mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false);
+                }
+            }
+        }
+    }
+
+    calibration_ends = true;
+}
+
+void Calibration::producer_cent_proto2()
+{
+    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+
+    // reception/producer params
+    size_t round = 1;
+
+    while (not signal_stop_called && not end_flag && round++ < max_total_round)
+    {
+        LOG_INFO_FMT("-------------- Round %1% ------------", round);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        // Transmit REF
+        uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-2);
+        bool transmit_success = transmission_ref(1.0, tx_timer);
+        if (transmit_success)
+        {
+            uhd::time_spec_t otac_timer;
+            bool rx_success = reception_otac(ltoc, otac_timer);
+            if (rx_success)
+            {
+                float txrx_gap = (otac_timer - tx_timer).get_real_secs() * 1e3;
+                LOG_INFO_FMT("OTAC signal reception gap = %1% millisecs", txrx_gap);
+                LOG_INFO_FMT("OTAC ltoc = %1%", ltoc);
+                float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");
+                if (txrx_gap > exp_wait_time + 200)
+                {
+                    LOG_WARN("OTAC signal reception delay is too big -> Reject this data.");
+                    continue;
+                }
+                mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc), false);
+            }
+            else
+                LOG_INFO("Reception failed!");
+        }
+    }
+
+    calibration_ends = true;
+}
+
+void Calibration::consumer_leaf_proto1()
 {
     while (not signal_stop_called)
     {
@@ -425,7 +558,25 @@ void Calibration::consumer()
     }
 }
 
-bool Calibration::transmission(const float &scale)
+void Calibration::consumer_leaf_proto2()
+{
+}
+
+void Calibration::consumer_cent_proto1()
+{
+    while (not signal_stop_called)
+    {
+        csd_obj->consume(csd_success_flag, signal_stop_called);
+        if (csd_success_flag)
+            LOG_INFO("***Successful CSD!");
+    }
+}
+
+void Calibration::consumer_cent_proto2()
+{
+}
+
+bool Calibration::transmission_ref(const float &scale, const uhd::time_spec_t &tx_timer)
 {
     auto tx_ref_waveform = ref_waveform;
     if (scale != 1.0) // if not full_scale = 1.0, implement scaling of signal
@@ -436,15 +587,36 @@ bool Calibration::transmission(const float &scale)
         }
     }
     // add small delay to transmission
-    auto tx_time = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);
+    uhd::time_spec_t tx_timer_set;
+    if (tx_timer < usrp_obj->usrp->get_time_now())
+        tx_timer_set = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);
+    else
+        tx_timer_set = tx_timer;
 
-    if (usrp_obj->transmission(tx_ref_waveform, tx_time, signal_stop_called, true))
+    if (usrp_obj->transmission(tx_ref_waveform, tx_timer_set, signal_stop_called, true))
         return true;
     else
         return false;
 }
 
-bool Calibration::reception(float &rx_sig_pow)
+bool Calibration::transmission_otac(const float &scale, const uhd::time_spec_t &tx_timer)
+{
+    auto tx_waveform = otac_waveform;
+    if (scale != 1.0) // if not full_scale = 1.0, implement scaling of signal
+    {
+        for (auto &elem : tx_waveform)
+        {
+            elem *= scale;
+        }
+    }
+
+    if (usrp_obj->transmission(tx_waveform, tx_timer, signal_stop_called, true))
+        return true;
+    else
+        return false;
+}
+
+bool Calibration::reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 {
     auto producer_wrapper = [this](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
     {
@@ -465,8 +637,36 @@ bool Calibration::reception(float &rx_sig_pow)
     }
 
     rx_sig_pow = csd_obj->est_ref_sig_pow;
+    tx_timer = csd_obj->csd_wait_timer;
 
     csd_obj->est_ref_sig_pow = 0.0;
+
+    return true;
+}
+
+bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
+{
+    uhd::time_spec_t current_ursp_time = usrp_obj->usrp->get_time_now();
+    auto producer_wrapper = [this, &current_ursp_time](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
+    {
+        csd_obj->produce(samples, sample_size, sample_time, signal_stop_called);
+
+        if (csd_success_flag || retx_flag || end_flag || usrp_obj->usrp->get_time_now() - current_ursp_time > 1.0)
+            return true;
+        else
+            return false;
+    };
+
+    usrp_obj->reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+
+    if (!csd_success_flag)
+    {
+        LOG_WARN("Reception ended without CSD success! Skip this round and transmit again.");
+        return false;
+    }
+
+    rx_sig_pow = csd_obj->otac_max_wms_value;
+    tx_timer = csd_obj->otac_sig_start_timer;
 
     return true;
 }
@@ -565,7 +765,7 @@ void Calibration::run_scaling_tests_leaf()
         while (mc_round == mc_round_temp and tx_counter++ < 10)
         {
             LOG_DEBUG_FMT("MC Round %1% : transmitting signal of amplitude = %2%", mc_round, mc_temp);
-            transmission(mc_temp / calib_sig_scale);
+            transmission_ref(mc_temp / calib_sig_scale);
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
 
@@ -598,6 +798,7 @@ void Calibration::run_scaling_tests_cent()
     bool receive_flag = false;
     end_flag = false;
     float mc_temp;
+    uhd::time_spec_t tmp_timer;
     while (mc_round++ < max_mctest_rounds)
     {
         size_t recv_counter = 0;
@@ -606,7 +807,7 @@ void Calibration::run_scaling_tests_cent()
         csd_success_flag = false;
         while (not receive_flag and recv_counter++ < 10)
         {
-            receive_flag = reception(mc_temp);
+            receive_flag = reception_ref(mc_temp, tmp_timer);
             if (not receive_flag)
                 LOG_WARN_FMT("Attempt %1% : Reception of REF signal failed! Keep receiving...", recv_counter);
             std::this_thread::sleep_for(std::chrono::milliseconds(100));

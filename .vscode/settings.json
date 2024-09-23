@@ -78,5 +78,6 @@
         "stop_token": "cpp",
         "valarray": "cpp"
     },
-    "cmake.sourceDirectory": "/home/nuc/OTA-C/ProjectRoot"
+    "cmake.sourceDirectory": "/home/nuc/OTA-C/ProjectRoot",
+    "C_Cpp.errorSquiggles": "enabled"
 }

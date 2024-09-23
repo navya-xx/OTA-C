@@ -9,12 +9,7 @@
 #include "cyclestartdetector.hpp"
 #include "waveforms.hpp"
 
-/**Calibration class to perform calibration between pair of leaf and cent nodes.
- *
- * Note that device serial and type (cent or leaf) are specified as "device_id" and "device_type".
- * Initialize the class with "initialize()" and then run "run()" to conduct calibration.
- *
- */
+/**Calibration protocol implementation between pair of leaf and cent nodes. */
 class Calibration
 {
 public:
@@ -32,7 +27,8 @@ public:
 
     bool initialize();
 
-    void run();
+    void run_proto1();
+    void run_proto2();
     void run_scaling_tests();
     void stop();
 
@@ -43,7 +39,7 @@ private:
     std::unique_ptr<USRP_class> usrp_obj;
     std::unique_ptr<CycleStartDetector> csd_obj;
     std::unique_ptr<PeakDetectionClass> peak_det_obj;
-    std::vector<std::complex<float>> ref_waveform;
+    std::vector<std::complex<float>> ref_waveform, otac_waveform;
 
     void initialize_peak_det_obj();
     void initialize_csd_obj();
@@ -55,8 +51,10 @@ private:
     void run_scaling_tests_cent();
     void run_scaling_tests_leaf();
 
-    bool transmission(const float &scale = 1.0);
-    bool reception(float &rx_sig_pow);
+    bool transmission_ref(const float &scale = 1.0, const uhd::time_spec_t &tx_timer = uhd::time_spec_t(0.0));
+    bool transmission_otac(const float &scale = 1.0, const uhd::time_spec_t &tx_timer = uhd::time_spec_t(0.0));
+    bool reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer);
+    bool reception_otac(float &otac_sig_pow, uhd::time_spec_t &tx_timer);
 
     bool proximity_check(const float &val1, const float &val2);
     void callback_detect_flags(const std::string &payload);
@@ -65,52 +63,39 @@ private:
     std::atomic<bool> csd_success_flag;
     boost::thread producer_thread, consumer_thread;
 
-    void consumer();
-
-    /** Producer for the leaf node -- Detect REF, est. RSSI, and update TX gains.
-     *
-     * The leaf node listens for REF and at successful reception captures subsequent samples sent at full-scale.
-     * Then, leaf node starts first by transmitting REF followed by full-scale signal.
-     * The cent detects REF, est. Rx power, and send the value over MQTT to the leaf node.
-     * Leaf node compares this value with Rx power est. of signal from the cent, and updates its TX gain to match at the cent.
-     * This process is repeated until a reasonable accuracy is achieved.
-     *
+    /** Leaf calibration protocol #1.
+     * 1. Receive multiple REF signals from cent to get a stable estimate of channel power
+     * 2. Transmit multiple REF signals until cent sends an MQTT message with received power
+     * 3. Update gains to calibrate leaf such that ctol and ltoc rx signal powers are matched
      */
-    void producer_leaf();
+    void producer_leaf_proto1();
+    void consumer_leaf_proto1();
+    void producer_cent_proto1();
+    void consumer_cent_proto1();
 
-    /** Producer for cent node -- Tx REF, Detect and Rx REF, send Rx pow value
-     *
-     * The cent node is a passive participant in the calibratoin process.
-     * It updates the Rx power of the signal from leaf, and informs the leaf.
-     *
+    /** Calibration protocol #2.
+     * 1. Leaf receives REF signal and transmits a seq of random phase signals (say S) with specified delay and constant amplitude (after removing ctol channel power)
+     * 2. Cent receives S and estimates mean square norm and timer, sends mean square norm value to leaf via mqtt
+     * 3. Leaf adjusts gain/scale such that the estimated signal mean square value matched with the constant amplitude used by the leaf for Tx
      */
-    void producer_cent();
+    void producer_leaf_proto2();
+    void consumer_leaf_proto2();
+    void producer_cent_proto2();
+    void consumer_cent_proto2();
 
     std::string device_id, counterpart_id, leaf_id, cent_id, device_type, client_id;
     std::string CFO_topic, flag_topic_leaf, cal_scale_topic, full_scale_topic, ltoc_topic, ctol_topic, tx_gain_topic, rx_gain_topic, mctest_topic;
-    size_t max_total_round = 100, max_num_tx_rounds = 5, max_mctest_rounds = 100;
+    size_t max_total_round = 20, max_mctest_rounds = 100, reps_total = 20;
     float max_tx_gain = 86.0, max_rx_gain = 50.0;
 
     bool recv_success = false;
     size_t total_reps_cal = 2, current_reps_cal = 0;
-    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.5, min_sigpow_mul = 100, proximity_tol = 5e-2;
+    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.8, min_sigpow_mul = 100, proximity_tol = 5e-2;
     bool recv_flag = false, retx_flag = false, end_flag = false;
+
+    float min_e2e_pow = 1.0;
+
+    std::vector<float> leaf_by_cent_ratios;
 };
 
 #endif // CALIBRATION
-
-// get gains of cent dev
-// std::atomic<bool> got_data(false);
-// std::function<void(const std::string &)> cent_data_parser = [&cent_tx_gain, &cent_rx_gain, &got_data](const std::string &payload)
-// {
-//     // Parse the JSON payload
-//     json json_data = json::parse(payload);
-//     cent_tx_gain = json_data["tx-gain"];
-//     cent_rx_gain = json_data["rx-gain"];
-//     got_data.store(true);
-// };
-// std::string cent_data_topic = "usrp/init_data/" + cent_id;
-// mqttClient.setCallback(cent_data_topic, cent_data_parser);
-// size_t max_timer = 10, timer = 0;
-// while (got_data.load(std::memory_order::relaxed) == false && timer++ < max_timer)
-//     std::this_thread::sleep_for(std::chrono::milliseconds(20));

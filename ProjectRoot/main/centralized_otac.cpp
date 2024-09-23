@@ -222,7 +222,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         if (msg == "start")
         {
             LOG_INFO("Starting Calibration routine...");
-            calib_class_obj.run();
+            calib_class_obj.run_proto2();
         }
         else if (msg == "stop")
         {
