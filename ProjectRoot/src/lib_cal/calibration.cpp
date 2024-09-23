@@ -558,11 +558,17 @@ void Calibration::consumer_leaf_proto1()
     }
 }
 
-void Calibration::consumer_leaf_proto2()
+void Calibration::consumer_cent_proto1()
 {
+    while (not signal_stop_called)
+    {
+        csd_obj->consume(csd_success_flag, signal_stop_called);
+        if (csd_success_flag)
+            LOG_INFO("***Successful CSD!");
+    }
 }
 
-void Calibration::consumer_cent_proto1()
+void Calibration::consumer_leaf_proto2()
 {
     while (not signal_stop_called)
     {
@@ -574,6 +580,12 @@ void Calibration::consumer_cent_proto1()
 
 void Calibration::consumer_cent_proto2()
 {
+    while (not signal_stop_called)
+    {
+        csd_obj->consume_otac(csd_success_flag, signal_stop_called);
+        if (csd_success_flag)
+            LOG_INFO("***Successful CSD!");
+    }
 }
 
 bool Calibration::transmission_ref(const float &scale, const uhd::time_spec_t &tx_timer)
