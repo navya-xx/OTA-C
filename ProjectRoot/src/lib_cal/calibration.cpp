@@ -448,6 +448,26 @@ void Calibration::producer_cent_proto1()
     calibration_ends = true;
 }
 
+void Calibration::consumer_leaf_proto1()
+{
+    while (not signal_stop_called)
+    {
+        csd_obj->consume(csd_success_flag, signal_stop_called);
+        if (csd_success_flag)
+            LOG_INFO("***Successful CSD!");
+    }
+}
+
+void Calibration::consumer_cent_proto1()
+{
+    while (not signal_stop_called)
+    {
+        csd_obj->consume(csd_success_flag, signal_stop_called);
+        if (csd_success_flag)
+            LOG_INFO("***Successful CSD!");
+    }
+}
+
 void Calibration::producer_leaf_proto2()
 {
     MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
@@ -546,26 +566,6 @@ void Calibration::producer_cent_proto2()
     }
 
     calibration_ends = true;
-}
-
-void Calibration::consumer_leaf_proto1()
-{
-    while (not signal_stop_called)
-    {
-        csd_obj->consume(csd_success_flag, signal_stop_called);
-        if (csd_success_flag)
-            LOG_INFO("***Successful CSD!");
-    }
-}
-
-void Calibration::consumer_cent_proto1()
-{
-    while (not signal_stop_called)
-    {
-        csd_obj->consume(csd_success_flag, signal_stop_called);
-        if (csd_success_flag)
-            LOG_INFO("***Successful CSD!");
-    }
 }
 
 void Calibration::consumer_leaf_proto2()
