@@ -571,7 +571,7 @@ void Calibration::producer_cent_proto2()
                 mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc), false);
             }
             else
-                LOG_INFO("Reception failed!");
+                LOG_WARN("Reception failed!");
         }
     }
 

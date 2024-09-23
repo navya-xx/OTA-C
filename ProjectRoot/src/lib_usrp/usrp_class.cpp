@@ -799,7 +799,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
             std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
             save_stream_to_file(filename, rx_save_stream, forward);
         }
-        else if (req_num_rx_samps > 0) // fixed number of samples -- save in a separate vector to return
+        else if (req_num_rx_samps > 0 || duration > 0) // fixed number of samples -- save in a separate vector to return
             rx_samples.insert(rx_samples.end(), buff.begin(), buff.begin() + num_curr_rx_samps);
 
         if (callback_success)
@@ -826,13 +826,13 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     if (req_num_rx_samps > 0 and num_acc_samps < req_num_rx_samps)
         LOG_WARN("Not all packets received!");
 
-    if (req_num_rx_samps > 0 and is_save_to_file) // save all received samples if a total number of desired rx samples given
+    if ((req_num_rx_samps > 0 or duration > 0) and is_save_to_file) // save all received samples if a total number of desired rx samples given
         save_stream_to_file(filename, rx_save_stream, rx_samples);
 
     if (rx_save_stream.is_open())
         rx_save_stream.close();
 
-    if (success and req_num_rx_samps > 0)
+    if (success and (req_num_rx_samps > 0 or duration > 0))
         return rx_samples;
     else // do not return anything if total num rx samps not given
         return std::vector<std::complex<float>>{};
