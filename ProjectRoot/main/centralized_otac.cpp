@@ -1,9 +1,3 @@
-/** Standalone code to run centralized OTAC program at each node.
- *
- * Device type and serial are passed as arguments to the program.
- * Program uses MQTT to receive commands and send data to a controller (web application).
- */
-
 #include "pch.hpp"
 
 #include "usrp_class.hpp"

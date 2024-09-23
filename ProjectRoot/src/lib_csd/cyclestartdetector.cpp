@@ -426,7 +426,7 @@ void CycleStartDetector::otac_detector()
     float max_ms_value = 0.0;
     // compute mean-square over sliding window of signal in the buffer
     // Loop through the signal with a sliding window
-    for (size_t i = 0; i < otac_buffer_len; ++i)
+    for (size_t i = 0; i < otac_buffer_len - (otac_window_len - 1); ++i)
     {
         // For each window, compute the sum of squared magnitudes
         float sum = 0.0f;

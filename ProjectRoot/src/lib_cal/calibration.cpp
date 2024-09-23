@@ -541,12 +541,15 @@ void Calibration::producer_cent_proto2()
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
+        if (retx_flag)
+            retx_flag = false;
+
         // Transmit REF
         uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-2);
         bool transmit_success = transmission_ref(1.0, tx_timer);
         if (transmit_success)
         {
-            uhd::time_spec_t otac_timer;
+            uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t(5e-4);
             bool rx_success = reception_otac(ltoc, otac_timer);
             if (rx_success)
             {
@@ -664,13 +667,13 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
     {
         csd_obj->produce(samples, sample_size, sample_time, signal_stop_called);
 
-        if (csd_success_flag || retx_flag || end_flag || usrp_obj->usrp->get_time_now() - current_ursp_time > 1.0)
+        if (csd_success_flag || retx_flag || end_flag || usrp_obj->usrp->get_time_now() - current_ursp_time > 10.0)
             return true;
         else
             return false;
     };
 
-    usrp_obj->reception(signal_stop_called, 0, 0, uhd::time_spec_t(0.0), false, producer_wrapper);
+    usrp_obj->reception(signal_stop_called, 0, 0, tx_timer, false, producer_wrapper);
 
     if (!csd_success_flag)
     {
