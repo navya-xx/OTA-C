@@ -160,8 +160,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
-    if (device_type == "leaf")
-        usrp_obj.use_calib_gains = false;
+    // if (device_type == "leaf")
+    //     usrp_obj.use_calib_gains = true;
 
     // external reference
     usrp_obj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
