@@ -291,8 +291,9 @@ bool Calibration::check_ctol()
     {
         // reduce the rx gain of leaf
         mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false); // restart
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / upper_bound, true);
-        float impl_rx_gain = std::ceil(new_rx_gain);
+        float impl_rx_gain = std::floor(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         float noise_power = usrp_obj->estimate_background_noise_power();
@@ -303,6 +304,7 @@ bool Calibration::check_ctol()
     {
         // increase the rx gain of leaf
         mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false); // restart
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / lower_bound, true);
         float impl_rx_gain = std::ceil(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
@@ -727,12 +729,18 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
         float max_val = 0.0;
         for (size_t i = 0; i < req_num_samps - otac_wf_len; ++i)
         {
-            float win_pow = calc_signal_power(otac_rx_samps, i, otac_wf_len, 10 * usrp_noise_power);
+            float win_pow = calc_signal_power(otac_rx_samps, i, otac_wf_len, 100 * usrp_noise_power);
             if (win_pow > max_val)
                 max_val = win_pow;
         }
-        rx_sig_pow = max_val;
-        return true;
+
+        if (max_val < 100 * usrp_noise_power)
+            return false;
+        else
+        {
+            rx_sig_pow = max_val;
+            return true;
+        }
     }
     else
         return false;
