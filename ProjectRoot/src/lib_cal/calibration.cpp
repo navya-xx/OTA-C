@@ -283,12 +283,14 @@ void Calibration::callback_detect_flags(const std::string &payload)
 
 bool Calibration::check_ctol()
 {
-    float upper_bound = 100 * min_e2e_pow;
+    float upper_bound = 1000 * min_e2e_pow;
     float lower_bound = min_e2e_pow;
+    MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
     LOG_DEBUG_FMT("CTOL = %1%, Allowed bounds = (%2%, %3%)", ctol, lower_bound, upper_bound);
     if (ctol > upper_bound)
     {
         // reduce the rx gain of leaf
+        mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false); // restart
         float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / upper_bound, true);
         float impl_rx_gain = std::ceil(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
@@ -300,6 +302,7 @@ bool Calibration::check_ctol()
     else if (ctol < lower_bound)
     {
         // increase the rx gain of leaf
+        mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false); // restart
         float new_rx_gain = usrp_obj->rx_gain - toDecibel(ctol / lower_bound, true);
         float impl_rx_gain = std::ceil(new_rx_gain);
         usrp_obj->set_rx_gain(impl_rx_gain);
@@ -530,7 +533,6 @@ void Calibration::producer_leaf_proto2()
             if (not check_ctol())
             {
                 LOG_WARN("Repeat ref reception with new Rx gain!");
-                mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("retx"), false); // restart
                 continue;
             }
 
@@ -591,7 +593,7 @@ void Calibration::producer_cent_proto2()
     {
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         if (retx_flag)
             retx_flag = false;
