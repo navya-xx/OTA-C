@@ -470,6 +470,7 @@ void Calibration::consumer_cent_proto1()
 
 void Calibration::producer_leaf_proto2()
 {
+    LOG_INFO("Implementing Calibration Protocol #2");
     MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
 
     size_t round = 1;
