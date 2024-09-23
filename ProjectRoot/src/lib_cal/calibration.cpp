@@ -568,14 +568,14 @@ void Calibration::producer_cent_proto2()
             {
                 float txrx_gap = (otac_timer - tx_timer).get_real_secs() * 1e3;
                 LOG_INFO_FMT("OTAC signal reception gap = %1% millisecs", txrx_gap);
-                LOG_INFO_FMT("OTAC ltoc = %1%", ltoc);
+                LOG_INFO_FMT("OTAC ltoc = %1%", ltoc / min_e2e_pow);
                 float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");
                 if (txrx_gap > exp_wait_time + 200)
                 {
                     LOG_WARN("OTAC signal reception delay is too big -> Reject this data.");
                     continue;
                 }
-                mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc), false);
+                mqttClient.publish(ltoc_topic, mqttClient.timestamp_float_data(ltoc / min_e2e_pow), false);
             }
             else
                 LOG_WARN("Reception failed!");
@@ -699,8 +699,10 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 
 bool Calibration::calibrate_gains(MQTTClient &mqttClient)
 {
-    float new_tx_gain = toDecibel(ctol / (calib_sig_scale * calib_sig_scale), true) - toDecibel(ltoc / (calib_sig_scale * calib_sig_scale), true) + usrp_obj->tx_gain;
+    // float new_tx_gain = toDecibel(ctol / (calib_sig_scale * calib_sig_scale), true) - toDecibel(ltoc / (calib_sig_scale * calib_sig_scale), true) + usrp_obj->tx_gain;
+    float new_tx_gain = usrp_obj->tx_gain - toDecibel(ltoc / (calib_sig_scale * calib_sig_scale), true);
     float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2; // tx gains are implemented in 0.5dB steps
+    LOG_DEBUG_FMT("Requested TX gain = %1% dB", impl_tx_gain);
     float remainder_gain = 0.0;
     // If TX gain has reached maximum, start by increasing RX gain of leaf
     if (impl_tx_gain > max_tx_gain)
