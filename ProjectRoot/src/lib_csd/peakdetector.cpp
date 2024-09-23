@@ -103,7 +103,7 @@ void PeakDetectionClass::reset()
     prev_peak_val = 0;
     curr_pnr_threshold = pnr_threshold;
     detection_flag = false;
-    noise_ampl = init_noise_ampl;
+    // noise_ampl = init_noise_ampl;
     noise_counter = 0;
 
     // reset pointers

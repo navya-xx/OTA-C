@@ -15,6 +15,8 @@ class CycleStartDetector
 public:
     CycleStartDetector(ConfigParser &parser, size_t &capacity, const uhd::time_spec_t &rx_sample_duration, PeakDetectionClass &peak_det_obj);
 
+    PeakDetectionClass peak_det_obj_ref;
+
     void produce(const std::vector<std::complex<float>> &samples, const size_t &samples_size, const uhd::time_spec_t &time, bool &stop_signal_called);
 
     void consume(std::atomic<bool> &csd_success_signal, bool &stop_signal_called);
@@ -49,7 +51,6 @@ private:
 
     ConfigParser parser;
     uhd::time_spec_t rx_sample_duration;
-    PeakDetectionClass peak_det_obj_ref;
 
     void reset();
     float est_e2e_ref_sig_amp();

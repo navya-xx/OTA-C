@@ -291,6 +291,7 @@ bool Calibration::check_ctol()
         usrp_obj->set_rx_gain(impl_rx_gain);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         float noise_power = usrp_obj->estimate_background_noise_power();
+        csd_obj->peak_det_obj_ref.noise_ampl = std::sqrt(noise_power);
         return false;
     }
     else if (ctol < min_e2e_pow)
@@ -301,6 +302,7 @@ bool Calibration::check_ctol()
         usrp_obj->set_rx_gain(impl_rx_gain);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         float noise_power = usrp_obj->estimate_background_noise_power();
+        csd_obj->peak_det_obj_ref.noise_ampl = std::sqrt(noise_power);
         return false;
     }
     else
