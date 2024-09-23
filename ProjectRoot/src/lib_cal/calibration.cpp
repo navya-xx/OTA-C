@@ -555,7 +555,8 @@ void Calibration::producer_cent_proto2()
         bool transmit_success = transmission_ref(1.0, tx_timer);
         if (transmit_success)
         {
-            uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t(5e-4);
+            double wait_duration = (ref_waveform.size() / usrp_obj->tx_rate) + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
+            uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t(wait_duration);
             bool rx_success = reception_otac(ltoc, otac_timer);
             if (rx_success)
             {
@@ -669,12 +670,14 @@ bool Calibration::reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 {
 
-    auto otac_rx_samps = usrp_obj->reception(signal_stop_called, 0, 1.0, tx_timer, true);
+    size_t otac_wf_len = parser.getValue_int("test-signal-len");
+    auto otac_rx_samps = usrp_obj->reception(signal_stop_called, otac_wf_len, 0.0, tx_timer, true);
 
-    rx_sig_pow = 0.0;
-
-    if (otac_rx_samps.size() >= otac_waveform.size())
+    if (otac_rx_samps.size() == otac_waveform.size())
+    {
+        rx_sig_pow = calc_signal_power(otac_rx_samps);
         return true;
+    }
     else
         return false;
 }
