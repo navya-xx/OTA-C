@@ -144,20 +144,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     if (val != "")
         parser.set_value("cfo", val, "float", "CFO-value from calibrated data");
 
-    // get last tx-gain
-    val = "";
-    std::string topic_tx_gain = mqttClient.topics->getValue_str("tx-gain") + device_id;
-    mqttClient.temporary_listen_for_last_value(val, topic_tx_gain, 15, 20);
-    if (val != "")
-        parser.set_value("tx-gain", val, "float", "Tx-value from calibrated data");
-
-    // get last rx-gain
-    val = "";
-    std::string topic_rx_gain = mqttClient.topics->getValue_str("rx-gain") + device_id;
-    mqttClient.temporary_listen_for_last_value(val, topic_rx_gain, 15, 20);
-    if (val != "")
-        parser.set_value("rx-gain", val, "float", "Rx-value from calibrated data");
-
     /*------- USRP setup --------------*/
     USRP_class usrp_obj(parser);
     // if (device_type == "leaf")
