@@ -21,8 +21,8 @@ size_t rational_number_approximation(double a, double e = 1e-10, size_t max_iter
 float generateRandomFloat(float a, float b);
 std::string floatToStringWithPrecision(float value, int precision);
 float findMaxAbsValue(const std::vector<std::complex<float>> &vec);
-float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0, const float &min_ampl = 0.0);
-float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0, const float &min_ampl = 0.0);
+float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0, const float &min_power = 0.0);
+float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index = 0, const size_t &length = 0, const float &min_power = 0.0);
 void update_device_config_cfo(const std::string &serial, const float &cfo);
 float obtain_last_cfo(const std::string &serial);
 std::string get_home_dir();

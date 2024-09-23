@@ -225,7 +225,7 @@ float findMaxAbsValue(const std::vector<std::complex<float>> &vec)
     return max_abs_value;
 }
 
-float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_ampl)
+float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_power)
 {
     size_t L;
     if (length == 0)
@@ -233,15 +233,15 @@ float calc_signal_power(const std::vector<std::complex<float>> &signal, const si
     else
         L = length;
 
-    auto sig_pow = meanSquareValue(signal, start_index, start_index + L, min_ampl * min_ampl);
+    auto sig_pow = meanSquareValue(signal, start_index, start_index + L, min_power);
 
     return sig_pow;
 }
 
-float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_ampl)
+float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_power)
 {
     std::vector<std::complex<float>> vector(signal.begin(), signal.end());
-    return calc_signal_power(vector, start_index, length, min_ampl);
+    return calc_signal_power(vector, start_index, length, min_power);
 }
 
 float meanSquareValue(const std::vector<std::complex<float>> &vec, const size_t &start_index, const size_t &end_index, const float lower_bound)

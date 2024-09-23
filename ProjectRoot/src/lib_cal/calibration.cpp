@@ -86,7 +86,7 @@ void Calibration::generate_waveform()
     ref_waveform = wf_gen.generate_waveform();
 
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, 0, 1, calib_sig_scale, 123);
+    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, otac_wf_len, 1, calib_sig_scale, 123);
     otac_waveform = wf_gen.generate_waveform();
 }
 
@@ -675,15 +675,14 @@ bool Calibration::reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 
 bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 {
-
+    float usrp_noise_power = usrp_obj->init_noise_ampl * usrp_obj->init_noise_ampl;
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    uhd::time_spec_t my_timer = tx_timer - uhd::time_spec_t(5000 / (usrp_obj->tx_rate));
-    size_t req_num_samps = otac_wf_len + 10000;
+    size_t req_num_samps = 5 * otac_wf_len;
     auto otac_rx_samps = usrp_obj->reception(signal_stop_called, req_num_samps, 0.0, tx_timer, true);
 
     if (otac_rx_samps.size() == req_num_samps)
     {
-        rx_sig_pow = calc_signal_power(otac_rx_samps);
+        rx_sig_pow = calc_signal_power(otac_rx_samps, 0, 0, 10 * usrp_noise_power);
         return true;
     }
     else
