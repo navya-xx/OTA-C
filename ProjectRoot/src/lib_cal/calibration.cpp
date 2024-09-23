@@ -541,6 +541,13 @@ void Calibration::producer_cent_proto2()
     // reception/producer params
     size_t round = 0;
 
+    size_t sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
+    size_t ref_pad_len = parser.getValue_int("Ref-padding-mul");
+    size_t N_zfc = parser.getValue_int("Ref-N-zfc");
+    size_t R_zfc = parser.getValue_int("Ref-R-zfc");
+    double peak_to_first_sample_duration = (N_zfc * ((R_zfc - sync_with_peak_from_last) + ref_pad_len)) / usrp_obj->tx_rate;
+    double wait_duration = peak_to_first_sample_duration + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
+
     while (not signal_stop_called && not end_flag && round++ < max_total_round)
     {
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
@@ -551,11 +558,10 @@ void Calibration::producer_cent_proto2()
             retx_flag = false;
 
         // Transmit REF
-        uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-2);
+        uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);
         bool transmit_success = transmission_ref(1.0, tx_timer);
         if (transmit_success)
         {
-            double wait_duration = (ref_waveform.size() / usrp_obj->tx_rate) + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
             uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t(wait_duration);
             bool rx_success = reception_otac(ltoc, otac_timer);
             if (rx_success)
@@ -671,9 +677,11 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 {
 
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    auto otac_rx_samps = usrp_obj->reception(signal_stop_called, otac_wf_len, 0.0, tx_timer, true);
+    uhd::time_spec_t my_timer = tx_timer - uhd::time_spec_t(5000 / (usrp_obj->tx_rate));
+    size_t req_num_samps = otac_wf_len + 10000;
+    auto otac_rx_samps = usrp_obj->reception(signal_stop_called, req_num_samps, 0.0, tx_timer, true);
 
-    if (otac_rx_samps.size() == otac_waveform.size())
+    if (otac_rx_samps.size() == req_num_samps)
     {
         rx_sig_pow = calc_signal_power(otac_rx_samps);
         return true;

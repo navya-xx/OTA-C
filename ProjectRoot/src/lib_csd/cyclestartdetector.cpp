@@ -366,9 +366,8 @@ float CycleStartDetector::est_e2e_ref_sig_amp()
 
 uhd::time_spec_t CycleStartDetector::get_wait_time()
 {
-    size_t sycn_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
-    size_t ref_pad_len = parser.getValue_int("Ref-padding-mul");
-    double peak_to_last_sample_duration = rx_sample_duration.get_real_secs() * (N_zfc * (sycn_with_peak_from_last + ref_pad_len));
+    size_t sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
+    double peak_to_last_sample_duration = rx_sample_duration.get_real_secs() * (N_zfc * sync_with_peak_from_last);
     auto abs_peak_timer = peak_det_obj_ref.get_sync_time();
     double wait_timer = peak_to_last_sample_duration + (tx_wait_microsec / 1e6);
     return abs_peak_timer + uhd::time_spec_t(wait_timer);
