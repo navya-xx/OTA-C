@@ -541,11 +541,9 @@ void Calibration::producer_cent_proto2()
     // reception/producer params
     size_t round = 0;
 
-    size_t sync_with_peak_from_last = parser.getValue_int("sync-with-peak-from-last");
     size_t ref_pad_len = parser.getValue_int("Ref-padding-mul");
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
-    size_t R_zfc = parser.getValue_int("Ref-R-zfc");
-    double peak_to_first_sample_duration = (N_zfc * ((R_zfc - sync_with_peak_from_last) + ref_pad_len)) / usrp_obj->tx_rate;
+    double peak_to_first_sample_duration = (N_zfc * ref_pad_len) / usrp_obj->rx_rate;
     double wait_duration = peak_to_first_sample_duration + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
 
     while (not signal_stop_called && not end_flag && round++ < max_total_round)

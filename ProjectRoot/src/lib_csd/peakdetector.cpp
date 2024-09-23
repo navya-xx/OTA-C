@@ -273,9 +273,9 @@ float PeakDetectionClass::avg_of_peak_vals()
     return e2e_est_ref_sig_amp;
 }
 
-uhd::time_spec_t PeakDetectionClass::get_sync_time()
+uhd::time_spec_t PeakDetectionClass::get_ref_start_time()
 {
-    return peak_times[peaks_count - sync_with_peak_from_last];
+    return peak_times[0];
 }
 
 float PeakDetectionClass::estimate_phase_drift()
@@ -327,7 +327,7 @@ int PeakDetectionClass::updatePeaksAfterCFO(const std::vector<float> &abs_corr_v
         peak_indices[i] = i * ref_seq_len;
     }
 
-        // int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);
+    // int ref_start_index = final_fpi - std::floor(ref_seq_len / 2);
 
     return final_fpi;
 }

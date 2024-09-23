@@ -62,7 +62,7 @@ public:
     void updateNoiseLevel(const float &corr_val, const size_t &num_samps);
 
     float avg_of_peak_vals();
-    uhd::time_spec_t get_sync_time();
+    uhd::time_spec_t get_ref_start_time();
 
     float estimate_phase_drift();
     int updatePeaksAfterCFO(const std::vector<float> &abs_corr_vals, const std::deque<uhd::time_spec_t> &new_timer);
