@@ -80,13 +80,6 @@ CycleStartDetector::CycleStartDetector(
     {
         val = std::conj(val);
     }
-
-    // OTAC
-    otac_window_len = parser.getValue_int("test-signal-len");
-    otac_buffer_len = 3 * otac_window_len - 1;
-    otac_buffer.resize(otac_buffer_len);
-    otac_timer.resize(otac_buffer_len);
-    otac_meansqr_threshold = parser.getValue_float("otac-threshold");
 };
 
 void CycleStartDetector::reset()
@@ -100,17 +93,6 @@ void CycleStartDetector::reset()
     saved_ref.resize(save_ref_len);
     saved_ref_timer.clear();
     saved_ref_timer.resize(save_ref_len);
-}
-
-void CycleStartDetector::reset_otac()
-{
-    otac_detection_flag = false;
-    otac_success_flag = false;
-    otac_high_counter = 0;
-    otac_buffer.clear();
-    otac_buffer.resize(otac_buffer_len);
-    otac_timer.clear();
-    otac_timer.resize(otac_buffer_len);
 }
 
 void CycleStartDetector::post_peak_det()
@@ -130,10 +112,6 @@ void CycleStartDetector::post_peak_det()
 
     // get wait time before transmission
     csd_wait_timer = get_wait_time();
-}
-
-void CycleStartDetector::post_otac_det()
-{
 }
 
 void CycleStartDetector::update_peaks_info(const float &new_cfo)
@@ -281,41 +259,6 @@ void CycleStartDetector::consume(std::atomic<bool> &csd_success_signal, bool &st
     }
 }
 
-void CycleStartDetector::consume_otac(std::atomic<bool> &csd_success_signal, bool &stop_signal_called)
-{
-    if (otac_success_flag)
-    {
-        post_otac_det();
-
-        // reset corr and peak det objects
-        reset_otac();
-
-        csd_success_signal = true;
-    }
-    else
-    {
-        for (int i = 0; i < otac_buffer_len - (otac_window_len - 1); ++i)
-        {
-            std::complex<float> sample;
-            while (!synced_buffer.pop(sample, otac_timer[i]))
-            {
-                if (stop_signal_called)
-                    break;
-                // LOG_DEBUG("Yield Consumer");
-                std::this_thread::yield();
-            }
-
-            // insert data into deque buffer
-            otac_buffer.pop_front();
-            otac_buffer.push_back(sample);
-        }
-
-        otac_detector();
-
-        std::cout << "\r Num samples without successful otac signal = " << num_samples_without_peak << std::flush;
-    }
-}
-
 std::vector<std::complex<float>> CycleStartDetector::fft_cross_correlate(const std::deque<std::complex<float>> &samples)
 {
     std::vector<std::complex<float>> padded_samples, fft_samples, product(fft_L), ifft_result;
@@ -413,64 +356,6 @@ void CycleStartDetector::peak_detector(const std::vector<std::complex<float>> &c
     // udpate noise level
     if ((not found_peak) and update_noise_level and (not peak_det_obj_ref.detection_flag))
         peak_det_obj_ref.updateNoiseLevel(sum_ampl / corr_seq_len, corr_seq_len);
-}
-
-void CycleStartDetector::otac_detector()
-{
-    /** Detection procedure is described as follows
-     * 1. Loop over the otac_buffer with sliding window
-     * 2. If meanSquare norm over the window is greater than threshold, set otac_detection_flag to true, else set otac_high_counter to zero and continue.
-     * 3. If otac_detection_flag is true, check if current value is greater than max_ms_value. Update max_ms_value. Increment conuter otac_high_counter.
-     * 4. If otac_high_counter > 2*otac_window_len, break and return max_ms_value.
-     */
-    float max_ms_value = 0.0;
-    // compute mean-square over sliding window of signal in the buffer
-    // Loop through the signal with a sliding window
-    for (size_t i = 0; i < otac_buffer_len - (otac_window_len - 1); ++i)
-    {
-        // For each window, compute the sum of squared magnitudes
-        float sum = 0.0f;
-        for (size_t j = 0; j < otac_window_len; ++j)
-        {
-            sum += std::norm(otac_buffer[i + j]);
-        }
-        float meanSquare = sum / otac_window_len;
-
-        // check if meanSquare value is above threshold
-        if (meanSquare > otac_meansqr_threshold)
-        {
-            otac_detection_flag = true;
-            num_samples_without_peak = 0;
-            if (max_ms_value < meanSquare)
-            {
-                max_ms_value = meanSquare;
-                otac_max_samp_index = i;
-            }
-            if (otac_high_counter > 2 * otac_window_len)
-            {
-                otac_success_flag = true;
-                break;
-            }
-            else
-                otac_high_counter++;
-        }
-        else
-        {
-            otac_detection_flag = false;
-            otac_high_counter = 0;
-            max_ms_value = 0.0;
-            ++num_samples_without_peak;
-            continue;
-        }
-    }
-    if (otac_success_flag)
-    {
-        otac_max_wms_value = max_ms_value;
-        // estimate timer
-        double otac_signal_duration = rx_sample_duration.get_real_secs() * otac_window_len;
-        double wait_timer = otac_signal_duration + (tx_wait_microsec / 1e6);
-        otac_sig_start_timer = uhd::time_spec_t(wait_timer) + otac_timer[otac_max_samp_index];
-    }
 }
 
 float CycleStartDetector::est_e2e_ref_sig_amp()

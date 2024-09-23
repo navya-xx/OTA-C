@@ -166,7 +166,7 @@ void Calibration::run_proto2()
     else if (device_type == "cent")
     {
         producer_thread = boost::thread(&Calibration::producer_cent_proto2, this);
-        consumer_thread = boost::thread(&Calibration::consumer_cent_proto2, this);
+        // consumer_thread = boost::thread(&Calibration::consumer_cent_proto2, this);
     }
 };
 
@@ -489,10 +489,16 @@ void Calibration::producer_leaf_proto2()
         }
         else
         {
-            LOG_INFO_FMT("Reception successful with ctol = %1% and timer = %2% secs", ctol, tx_timer.get_real_secs());
+            csd_success_flag = false;
+            if (ctol > 0.0)
+                LOG_INFO_FMT("Reception successful with ctol = %1% and timer = %2% secs", ctol, tx_timer.get_real_secs());
+            else
+                continue;
+
             // transmit otac signal
             recv_success = false;
             float sig_scale = std::min<float>(full_scale / std::sqrt(ctol / min_e2e_pow), 1.0);
+            LOG_DEBUG_FMT("Transmitting OTAC signal with scale %1%", sig_scale);
             bool tx_success = transmission_otac(sig_scale, tx_timer);
             if (not tx_success)
             {
@@ -503,8 +509,8 @@ void Calibration::producer_leaf_proto2()
             else
             {
                 size_t wait_counter = 0;
-                while (not recv_success && wait_counter++ < 20)
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                while (not recv_success && wait_counter++ < 200)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
                 if (recv_success)
                 {
@@ -586,7 +592,7 @@ void Calibration::consumer_cent_proto2()
 {
     while (not signal_stop_called)
     {
-        csd_obj->consume_otac(csd_success_flag, signal_stop_called);
+        csd_obj->consume(csd_success_flag, signal_stop_called);
         if (csd_success_flag)
             LOG_INFO("***Successful CSD!");
     }
@@ -662,29 +668,15 @@ bool Calibration::reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 
 bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 {
-    uhd::time_spec_t current_ursp_time = usrp_obj->usrp->get_time_now();
-    auto producer_wrapper = [this, &current_ursp_time](const std::vector<std::complex<float>> &samples, const size_t &sample_size, const uhd::time_spec_t &sample_time)
-    {
-        csd_obj->produce(samples, sample_size, sample_time, signal_stop_called);
 
-        if (csd_success_flag || retx_flag || end_flag || usrp_obj->usrp->get_time_now() - current_ursp_time > 10.0)
-            return true;
-        else
-            return false;
-    };
+    auto otac_rx_samps = usrp_obj->reception(signal_stop_called, 0, 1.0, tx_timer, true);
 
-    usrp_obj->reception(signal_stop_called, 0, 0, tx_timer, false, producer_wrapper);
+    rx_sig_pow = 0.0;
 
-    if (!csd_success_flag)
-    {
-        LOG_WARN("Reception ended without CSD success! Skip this round and transmit again.");
+    if (otac_rx_samps.size() >= otac_waveform.size())
+        return true;
+    else
         return false;
-    }
-
-    rx_sig_pow = csd_obj->otac_max_wms_value;
-    tx_timer = csd_obj->otac_sig_start_timer;
-
-    return true;
 }
 
 bool Calibration::calibrate_gains(MQTTClient &mqttClient)
