@@ -682,7 +682,15 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 
     if (otac_rx_samps.size() == req_num_samps)
     {
-        rx_sig_pow = calc_signal_power(otac_rx_samps, 0, 0, 10 * usrp_noise_power);
+        // compute signal power over window
+        float max_val = 0.0;
+        for (size_t i = 0; i < req_num_samps - otac_wf_len; ++i)
+        {
+            float win_pow = calc_signal_power(otac_rx_samps, i, otac_wf_len, 10 * usrp_noise_power);
+            if (win_pow > max_val)
+                max_val = win_pow;
+        }
+        rx_sig_pow = max_val;
         return true;
     }
     else
