@@ -163,8 +163,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     /*-------- Subscribe to Control topics ---------*/
     // Calibration
-    bool calibration_success = false;
-    bool program_ends = true;
+    std::atomic_bool program_ends(true);
 
     auto control_calibration_callback = [usrp_obj, &parser, &program_ends, &device_type](const std::string &payload)
     {
