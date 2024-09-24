@@ -575,6 +575,8 @@ void Calibration::producer_leaf_proto2()
                 }
             }
         }
+
+        proximity_tol = proximity_tol * std::max(1.0, std::ceil(double(round / 3)));
     }
 
     calibration_ends = true;

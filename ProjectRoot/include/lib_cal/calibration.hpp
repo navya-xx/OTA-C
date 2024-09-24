@@ -91,7 +91,7 @@ private:
 
     bool recv_success = false;
     size_t total_reps_cal = 2, current_reps_cal = 0;
-    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.7, min_sigpow_mul = 100, proximity_tol = 5e-2;
+    float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.7, min_sigpow_mul = 100, proximity_tol = 0.01;
     bool recv_flag = false, retx_flag = false, end_flag = false;
 
     float min_e2e_pow = 1.0, max_e2e_pow = 1.0;
