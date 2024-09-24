@@ -683,7 +683,7 @@ bool Calibration::transmission_otac(const float &scale, const uhd::time_spec_t &
     for (int i = 0; i < tx_waveform.size(); ++i)
         tx_waveform[i] = my_scale * otac_waveform[i];
 
-    if (usrp_obj->single_burst_transmission(tx_waveform, tx_timer, signal_stop_called, true))
+    if (usrp_obj->transmission(tx_waveform, tx_timer, signal_stop_called, true))
         return true;
     else
         return false;
