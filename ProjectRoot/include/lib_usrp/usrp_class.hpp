@@ -46,6 +46,8 @@ public:
 
     bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
 
+    bool single_burst_transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
+
     void continuous_transmission(const std::vector<std::complex<float>> &buff, std::atomic_bool &stop_signal_called);
 
     std::vector<std::complex<float>> reception(

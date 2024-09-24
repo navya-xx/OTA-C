@@ -687,6 +687,82 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
+bool USRP_class::single_burst_transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
+{
+    bool success = false;
+    size_t total_num_samps = buff.size();
+
+    // setup metadata for the first packet
+    uhd::tx_metadata_t md;
+    md.start_of_burst = true;
+    md.end_of_burst = false;
+
+    auto usrp_now = usrp->get_time_now();
+    double time_diff = (tx_time - usrp_now).get_real_secs();
+    LOG_DEBUG_FMT("TX with delay = %.4f microsecs.", (time_diff * 1e6));
+    if (time_diff <= 0.0)
+    {
+        LOG_DEBUG_FMT("Transmitting %d samples WITHOUT delay.", total_num_samps);
+        md.has_time_spec = false;
+    }
+    else
+    {
+        LOG_DEBUG_FMT("Transmitting %d samples WITH delay.", total_num_samps);
+        md.has_time_spec = true;
+        md.time_spec = tx_time;
+    }
+
+    const double burst_pkt_time = std::max<double>(0.1, (1.5 * total_num_samps / tx_rate));
+    double tx_delay, timeout;
+
+    timeout = burst_pkt_time + time_diff;
+    size_t num_tx_samps_sent_now = tx_streamer->send(buff, total_num_samps, md, timeout);
+
+    if (num_tx_samps_sent_now < total_num_samps)
+        return false;
+
+    // send a mini EOB packet
+    md.end_of_burst = true;
+    tx_streamer->send("", 0, md);
+
+    if (ask_ack)
+    {
+        LOG_INTO_BUFFER("Waiting for async burst ACK... ");
+
+        uhd::async_metadata_t async_md;
+        bool got_async_burst_ack = false;
+        if (time_diff >= 0.0)
+            timeout = burst_pkt_time + time_diff;
+        else
+            timeout = burst_pkt_time;
+        // loop through all messages for the ACK packet (may have underflow messages in queue)
+        while (not got_async_burst_ack and tx_streamer->recv_async_msg(async_md, timeout))
+            got_async_burst_ack = (async_md.event_code == uhd::async_metadata_t::EVENT_CODE_BURST_ACK);
+
+        LOG_INTO_BUFFER(got_async_burst_ack ? "success" : "fail");
+
+        LOG_FLUSH_INFO();
+
+        if (not got_async_burst_ack)
+        {
+            LOG_WARN("ACK FAIL..!");
+        }
+        else
+            success = true;
+    }
+    else
+    {
+        if (num_tx_samps_sent_now == total_num_samps)
+            success = true;
+        else
+        {
+            LOG_WARN("Transmission FAILED..!");
+        }
+    }
+
+    return success;
+};
+
 void USRP_class::continuous_transmission(const std::vector<std::complex<float>> &buff, std::atomic_bool &stop_transmission)
 {
 
