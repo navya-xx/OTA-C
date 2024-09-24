@@ -217,17 +217,10 @@ bool Calibration::proximity_check(const float &val1, const float &val2)
     LOG_DEBUG_FMT("Error - tol : %1% - %2% = %3%", dist_norm, proximity_tol, dist_norm - proximity_tol);
     if (dist_norm < proximity_tol)
     {
-        if (current_reps_cal < total_reps_cal)
-        {
-            current_reps_cal++;
-            return false;
-        }
-        else
-            return true;
+        return true;
     }
     else
     {
-        current_reps_cal = 0;
         return false;
     }
 }
