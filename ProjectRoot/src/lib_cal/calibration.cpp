@@ -554,7 +554,7 @@ void Calibration::producer_leaf_proto2()
             else
             {
                 size_t wait_counter = 0;
-                while (not recv_success && wait_counter++ < 200)
+                while (not recv_success && wait_counter++ < 20)
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
                 if (recv_success)
@@ -734,13 +734,8 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
                 max_val = win_pow;
         }
 
-        if (max_val < 100 * usrp_noise_power)
-            return false;
-        else
-        {
-            rx_sig_pow = max_val;
-            return true;
-        }
+        rx_sig_pow = max_val;
+        return true;
     }
     else
         return false;
