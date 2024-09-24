@@ -94,7 +94,7 @@ private:
     float ltoc, ctol, full_scale = 1.0, calib_sig_scale = 0.7, min_sigpow_mul = 100, proximity_tol = 5e-2;
     bool recv_flag = false, retx_flag = false, end_flag = false;
 
-    float min_e2e_pow = 1.0;
+    float min_e2e_pow = 1.0, max_e2e_pow = 1.0;
 
     std::vector<float> leaf_by_cent_ratios;
 };

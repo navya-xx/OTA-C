@@ -46,6 +46,7 @@ void Calibration::initialize_csd_obj()
 {
     size_t capacity = std::pow(2.0, parser.getValue_int("capacity-pow"));
     min_e2e_pow = std::norm(parser.getValue_float("min-e2e-amp"));
+    max_e2e_pow = std::norm(parser.getValue_float("max-e2e-amp"));
     double rx_sample_duration_float = 1 / parser.getValue_float("rate");
     uhd::time_spec_t rx_sample_duration = uhd::time_spec_t(rx_sample_duration_float);
     csd_obj = std::make_unique<CycleStartDetector>(parser, capacity, rx_sample_duration, *peak_det_obj);
@@ -283,7 +284,7 @@ void Calibration::callback_detect_flags(const std::string &payload)
 
 bool Calibration::check_ctol()
 {
-    float upper_bound = 1000 * min_e2e_pow;
+    float upper_bound = max_e2e_pow;
     float lower_bound = min_e2e_pow;
     MQTTClient &mqttClient = MQTTClient::getInstance(leaf_id);
     LOG_DEBUG_FMT("CTOL = %1%, Allowed bounds = (%2%, %3%)", ctol, lower_bound, upper_bound);
