@@ -86,7 +86,7 @@ private:
 
     std::string device_id, counterpart_id, leaf_id, cent_id, device_type, client_id;
     std::string CFO_topic, flag_topic_leaf, cal_scale_topic, full_scale_topic, ltoc_topic, ctol_topic, tx_gain_topic, rx_gain_topic, mctest_topic;
-    size_t max_total_round = 100, max_mctest_rounds = 100, reps_total = 20;
+    size_t max_total_round = 30, max_mctest_rounds = 100, reps_total = 20;
     float max_tx_gain = 86.0, max_rx_gain = 50.0;
 
     bool recv_success = false;
