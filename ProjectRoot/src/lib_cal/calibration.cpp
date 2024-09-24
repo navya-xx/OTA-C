@@ -576,7 +576,10 @@ void Calibration::producer_leaf_proto2()
             }
         }
 
-        proximity_tol = proximity_tol * std::max(1.0, std::ceil(double(round / 3)));
+        if (calibration_ends)
+            break;
+
+        proximity_tol = init_proximity_tol * std::max(1.0, std::ceil(double(round / 3)));
     }
 
     calibration_ends = true;
@@ -780,6 +783,7 @@ bool Calibration::calibrate_gains(MQTTClient &mqttClient)
     if (prox_check)
     {
         on_calib_success(mqttClient);
+        calibration_ends = true;
         return true;
     }
     float new_tx_gain = usrp_obj->tx_gain - toDecibel(ltoc_sig_scale, true);
