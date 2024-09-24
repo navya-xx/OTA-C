@@ -727,12 +727,28 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 
     if (otac_rx_samps.size() == req_num_samps)
     {
+        std::vector<float> norm_samples(otac_rx_samps.size());
+        std::transform(otac_rx_samps.begin(), otac_rx_samps.end(), norm_samples.begin(), [](const std::complex<float> &c)
+                       { return std::norm(c); });
         // compute signal power over window
-        float max_val = 0.0;
+        float max_val = 0.0, temp_val = 0.0, win_pow = 0.0;
         size_t max_index = 0;
         for (size_t i = 0; i < req_num_samps - otac_wf_len; ++i)
         {
-            float win_pow = calc_signal_power(otac_rx_samps, i, otac_wf_len, 0.0);
+            if (i == 0)
+            {
+                for (size_t j = 0; j < otac_wf_len; ++j)
+                {
+                    temp_val += norm_samples[j];
+                }
+            }
+            else
+            {
+                temp_val -= norm_samples[i - 1];
+                temp_val += norm_samples[i + otac_wf_len - 1];
+            }
+
+            win_pow = temp_val / otac_wf_len;
             if (win_pow > max_val)
             {
                 max_val = win_pow;
