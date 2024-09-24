@@ -773,7 +773,14 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 bool Calibration::calibrate_gains(MQTTClient &mqttClient)
 {
     // float new_tx_gain = toDecibel(ctol / (calib_sig_scale * calib_sig_scale), true) - toDecibel(ltoc / (calib_sig_scale * calib_sig_scale), true) + usrp_obj->tx_gain;
-    float new_tx_gain = usrp_obj->tx_gain - toDecibel(ltoc / std::norm(calib_sig_scale * full_scale), true);
+    float ltoc_sig_scale = ltoc / std::norm(calib_sig_scale * full_scale);
+    bool prox_check = proximity_check(1.0, ltoc_sig_scale);
+    if (prox_check)
+    {
+        on_calib_success(mqttClient);
+        return true;
+    }
+    float new_tx_gain = usrp_obj->tx_gain - toDecibel(ltoc_sig_scale, true);
     float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2; // tx gains are implemented in 0.5dB steps
     LOG_DEBUG_FMT("Requested TX gain = %1% dB", impl_tx_gain);
     float remainder_gain = 0.0;
