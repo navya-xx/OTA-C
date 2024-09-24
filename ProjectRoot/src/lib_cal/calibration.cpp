@@ -86,7 +86,7 @@ void Calibration::generate_waveform()
     ref_waveform = wf_gen.generate_waveform();
 
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, 0, 1, calib_sig_scale, 123);
+    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, 2 * otac_wf_len, 1, calib_sig_scale, 1);
     otac_waveform = wf_gen.generate_waveform();
 }
 
@@ -673,14 +673,15 @@ bool Calibration::transmission_ref(const float &scale, const uhd::time_spec_t &t
 
 bool Calibration::transmission_otac(const float &scale, const uhd::time_spec_t &tx_timer)
 {
-    auto tx_waveform = otac_waveform;
-    if (scale != 1.0) // if not full_scale = 1.0, implement scaling of signal
-    {
-        for (auto &elem : tx_waveform)
-        {
-            elem *= scale;
-        }
-    }
+    std::vector<std::complex<float>> tx_waveform(otac_waveform.size());
+    float my_scale;
+    if (scale > 1.0) // if not full_scale = 1.0, implement scaling of signal
+        my_scale = 1.0;
+    else
+        my_scale = scale;
+
+    for (int i = 0; i < tx_waveform.size(); ++i)
+        tx_waveform[i] = my_scale * otac_waveform[i];
 
     if (usrp_obj->transmission(tx_waveform, tx_timer, signal_stop_called, true))
         return true;
