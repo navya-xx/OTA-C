@@ -153,8 +153,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_obj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
     usrp_obj.initialize();
 
-    parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
+    // run background noise estimator
+    if (device_type == "leaf")
+        usrp_obj.collect_background_noise_powers();
 
+    parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
     parser.print_values();
 
     /*-------- Subscribe to Control topics ---------*/

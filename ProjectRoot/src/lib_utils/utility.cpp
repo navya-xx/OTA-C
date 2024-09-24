@@ -443,3 +443,176 @@ float fromDecibel(float dB, bool isPower)
         return pow(10.0, dB / 20.0); // converting back to amplitude/voltage ratio
     }
 }
+
+// read/write devices.json file
+bool devices_json_read_write(json &config_data, const bool &is_read)
+{
+    std::string homeDir = get_home_dir();
+    std::string devices_json_file = homeDir + "/OTA-C/ProjectRoot/config/devices.json";
+
+    if (is_read)
+    {
+        try
+        {
+            std::ifstream inFile(devices_json_file);
+            config_data = json::parse(inFile);
+            return true;
+        }
+        catch (json::exception &e)
+        {
+            LOG_WARN_FMT("JSON error: %1%", e.what());
+            return false;
+        }
+    }
+    else
+    {
+        std::ofstream outFile(devices_json_file);
+        if (outFile.is_open())
+        {
+            outFile << config_data.dump(4);
+            outFile.close();
+            LOG_DEBUG("Config written to devices.json file.");
+            return true;
+        }
+        LOG_WARN("Writing config to devices.json file failed!");
+        return false;
+    }
+}
+
+// Save config value in devices.json file
+bool saveDeviceConfig(const std::string &device_id, const std::string &config_type, const float &config_val)
+{
+    json devices_json_data;
+    bool read_success = devices_json_read_write(devices_json_data, true);
+    if (not read_success)
+    {
+        LOG_WARN("Saving config data failed! Failed to read config file.");
+        return false;
+    }
+
+    if (not devices_json_data.contains(device_id))
+    {
+        LOG_WARN_FMT("Device ID %1% not found in devices.json", device_id);
+        return false;
+    }
+
+    json config_data = devices_json_data[device_id]["config"];
+    if (not config_data.contains(config_type))
+    {
+        LOG_WARN_FMT("Config type %2% for device ID %1% not found in devices.json", device_id, config_type);
+        return false;
+    }
+
+    // insert new data
+    config_data[config_type] = config_val;
+    devices_json_data[device_id]["config"] = config_data;
+    bool write_success = devices_json_read_write(devices_json_data, false);
+    if (write_success)
+        return true;
+    else
+        return false;
+}
+
+bool saveDeviceConfig(const std::string &device_id, const std::string &config_type, const json &config_val)
+{
+    json devices_json_data;
+    bool read_success = devices_json_read_write(devices_json_data, true);
+    if (not read_success)
+    {
+        LOG_WARN("Saving config data failed! Failed to read config file.");
+        return false;
+    }
+
+    if (not devices_json_data.contains(device_id))
+    {
+        LOG_WARN_FMT("Device ID %1% not found in devices.json", device_id);
+        return false;
+    }
+
+    json config_data = devices_json_data[device_id]["config"];
+    if (not config_data.contains(config_type))
+    {
+        LOG_WARN_FMT("Config type %2% for device ID %1% not found in devices.json", device_id, config_type);
+        return false;
+    }
+
+    // insert new data
+    config_data[config_type] = config_val;
+    devices_json_data[device_id]["config"] = config_data;
+    bool write_success = devices_json_read_write(devices_json_data, false);
+    if (write_success)
+        return true;
+    else
+        return false;
+}
+
+// Read data from devices.json file
+bool readDeviceConfig(const std::string &device_id, const std::string &config_type, float &config_val)
+{
+    json devices_json_data;
+    bool read_success = devices_json_read_write(devices_json_data, true);
+    if (not read_success)
+    {
+        LOG_WARN("Saving config data failed! Failed to read config file.");
+        return false;
+    }
+
+    if (not devices_json_data.contains(device_id))
+    {
+        LOG_WARN_FMT("Device ID %1% not found in devices.json", device_id);
+        return false;
+    }
+
+    json config_data = devices_json_data[device_id]["config"];
+    if (not config_data.contains(config_type))
+    {
+        LOG_WARN_FMT("Config type %2% for device ID %1% not found in devices.json", device_id, config_type);
+        return false;
+    }
+
+    try
+    {
+        config_val = config_data[config_type].get<float>();
+        return true;
+    }
+    catch (json::exception &e)
+    {
+        LOG_WARN_FMT("JSON error %1%", e.what());
+        return false;
+    }
+}
+
+bool readDeviceConfig(const std::string &device_id, const std::string &config_type, json &config_val)
+{
+    json devices_json_data;
+    bool read_success = devices_json_read_write(devices_json_data, true);
+    if (not read_success)
+    {
+        LOG_WARN("Saving config data failed! Failed to read config file.");
+        return false;
+    }
+
+    if (not devices_json_data.contains(device_id))
+    {
+        LOG_WARN_FMT("Device ID %1% not found in devices.json", device_id);
+        return false;
+    }
+
+    json config_data = devices_json_data[device_id]["config"];
+    if (not config_data.contains(config_type))
+    {
+        LOG_WARN_FMT("Config type %2% for device ID %1% not found in devices.json", device_id, config_type);
+        return false;
+    }
+
+    try
+    {
+        config_val = config_data[config_type];
+        return true;
+    }
+    catch (json::exception &e)
+    {
+        LOG_WARN_FMT("JSON error %1%", e.what());
+        return false;
+    }
+}

@@ -80,7 +80,12 @@
 			"codecvt": "cpp",
 			"forward_list": "cpp",
 			"fft": "cpp",
-			"*.ipp": "cpp"
+			"*.ipp": "cpp",
+			"compare": "cpp",
+			"concepts": "cpp",
+			"ranges": "cpp",
+			"span": "cpp",
+			"stop_token": "cpp"
 		},
 		"docwriter.style": "Doxygen"
 	}

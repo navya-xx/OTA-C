@@ -111,6 +111,8 @@ void USRP_class::initialize(bool perform_rxtx_tests)
     setup_streamers();
 
     float noise_power = estimate_background_noise_power();
+    init_noise_ampl = std::sqrt(noise_power);
+    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
 
     // if (perform_rxtx_tests)
     // {
@@ -480,16 +482,39 @@ void USRP_class::perform_rx_test()
         LOG_WARN("Reception test Failed!");
     }
 
-    float noise_power = calc_signal_power(rx_samples);
-    init_noise_ampl = std::sqrt(noise_power);
-    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
+    // float noise_power = calc_signal_power(rx_samples);
+    // init_noise_ampl = std::sqrt(noise_power);
+    // LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
 }
 
-float USRP_class::estimate_background_noise_power()
+void USRP_class::collect_background_noise_powers()
+{
+    LOG_DEBUG("----- Running routine to estimate background noise power for different rx-gains -------------");
+    json noise_powers;
+    for (float i = 0.0; i < 60.0; i = i + 1.0)
+    {
+        // set RX gain
+        set_rx_gain(i);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        float noise_power = estimate_background_noise_power(200);
+        std::string rx_gain_str = floatToStringWithPrecision(i, 1);
+        noise_powers[rx_gain_str] = noise_power;
+        LOG_DEBUG_FMT("Rx-gain: %1% --- Noise power: %2%", rx_gain_str, noise_power);
+    }
+
+    // return USRP to original gains
+    set_initial_gains();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    bool save_success = saveDeviceConfig(device_id, "noise", noise_powers);
+    if (not save_success)
+        LOG_WARN("Failed to save noise powers to the config file.");
+}
+
+float USRP_class::estimate_background_noise_power(const size_t &num_pkts)
 {
     bool dont_stop = false;
 
-    size_t num_pkts = 50;
     auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
     if (rx_samples.size() == max_rx_packet_size * num_pkts)
     {
@@ -501,9 +526,6 @@ float USRP_class::estimate_background_noise_power()
     }
 
     float noise_power = calc_signal_power(rx_samples);
-
-    init_noise_ampl = std::sqrt(noise_power);
-    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
 
     return noise_power;
 }

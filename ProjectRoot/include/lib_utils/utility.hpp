@@ -30,6 +30,12 @@ std::pair<float, float> find_closest_gain(const std::string &json_filename, cons
 float toDecibel(float value, bool isPower = true);
 float fromDecibel(float dB, bool isPower = true);
 
+bool devices_json_read_write(json &config_data, const bool &is_read = true);
+bool saveDeviceConfig(const std::string &device_id, const std::string &config_type, const float &config_val);
+bool saveDeviceConfig(const std::string &device_id, const std::string &config_type, const json &config_val);
+bool readDeviceConfig(const std::string &device_id, const std::string &config_type, float &config_val);
+bool readDeviceConfig(const std::string &device_id, const std::string &config_type, json &config_val);
+
 struct GainPower
 {
     double gain;

@@ -33,7 +33,8 @@ public:
     void setup_streamers();
     void perform_tx_test();
     void perform_rx_test();
-    float estimate_background_noise_power();
+    float estimate_background_noise_power(const size_t &num_pkts = 100);
+    void collect_background_noise_powers();
     float get_device_temperature();
     void print_available_sensors();
 
