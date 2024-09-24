@@ -249,8 +249,7 @@ float meanSquareValue(const std::vector<std::complex<float>> &vec, const size_t 
     float sum = 0.0;
     for (size_t i = start_index; i < end_index; ++i)
     {
-        float sqr_val = std::abs(vec[i]);
-        sqr_val = sqr_val * sqr_val;
+        float sqr_val = std::norm(vec[i]);
         if (lower_bound > 0.0 and sqr_val < lower_bound)
             continue;
 

@@ -86,7 +86,7 @@ void Calibration::generate_waveform()
     ref_waveform = wf_gen.generate_waveform();
 
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, otac_wf_len, 1, calib_sig_scale, 123);
+    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, 0, 1, calib_sig_scale, 123);
     otac_waveform = wf_gen.generate_waveform();
 }
 
