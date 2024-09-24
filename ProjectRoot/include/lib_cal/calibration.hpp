@@ -36,7 +36,7 @@ public:
 
 private:
     ConfigParser parser;
-    std::unique_ptr<USRP_class> usrp_obj;
+    std::shared_ptr<USRP_class> usrp_obj;
     std::unique_ptr<CycleStartDetector> csd_obj;
     std::unique_ptr<PeakDetectionClass> peak_det_obj;
     std::vector<std::complex<float>> ref_waveform, otac_waveform;

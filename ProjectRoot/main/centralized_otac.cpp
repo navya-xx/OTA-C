@@ -145,19 +145,20 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         parser.set_value("cfo", val, "float", "CFO-value from calibrated data");
 
     /*------- USRP setup --------------*/
-    USRP_class usrp_obj(parser);
+    // USRP_class usrp_obj(parser);
+    std::shared_ptr<USRP_class> usrp_obj = std::make_shared<USRP_class>(parser);
     // if (device_type == "leaf")
-    //     usrp_obj.use_calib_gains = true;
+    //     usrp_obj->use_calib_gains = true;
 
     // external reference
-    usrp_obj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
-    usrp_obj.initialize();
+    usrp_obj->external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
+    usrp_obj->initialize();
 
     // run background noise estimator
     // if (device_type == "leaf")
-    //     usrp_obj.collect_background_noise_powers();
+    //     usrp_obj->collect_background_noise_powers();
 
-    parser.set_value("max-rx-packet-size", std::to_string(usrp_obj.max_rx_packet_size), "int", "Max Rx packet size");
+    parser.set_value("max-rx-packet-size", std::to_string(usrp_obj->max_rx_packet_size), "int", "Max Rx packet size");
     parser.print_values();
 
     /*-------- Subscribe to Control topics ---------*/
@@ -165,7 +166,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     bool calibration_success = false;
     bool program_ends = true;
 
-    auto control_calibration_callback = [&usrp_obj, &parser, &program_ends, &device_type](const std::string &payload)
+    auto control_calibration_callback = [usrp_obj, &parser, &program_ends, &device_type](const std::string &payload)
     {
         json jdata;
         try
@@ -193,7 +194,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             c_dev = jdata["cent-id"];
         }
 
-        Calibration calib_class_obj(usrp_obj, parser, main_dev, c_dev, device_type, stop_signal_called);
+        Calibration calib_class_obj(*usrp_obj, parser, main_dev, c_dev, device_type, stop_signal_called);
 
         if (!calib_class_obj.initialize())
         {
@@ -226,7 +227,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
     mqttClient.setCallback(control_calib_topic, control_calibration_callback, true);
 
-    auto control_scaling_test_callback = [&](const std::string &payload)
+    auto control_scaling_test_callback = [usrp_obj, &parser, &program_ends, &device_type](const std::string &payload)
     {
         json jdata;
         try
@@ -254,7 +255,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             c_dev = jdata["cent-id"];
         }
 
-        Calibration calib_class_obj(usrp_obj, parser, main_dev, c_dev, device_type, stop_signal_called);
+        Calibration calib_class_obj(*usrp_obj, parser, main_dev, c_dev, device_type, stop_signal_called);
 
         if (!calib_class_obj.initialize())
         {
