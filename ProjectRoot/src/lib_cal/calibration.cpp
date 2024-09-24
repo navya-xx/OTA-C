@@ -610,8 +610,8 @@ void Calibration::producer_cent_proto2()
             bool rx_success = reception_otac(ltoc, otac_timer);
             if (rx_success)
             {
-                float txrx_gap = (otac_timer - tx_timer).get_real_secs() * 1e3;
-                LOG_INFO_FMT("OTAC signal reception gap = %1% millisecs", txrx_gap);
+                float txrx_gap = (otac_timer - tx_timer - uhd::time_spec_t(wait_duration)).get_real_secs() * 1e6;
+                LOG_INFO_FMT("OTAC signal synchronization gap = %1% microsecs", txrx_gap);
                 LOG_INFO_FMT("OTAC ltoc = %1%", ltoc / min_e2e_pow);
                 float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");
                 if (txrx_gap > exp_wait_time + 200)
@@ -729,11 +729,15 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
     {
         // compute signal power over window
         float max_val = 0.0;
+        size_t max_index = 0;
         for (size_t i = 0; i < req_num_samps - otac_wf_len; ++i)
         {
             float win_pow = calc_signal_power(otac_rx_samps, i, otac_wf_len, 0.0);
             if (win_pow > max_val)
+            {
                 max_val = win_pow;
+                max_index = i;
+            }
         }
 
         if (max_val < 10 * usrp_noise_power)
@@ -741,6 +745,8 @@ bool Calibration::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
             LOG_WARN_FMT("Estimated OTAC signal power = %1% .. is too low!", max_val);
             return false;
         }
+
+        tx_timer += uhd::time_spec_t(max_index / usrp_obj->rx_rate);
         rx_sig_pow = max_val;
         return true;
     }
@@ -784,7 +790,7 @@ bool Calibration::calibrate_gains(MQTTClient &mqttClient)
     LOG_INFO_FMT("Full scale value %1%", full_scale);
     if (full_scale > 1.0)
         full_scale = 1.0;
-    mqttClient.publish(cal_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
+    // mqttClient.publish(cal_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
 
     return true;
 }
