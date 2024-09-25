@@ -3,6 +3,7 @@
 #include "usrp_class.hpp"
 #include "config_parser.hpp"
 #include "calibration.hpp"
+#include "otac_processor.hpp"
 #include "log_macros.hpp"
 #include "utility.hpp"
 #include "MQTTClient.hpp"
@@ -318,11 +319,57 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // TODO: Synchronization routine
 
-    // TODO: OTAC routine
-    auto control_otac_callback = [usrp_obj, parser, &program_ends, &device_type](const std::string &payload)
+    // OTAC routine
+    auto control_otac_callback = [usrp_obj, parser, &program_ends, &device_id, &device_type](const std::string &payload)
     {
         LOG_INFO("------- Starting OTAC routine ----------- ");
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+        json jdata;
+        try
+        {
+            jdata = json::parse(payload);
+        }
+        catch (json::exception &e)
+        {
+            LOG_WARN_FMT("JSON error : %1%", e.what());
+            LOG_WARN_FMT("Incorrect format of control message = %1%", payload);
+            program_ends.store(true);
+            return;
+        }
+
+        std::string msg = jdata["message"];
+        float input_data = 0.0, dmin = 0.0, dmax = 1.0;
+        size_t num_leafs = 1;
+        if (device_type == "leaf")
+        {
+            input_data = jdata["otac_input"];
+            dmin = jdata["dmin"];
+            dmax = jdata["dmax"];
+            num_leafs = jdata["num_leafs"];
+        }
+
+        OTAC_class otac_obj(*usrp_obj, *parser, device_id, device_type, dmin, dmax, num_leafs, stop_signal_called);
+
+        if (!otac_obj.initialize())
+        {
+            LOG_WARN("OTAC class object initilization failed!");
+            program_ends.store(true);
+            return;
+        }
+
+        if (msg == "start")
+        {
+            LOG_INFO("----------- Starting OTAC program ---------------");
+            otac_obj.run_proto();
+        }
+        else if (msg == "stop")
+        {
+            LOG_INFO("----------- Stopping OTAC program ---------------");
+            otac_obj.stop();
+        }
+
+        while (!otac_obj.otac_routine_ends)
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
         program_ends.store(true);
     };
     auto control_otac_topic = mqttClient.topics->getValue_str("otac") + device_id;

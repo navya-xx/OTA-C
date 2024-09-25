@@ -478,13 +478,13 @@ void USRP_class::collect_background_noise_powers()
 {
     LOG_DEBUG("----- Running routine to estimate background noise power for different rx-gains -------------");
     json noise_powers;
-    for (float i = 0.0; i < 60.0; i = i + 1.0)
+    for (size_t i = 0; i < 60; ++i)
     {
         // set RX gain
-        set_rx_gain(i);
+        set_rx_gain(float(i));
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         float noise_power = estimate_background_noise_power(200);
-        std::string rx_gain_str = floatToStringWithPrecision(i, 1);
+        std::string rx_gain_str = floatToStringWithPrecision(float(i), 1);
         noise_powers[rx_gain_str] = noise_power;
         LOG_DEBUG_FMT("Rx-gain: %1% --- Noise power: %2%", rx_gain_str, noise_power);
     }
@@ -496,6 +496,26 @@ void USRP_class::collect_background_noise_powers()
     bool save_success = saveDeviceConfig(device_id, "noise", noise_powers);
     if (not save_success)
         LOG_WARN("Failed to save noise powers to the config file.");
+}
+
+float USRP_class::set_background_noise_power()
+{
+    json noise_power_vals;
+    if (not readDeviceConfig(device_id, "noise", noise_power_vals))
+        LOG_WARN("Unable to get noise values from the config file!");
+
+    std::string rx_gain_str = floatToStringWithPrecision(rx_gain, 1);
+    if (not noise_power_vals.contains(rx_gain_str))
+    {
+        LOG_WARN_FMT("Noise power corresponding to Rx gain %1% dB not found in the config file!", rx_gain_str);
+        return 0.0;
+    }
+    else
+    {
+        float noise_pow = noise_power_vals[rx_gain_str];
+        init_noise_ampl = sqrt(noise_pow);
+        return noise_pow;
+    }
 }
 
 float USRP_class::estimate_background_noise_power(const size_t &num_pkts)

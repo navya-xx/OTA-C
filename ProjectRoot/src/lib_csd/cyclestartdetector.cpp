@@ -22,6 +22,15 @@ CycleStartDetector::CycleStartDetector(
 
     tx_wait_microsec = parser.getValue_float("start-tx-wait-microsec");
 
+    // get saved CFO
+    float read_cfo;
+    bool get_cfo_success = readDeviceConfig(parser.getValue_str("device-id"), "CFO", read_cfo);
+    if (get_cfo_success)
+    {
+        if (read_cfo > 0.0)
+            cfo = read_cfo;
+    }
+
     // capture entire ref signal and more
     save_ref_len = N_zfc * (R_zfc + 2);
     saved_ref.resize(save_ref_len);
@@ -106,7 +115,8 @@ void CycleStartDetector::post_peak_det()
         cfo += new_cfo; // radians/sample
         // cfo_count_max = rational_number_approximation(cfo / (2 * M_PI));
         // Add CFO to config file
-        bool save_cfo = saveDeviceConfig(parser.getValue_str("device-id"), "CFO", cfo);
+        if (not saveDeviceConfig(parser.getValue_str("device-id"), "CFO", float(cfo)))
+            LOG_WARN("CFO cannot be saved to the config file.");
         LOG_DEBUG_FMT("Estimated new CFO = %1% rad/sample and current CFO = %2% rad/sample.", new_cfo, cfo);
     }
 
