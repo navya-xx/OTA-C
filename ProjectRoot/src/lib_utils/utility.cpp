@@ -488,7 +488,7 @@ bool saveDeviceConfig(const std::string &device_id, const std::string &config_ty
     bool read_success = devices_json_read_write(devices_json_data, true);
     if (not read_success)
     {
-        LOG_WARN("Saving config data failed! Failed to read config file.");
+        LOG_WARN("Failed to read config file.");
         return false;
     }
 
@@ -521,7 +521,7 @@ bool saveDeviceConfig(const std::string &device_id, const std::string &config_ty
     bool read_success = devices_json_read_write(devices_json_data, true);
     if (not read_success)
     {
-        LOG_WARN("Saving config data failed! Failed to read config file.");
+        LOG_WARN("Failed to read config file.");
         return false;
     }
 
@@ -555,7 +555,7 @@ bool readDeviceConfig(const std::string &device_id, const std::string &config_ty
     bool read_success = devices_json_read_write(devices_json_data, true);
     if (not read_success)
     {
-        LOG_WARN("Saving config data failed! Failed to read config file.");
+        LOG_WARN("Failed to read config file.");
         return false;
     }
 
@@ -590,7 +590,7 @@ bool readDeviceConfig(const std::string &device_id, const std::string &config_ty
     bool read_success = devices_json_read_write(devices_json_data, true);
     if (not read_success)
     {
-        LOG_WARN("Saving config data failed! Failed to read config file.");
+        LOG_WARN("Failed to read config file.");
         return false;
     }
 
@@ -617,6 +617,24 @@ bool readDeviceConfig(const std::string &device_id, const std::string &config_ty
         LOG_WARN_FMT("JSON error %1%", e.what());
         return false;
     }
+}
+
+bool listActiveDevices(std::vector<std::string> &device_ids)
+{
+    json devices_json_data;
+    bool read_success = devices_json_read_write(devices_json_data, true);
+    if (not read_success)
+    {
+        LOG_WARN("Saving config data failed! Failed to read config file.");
+        return false;
+    }
+
+    for (const auto &device_id : devices_json_data.items())
+    {
+        if (device_id.startswith("32"))
+            device_ids.emplace_back(device_id);
+    }
+    return true;
 }
 
 void correct_cfo_tx(std::vector<std::complex<float>> &signal, float &scale, float &cfo, size_t &counter)

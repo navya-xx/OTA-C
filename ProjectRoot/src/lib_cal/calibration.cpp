@@ -171,7 +171,7 @@ void Calibration::run_proto2()
     else if (device_type == "cent")
     {
         producer_thread = boost::thread(&Calibration::producer_cent_proto2, this);
-        // consumer_thread = boost::thread(&Calibration::consumer_cent_proto2, this);
+        consumer_thread = boost::thread(&Calibration::consumer_cent_proto2, this);
     }
 };
 
@@ -647,9 +647,7 @@ void Calibration::consumer_cent_proto2()
 {
     while (not signal_stop_called)
     {
-        csd_obj->consume(csd_success_flag, signal_stop_called);
-        if (csd_success_flag)
-            LOG_INFO("***Successful CSD!");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 

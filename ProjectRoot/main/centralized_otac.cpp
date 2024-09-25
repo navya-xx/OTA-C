@@ -164,9 +164,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     parser->print_values();
 
     /*-------- Subscribe to Control topics ---------*/
-    // Calibration
     std::atomic_bool program_ends(true);
 
+    // Calibration routine
     auto control_calibration_callback = [usrp_obj, parser, &program_ends, &device_type](const std::string &payload)
     {
         json jdata;
@@ -226,10 +226,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         return;
     };
-
     auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
     mqttClient.setCallback(control_calib_topic, control_calibration_callback, true);
 
+    // scaling test routine
     auto control_scaling_test_callback = [usrp_obj, parser, &program_ends, &device_type](const std::string &payload)
     {
         json jdata;
@@ -289,13 +289,26 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
         return;
     };
-
     auto control_scale_topic = mqttClient.topics->getValue_str("scaling-tests") + device_id;
     mqttClient.setCallback(control_scale_topic, control_scaling_test_callback, true);
 
     // TODO: Synchronization routine
 
     // TODO: OTAC routine
+    auto control_otac_callback = [usrp_obj, parser, &program_ends, &device_type](const std::string &payload)
+    {
+        LOG_INFO("------- Starting OTAC routine ----------- ");
+        std::vector<std::string> device_id_list;
+        if (not listActiveDevices(device_id_list))
+            LOG_WARN("Unable to get device list.");
+        else
+        {
+            for (const auto &device_id : device_id_list)
+                LOG_INFO_FMT("Device ID : %1%", device_id);
+        }
+    };
+    auto control_otac_topic = mqttClient.topics->getValue_str("otac") + device_id;
+    mqttClient.setCallback(control_otac_topic, control_otac_callback, true);
 
     // run contoller on a separate thread
     std::string counterpart_id;
@@ -307,15 +320,16 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     {
         if (device_type == "cent" && program_ends)
         {
-            program_ends = false;
-            std::thread input_thread([&device_id, &counterpart_id, &is_cent]()
-                                     { gen_mqtt_control_msg(device_id, counterpart_id, is_cent); });
-            input_thread.join();
+            // std::thread input_thread([&device_id, &counterpart_id, &is_cent]()
+            //                          { gen_mqtt_control_msg(device_id, counterpart_id, is_cent); });
+            // input_thread.join();
+            gen_mqtt_control_msg(device_id, counterpart_id, is_cent);
+            program_ends.store(false);
         }
         else if (device_type == "leaf" && program_ends)
         {
             LOG_INFO("Waiting for command from central node ...");
-            program_ends = false;
+            program_ends.store(false);
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
