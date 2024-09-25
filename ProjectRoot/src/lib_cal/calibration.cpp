@@ -585,10 +585,11 @@ void Calibration::producer_cent_proto2()
     // reception/producer params
     size_t round = 0;
 
-    size_t ref_pad_len = parser.getValue_int("Ref-padding-mul");
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
-    double peak_to_first_sample_duration = (N_zfc * ref_pad_len) / usrp_obj->rx_rate;
-    double wait_duration = peak_to_first_sample_duration + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
+    size_t ref_pad_len = parser.getValue_int("Ref-padding-mul") * N_zfc;
+    double first_sample_gap = ref_pad_len / usrp_obj->rx_rate;
+    double wait_duration = first_sample_gap + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
+    size_t otac_wf_len = parser.getValue_int("test-signal-len");
 
     while (not signal_stop_called && not end_flag && round++ < max_total_round)
     {
@@ -600,7 +601,7 @@ void Calibration::producer_cent_proto2()
             retx_flag = false;
 
         // Transmit REF
-        uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);
+        uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(10e-3);
         bool transmit_success = transmission_ref(1.0, tx_timer);
         if (transmit_success)
         {
@@ -609,6 +610,7 @@ void Calibration::producer_cent_proto2()
             if (rx_success)
             {
                 float txrx_gap = (otac_timer - tx_timer - uhd::time_spec_t(wait_duration)).get_real_secs() * 1e6;
+                txrx_gap -= ((otac_wf_len / usrp_obj->rx_rate) * 1e6);
                 LOG_INFO_FMT("OTAC signal synchronization gap = %1% microsecs", txrx_gap);
                 LOG_INFO_FMT("OTAC ltoc = %1%", ltoc / min_e2e_pow);
                 float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");

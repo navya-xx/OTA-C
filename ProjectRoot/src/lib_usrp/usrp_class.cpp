@@ -836,9 +836,9 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     {
         LOG_DEBUG("Receiving WITH delay.");
         LOG_DEBUG_FMT("Rx delay : %.4f microsecs", (time_diff * 1e6));
-        if (std::floor(time_diff * 1e6) > 5000)
+        if (std::floor(time_diff * 1e6) > 50000)
         {
-            size_t wait_microsecs = std::floor(time_diff * 1e6) - 10000;
+            size_t wait_microsecs = std::floor(time_diff * 1e6) - 50000;
             LOG_DEBUG_FMT("Rx wait for %1% microsecs", wait_microsecs);
             std::this_thread::sleep_for(std::chrono::microseconds(wait_microsecs));
         }
