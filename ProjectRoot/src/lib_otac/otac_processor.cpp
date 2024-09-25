@@ -1,5 +1,6 @@
 #include "otac_processor.hpp"
 
+// TODO: consumer-producer routine for Cent reception (add ZFC seq to detect reception)
 // TODO: Adpatable (dmin, dmax)
 // TODO: Non-linear power amplification control
 
@@ -236,7 +237,7 @@ void OTAC_class::producer_leaf_proto()
             }
 
             // transmit otac signal
-            if (tx_timer <= uhd::time_spec_t(0.0))
+            if (tx_timer <= uhd::time_spec_t(0.0) or tx_timer > usrp_obj->usrp->get_time_now() + uhd::time_spec_t(0.1))
             {
                 LOG_WARN_FMT("Estimated timer %1% secs from REF is incorrect. Skip transmission.", tx_timer.get_real_secs());
                 continue;
@@ -272,6 +273,7 @@ void OTAC_class::producer_cent_proto()
     size_t round = 0;
 
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
+    size_t R_zfc = parser.getValue_int("Ref-R-zfc");
     size_t ref_pad_len = parser.getValue_int("Ref-padding-mul") * N_zfc;
     double first_sample_gap = ref_pad_len / usrp_obj->rx_rate;
     double wait_duration = first_sample_gap + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
@@ -288,19 +290,20 @@ void OTAC_class::producer_cent_proto()
         bool transmit_success = transmission_ref(1.0, tx_timer);
         if (transmit_success)
         {
-            uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t(wait_duration);
+            uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t((ref_waveform.size()) / usrp_obj->rx_rate); // uhd::time_spec_t(wait_duration);
             bool rx_success = reception_otac(ltoc, otac_timer);
             if (rx_success)
             {
-                float txrx_gap = (otac_timer - tx_timer - uhd::time_spec_t(wait_duration)).get_real_secs() * 1e6;
-                txrx_gap -= ((otac_wf_len / usrp_obj->rx_rate) * 1e6);
-                LOG_INFO_FMT("OTAC signal synchronization gap = %1% microsecs", txrx_gap);
-                float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");
-                if (txrx_gap > exp_wait_time + 200)
-                {
-                    LOG_WARN("OTAC signal reception delay is too big -> Reject this data.");
-                    continue;
-                }
+                // float txrx_gap = (otac_timer - tx_timer - uhd::time_spec_t(wait_duration)).get_real_secs() * 1e6;
+                // txrx_gap -= ((otac_wf_len / usrp_obj->rx_rate) * 1e6);
+                // LOG_INFO_FMT("OTAC signal synchronization gap = %1% microsecs", txrx_gap);
+                // float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");
+                // if (txrx_gap > exp_wait_time + 200)
+                // {
+                //     LOG_WARN("OTAC signal reception delay is too big -> Reject this data.");
+                //     continue;
+                // }
+
                 float otac_output;
                 if (not otac_post_processing(ltoc, otac_output))
                 {
