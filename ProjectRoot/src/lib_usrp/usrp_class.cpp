@@ -285,13 +285,14 @@ void USRP_class::set_initial_gains()
 
 float USRP_class::get_gain(const std::string &trans_type, const bool &get_calib_gains)
 {
+    std::string config_type;
     if (trans_type == "tx")
     {
-        std::string config_type = "tx-gain";
+        config_type = "tx-gain";
     }
     else if (trans_type == "rx")
     {
-        std::string config_type = "rx-gain";
+        config_type = "rx-gain";
     }
     else
         LOG_WARN_FMT("Incorrect `trans_type´ = %1%. Allowed values are \"tx\" or \"rx\".", trans_type);
@@ -325,7 +326,7 @@ float USRP_class::get_gain(const std::string &trans_type, const bool &get_calib_
             else
                 gain_val = retval.second;
         }
-        return gain_val
+        return gain_val;
     }
 }
 
