@@ -1,8 +1,10 @@
 import os
 import subprocess
 import json
+import time
 
 # List of scripts and their parameters
+pkill_template = "ssh {node_username}@{node_address} 'pkill -f otac_cent && sleep 1'"
 command_template = "ssh {node_username}@{node_address} 'cd $HOME/OTA-C && git stash && git checkout main && git pull && mkdir -p $HOME/OTA-C/ProjectRoot/build/ && cd $HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j && ./otac_cent leaf {node_serial}'"
 cent_template = "cd $HOME/OTA-C/ProjectRoot/build/ && ./otac_cent cent {node_serial}"
 # command_template = "echo \"ssh {node_username}@{node_address}\""
@@ -30,6 +32,8 @@ def run_parallel_scripts():
         # For the first script, we're already in the first pane of the session.
         if i == 0:
             if (val["type"] == "leaf"):
+                pkill_command = pkill_template.format(node_username=val["hostname"], node_address=val["IP"])
+                subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0", pkill_command, "C-m"])
                 tmux_command = command_template.format(node_username=val["hostname"], node_address=val["IP"], node_serial=key)
                 subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0", tmux_command, "C-m"])
             elif (val["type"] == "cent"):
@@ -43,6 +47,8 @@ def run_parallel_scripts():
             subprocess.run(["tmux", "select-layout", "-t", f"{session_name}", "tiled"])
 
             if (val["type"] == "leaf"):
+                pkill_command = pkill_template.format(node_username=val["hostname"], node_address=val["IP"])
+                subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0.{i}", pkill_command, "C-m"])
                 tmux_command = command_template.format(node_username=val["hostname"], node_address=val["IP"], node_serial=key)
                 subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0.{i}", tmux_command, "C-m"])
             elif (val["type"] == "cent"):

@@ -414,7 +414,7 @@ bool OTAC_class::reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 bool OTAC_class::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 {
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    size_t req_num_samps = 10 * otac_wf_len;
+    size_t req_num_samps = (60 / 1e3 * usrp_obj->rx_rate);
     auto otac_rx_samps = usrp_obj->reception(signal_stop_called, req_num_samps, 0.0, tx_timer, true);
 
     if (otac_rx_samps.size() == req_num_samps)
