@@ -97,30 +97,39 @@ void gen_mqtt_control_msg(std::string &device_id, std::string &counterpard_id, c
     }
     case 4:
     {
+        std::vector<std::string> device_id_list;
+        if (not listActiveDevices(device_id_list))
+        {
+            LOG_WARN("Unable to get device list.");
+            break;
+        }
+
         MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
+
+        float dmin = 1.0, dmax = 10.0;
+        size_t num_leafs = device_id_list.size();
 
         std::string topic_otac = mqttClient.topics->getValue_str("otac");
         json jstring;
         jstring["message"] = "start";
         jstring["time"] = currentDateTime();
-
-        // cent
-        // LOG_DEBUG_FMT("Sending data to topic %1% : %2%", topic_otac + device_id, jstring.dump(4));
-        mqttClient.publish(topic_otac + device_id, jstring.dump(4), false);
+        jstring["dmin"] = dmin;
+        jstring["dmax"] = dmax;
+        jstring["num_leafs"] = num_leafs;
 
         // leafs
-        std::vector<std::string> device_id_list;
-        if (not listActiveDevices(device_id_list))
-            LOG_WARN("Unable to get device list.");
-        else
+        for (const auto &dev_id : device_id_list)
         {
-            for (const auto &dev_id : device_id_list)
-            {
-                // LOG_INFO_FMT("Leaf Device ID : %1%", dev_id);
-                // LOG_INFO_FMT("Sending data to topic %1% : %2%", topic_otac + dev_id, jstring.dump(4));
-                mqttClient.publish(topic_otac + dev_id, jstring.dump(4), false);
-            }
+            float otac_input_ = generateRandomFloat(dmin, dmax);
+            jstring["otac_input"] = otac_input_;
+            mqttClient.publish(topic_otac + dev_id, jstring.dump(4), false);
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // give leafs some lead
+
+        // cent
+        jstring.erase("otac_input");
+        mqttClient.publish(topic_otac + device_id, jstring.dump(4), false);
 
         break;
     }
