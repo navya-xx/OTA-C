@@ -3,7 +3,7 @@ import subprocess
 import json
 
 # List of scripts and their parameters
-command_template = "ssh {node_username}@{node_address} 'pkill -f otac_cent && sleep 3 && cd $HOME/OTA-C && git stash && git checkout main && git pull && mkdir -p $HOME/OTA-C/ProjectRoot/build/ && cd $HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j && ./otac_cent leaf {node_serial}'"
+command_template = "ssh {node_username}@{node_address} 'cd $HOME/OTA-C && git stash && git checkout main && git pull && mkdir -p $HOME/OTA-C/ProjectRoot/build/ && cd $HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j && ./otac_cent leaf {node_serial}'"
 cent_template = "cd $HOME/OTA-C/ProjectRoot/build/ && ./otac_cent cent {node_serial}"
 # command_template = "echo \"ssh {node_username}@{node_address}\""
 
