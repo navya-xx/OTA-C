@@ -629,10 +629,16 @@ bool listActiveDevices(std::vector<std::string> &device_ids)
         return false;
     }
 
-    for (const auto &device_id : devices_json_data.items())
+    for (const auto &item : devices_json_data.items())
     {
-        if (device_id.startswith("32"))
-            device_ids.emplace_back(device_id);
+        std::string device_id = item.key();
+        if (device_id.compare(0, 2, "32") == 0)
+        {
+            json dev_conf = item.value();
+            std::string dev_type = dev_conf["type"].get<std::string>();
+            if ((dev_type == "leaf"))
+                device_ids.emplace_back(device_id);
+        }
     }
     return true;
 }
