@@ -64,7 +64,7 @@ private:
 
     std::string device_id, device_type;
     std::string tele_otac_topic;
-    size_t max_total_round = 30;
+    size_t max_total_round = 50;
     float max_rx_gain = 50.0, min_rx_gain = 20.0;
     float full_scale = 1.0, ctol = 0.0, ltoc = 0.0;
     float noise_power;

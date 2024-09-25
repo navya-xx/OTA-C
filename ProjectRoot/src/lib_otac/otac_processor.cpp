@@ -77,7 +77,7 @@ void OTAC_class::generate_waveform()
     ref_waveform = wf_gen.generate_waveform();
 
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    wf_gen.initialize(wf_gen.UNIT_RAND, 2 * otac_wf_len, 1, 0, otac_wf_len, 1, 1.0, 1);
+    wf_gen.initialize(wf_gen.UNIT_RAND, 3 * otac_wf_len, 1, 0, otac_wf_len, 1, 1.0, 1);
     otac_waveform = wf_gen.generate_waveform();
 }
 
@@ -281,7 +281,7 @@ void OTAC_class::producer_cent_proto()
     {
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         // Transmit REF
         uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);

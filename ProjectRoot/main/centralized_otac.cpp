@@ -106,7 +106,7 @@ void gen_mqtt_control_msg(std::string &device_id, std::string &counterpard_id, c
 
         MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
 
-        float dmin = 1.0, dmax = 10.0;
+        float dmin = 0.0, dmax = 1.0;
         size_t num_leafs = device_id_list.size();
 
         std::string topic_otac = mqttClient.topics->getValue_str("otac");
