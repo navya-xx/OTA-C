@@ -16,3 +16,4 @@ ProjectRoot/build
 ProjectRoot/storage
 ProjectRoot/bkp_storage
 ProjectRoot/config/mosquitto/logs
+ProjectRoot/config/devices.json
