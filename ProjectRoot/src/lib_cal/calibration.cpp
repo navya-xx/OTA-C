@@ -521,7 +521,7 @@ void Calibration::producer_leaf_proto2()
         {
             csd_success_flag = false;
             if (ctol > 0.0)
-                LOG_INFO_FMT("Reception successful with ctol = %1% and timer = %2% secs", ctol, tx_timer.get_real_secs());
+                LOG_INFO_FMT("Reception successful with ctol = %1% and timer-gap = %2% millisecs", ctol, (tx_timer - usrp_obj->usrp->get_time_now()).get_real_secs() * 1e3);
             else
                 continue;
 
