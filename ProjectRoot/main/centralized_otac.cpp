@@ -118,9 +118,11 @@ void gen_mqtt_control_msg(std::string &device_id, std::string &counterpard_id, c
         jstring["num_leafs"] = num_leafs;
 
         // leafs
+        float otac_input_sum = 0.0;
         for (const auto &dev_id : device_id_list)
         {
             float otac_input_ = generateRandomFloat(dmin, dmax);
+            otac_input_sum += otac_input_;
             jstring["otac_input"] = otac_input_;
             mqttClient.publish(topic_otac + dev_id, jstring.dump(4), false);
         }
@@ -128,7 +130,7 @@ void gen_mqtt_control_msg(std::string &device_id, std::string &counterpard_id, c
         std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // give leafs some lead
 
         // cent
-        jstring.erase("otac_input");
+        jstring["otac_input"] = otac_input_sum;
         mqttClient.publish(topic_otac + device_id, jstring.dump(4), false);
 
         break;
@@ -346,17 +348,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
 
         std::string msg = jdata["message"];
-        float input_data = 0.0, dmin = 0.0, dmax = 1.0;
-        size_t num_leafs = 1;
-        if (device_type == "leaf")
-        {
-            input_data = jdata["otac_input"];
-            dmin = jdata["dmin"];
-            dmax = jdata["dmax"];
-            num_leafs = jdata["num_leafs"];
-        }
+        float input_data = jdata["otac_input"];
+        float dmin = jdata["dmin"];
+        float dmax = jdata["dmax"];
+        size_t num_leafs = jdata["num_leafs"];
 
-        OTAC_class otac_obj(*usrp_obj, *parser, device_id, device_type, dmin, dmax, num_leafs, stop_signal_called);
+        OTAC_class otac_obj(*usrp_obj, *parser, device_id, device_type, input_data, dmin, dmax, num_leafs, stop_signal_called);
 
         if (!otac_obj.initialize())
         {

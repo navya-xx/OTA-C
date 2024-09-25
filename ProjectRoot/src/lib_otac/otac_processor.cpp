@@ -8,6 +8,7 @@ OTAC_class::OTAC_class(
     ConfigParser &parser_,
     const std::string &device_id_,
     const std::string &device_type_,
+    const float &otac_input_,
     const float &dmin_,
     const float &dmax_,
     const size_t &num_leafs_,
@@ -15,6 +16,7 @@ OTAC_class::OTAC_class(
                                  parser(parser_),
                                  device_id(device_id_),
                                  device_type(device_type_),
+                                 otac_input(otac_input_),
                                  dmin(dmin_),
                                  dmax(dmax_),
                                  num_leafs(num_leafs_),
@@ -306,7 +308,9 @@ void OTAC_class::producer_cent_proto()
                     continue;
                 }
                 otac_output_list.emplace_back(otac_output);
-                LOG_INFO_FMT("OTAC output = %1%", otac_output);
+                float nmse_val = compute_nmse(otac_input, otac_output);
+                nmse_list.emplace_back(nmse_val);
+                LOG_INFO_FMT("OTAC output = %1%  -- NMSE = %2%", otac_output, nmse_val);
             }
             else
                 LOG_WARN("Reception failed!");

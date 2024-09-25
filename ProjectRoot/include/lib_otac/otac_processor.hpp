@@ -12,7 +12,7 @@
 class OTAC_class
 {
 public:
-    OTAC_class(USRP_class &usrp_obj, ConfigParser &parser, const std::string &device_id, const std::string &device_type, const float &dmin, const float &dmax, const size_t &num_leafs, bool &signal_stop_called);
+    OTAC_class(USRP_class &usrp_obj, ConfigParser &parser, const std::string &device_id, const std::string &device_type, const float &otac_input, const float &dmin, const float &dmax, const size_t &num_leafs, bool &signal_stop_called);
     ~OTAC_class();
 
     bool initialize();
@@ -68,7 +68,7 @@ private:
     float max_rx_gain = 50.0, min_rx_gain = 20.0;
     float full_scale = 1.0, ctol = 0.0, ltoc = 0.0;
     float noise_power;
-    std::vector<float> otac_output_list;
+    std::vector<float> otac_output_list, nmse_list;
 
     float init_proximity_tol = 0.04, proximity_tol = 0.01;
     float min_e2e_pow = 1.0, max_e2e_pow = 1.0;
