@@ -3,7 +3,7 @@ import subprocess
 import json
 
 # List of scripts and their parameters
-command_template = "ssh {node_username}@{node_address} 'cd \$HOME/OTA-C && git stash && git checkout main && git pull && mkdir -p \$HOME/OTA-C/ProjectRoot/build/ && cd \$HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j && echo \"Success\"'"
+command_template = "ssh {node_username}@{node_address} 'cd $HOME/OTA-C && git stash && git checkout main && git pull && mkdir -p $HOME/OTA-C/ProjectRoot/build/ && cd $HOME/OTA-C/ProjectRoot/build/ && cmake ../ && make -j && echo \"Success\"'"
 # command_template = "echo \"ssh {node_username}@{node_address}\""
 
 # Name of the tmux session
