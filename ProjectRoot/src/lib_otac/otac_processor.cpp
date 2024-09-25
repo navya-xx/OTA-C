@@ -281,7 +281,7 @@ void OTAC_class::producer_cent_proto()
     {
         LOG_INFO_FMT("-------------- Round %1% ------------", round);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         // Transmit REF
         uhd::time_spec_t tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(5e-3);
