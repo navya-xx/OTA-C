@@ -150,8 +150,12 @@
     "32C7981": {
         "IP": "192.168.5.242",
         "config": {
+<<<<<<< HEAD
             "CFO": 0.0,
             "calib-rx-gain": 0.0,
+=======
+            "CFO": 0.007058609277009964,
+>>>>>>> 3a38c9b (asdf)
             "calib-tx-gain": 0.0,
             "fullscale": 1.0,
             "noise": {
