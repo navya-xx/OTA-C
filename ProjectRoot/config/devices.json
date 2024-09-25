@@ -3,7 +3,9 @@
         "IP": "192.168.5.247",
         "config": {
             "CFO": 0.0,
+            "fullscale": 1.0,
             "calib-tx-gain": 0.0,
+            "calib-rx-gain": 0.0,
             "noise": {
                 "0.0": 1.2188453801798005e-08,
                 "1.0": 1.212869626954216e-08,
@@ -75,7 +77,9 @@
         "IP": "192.168.5.241",
         "config": {
             "CFO": 0.0,
+            "fullscale": 1.0,
             "calib-tx-gain": 0.0,
+            "calib-rx-gain": 0.0,
             "noise": {
                 "0.0": 1.1701374091899197e-08,
                 "1.0": 1.1706660529853252e-08,
@@ -147,7 +151,9 @@
         "IP": "192.168.5.242",
         "config": {
             "CFO": 0.0,
+            "fullscale": 1.0,
             "calib-tx-gain": 0.0,
+            "calib-rx-gain": 0.0,
             "noise": {
                 "0.0": 1.2801293358677412e-08,
                 "1.0": 1.2793977433034343e-08,
@@ -219,7 +225,9 @@
         "IP": "192.168.5.248",
         "config": {
             "CFO": 0.0,
+            "fullscale": 1.0,
             "calib-tx-gain": 0.0,
+            "calib-rx-gain": 0.0,
             "noise": {
                 "0.0": 1.3930728570699102e-08,
                 "1.0": 1.3906252149809006e-08,
@@ -292,7 +300,9 @@
             "IP": "192.168.5.243",
             "config": {
                 "CFO": 0.0,
+                "fullscale": 1.0,
                 "calib-tx-gain": 0.0,
+                "calib-rx-gain": 0.0,
                 "noise": {}
             },
             "hostname": "rpi4m3",
@@ -303,7 +313,9 @@
             "IP": "192.168.5.245",
             "config": {
                 "CFO": 0.0,
+                "fullscale": 1.0,
                 "calib-tx-gain": 0.0,
+                "calib-rx-gain": 0.0,
                 "noise": {}
             },
             "hostname": "rpi4m5",
@@ -314,7 +326,9 @@
             "IP": "192.168.5.246",
             "config": {
                 "CFO": 0.0,
+                "fullscale": 1.0,
                 "calib-tx-gain": 0.0,
+                "calib-rx-gain": 0.0,
                 "noise": {}
             },
             "hostname": "rpi4compute",
@@ -325,7 +339,9 @@
             "IP": "192.168.5.244",
             "config": {
                 "CFO": 0.0,
+                "fullscale": 1.0,
                 "calib-tx-gain": 0.0,
+                "calib-rx-gain": 0.0,
                 "noise": {}
             },
             "hostname": "rpi4m4",

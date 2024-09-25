@@ -114,9 +114,13 @@ bool Calibration::initialize()
         {
             mqttClient.setCallback(ltoc_topic, [this](const std::string &payload)
                                    { callback_update_ltoc(payload); });
-            // std::string temp;
-            // if (mqttClient.temporary_listen_for_last_value(temp, full_scale_topic, 10, 30))
-            //     full_scale = std::stof(temp);
+            if (not readDeviceConfig(device_id, "fullscale", full_scale))
+                LOG_WARN("Failed to read full_scale config.");
+            else
+            {
+                if (full_scale <= 0.0 or full_scale >= 1.0)
+                    full_scale = 1.0;
+            }
         }
         return true;
     }
@@ -825,8 +829,14 @@ void Calibration::on_calib_success(MQTTClient &mqttClient)
     mqttClient.publish(flag_topic_leaf, mqttClient.timestamp_str_data("end"), false);
     LOG_INFO_FMT("Last recived signal power C->L and L->C = %1% and %2%", ctol, ltoc);
     LOG_INFO_FMT("Calibrated Tx-Rx gain values = %1% dB, %2% dB -- and scale = %3%", usrp_obj->tx_gain, usrp_obj->rx_gain, full_scale);
+    if (not saveDeviceConfig(device_id, "calib-tx-gain", usrp_obj->tx_gain))
+        LOG_WARN("Saving config `calib-tx-gain´ failed!");
+    if (not saveDeviceConfig(device_id, "calib-rx-gain", usrp_obj->rx_gain))
+        LOG_WARN("Saving config `calib-rx-gain´ failed!");
     mqttClient.publish(tx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->tx_gain), true);
     mqttClient.publish(rx_gain_topic, mqttClient.timestamp_float_data(usrp_obj->rx_gain), true);
+    if (not saveDeviceConfig(device_id, "fullscale", full_scale))
+        LOG_WARN("Saving config `full_scale´ failed!");
     mqttClient.publish(full_scale_topic, mqttClient.timestamp_float_data(full_scale), true);
 }
 

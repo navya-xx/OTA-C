@@ -24,6 +24,7 @@ public:
     void set_sample_rate();
     void set_center_frequency();
     void set_initial_gains();
+    float get_gain(const std::string &trans_type, const bool &get_calib_gains = true);
     void set_bandwidth();
     void apply_additional_settings();
 

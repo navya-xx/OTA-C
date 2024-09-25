@@ -267,39 +267,7 @@ void USRP_class::set_center_frequency()
 
 void USRP_class::set_initial_gains()
 {
-    float tx_gain_input, rx_gain_input;
-
-    // Tx gains
-    // check if calibrated gains are available
-    MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
-    std::string tx_gain_topic = mqttClient.topics->getValue_str("tx-gain") + device_id;
-    std::string temp = "";
-    if (use_calib_gains)
-    {
-        if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
-        {
-            tx_gain_input = std::stof(temp);
-            LOG_DEBUG_FMT("Using Calibrated Tx Gain Value = %1% dB.", tx_gain_input);
-        }
-    }
-    else
-    {
-        if (parser.getValue_str("gain-mgmt") == "gain")
-        {
-            tx_gain_input = parser.getValue_float("tx-gain");
-            LOG_DEBUG_FMT("Using Fixed Tx Gain Value = %1% dB.", tx_gain_input);
-        }
-        else if (parser.getValue_str("gain-mgmt") == "power")
-        {
-            auto retval = query_calibration_data();
-
-            if (retval.second == -100.0)
-                tx_gain_input = parser.getValue_float("tx-gain");
-            else
-                tx_gain_input = retval.second;
-            LOG_DEBUG_FMT("Using Measurement-based Tx Gain Value = %1% dB.", tx_gain_input);
-        }
-    }
+    float tx_gain_input = get_gain("tx", use_calib_gains);
 
     LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", tx_gain_input);
     usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
@@ -307,41 +275,59 @@ void USRP_class::set_initial_gains()
     LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
 
     // Rx-gain
-    std::string rx_gain_topic = mqttClient.topics->getValue_str("rx-gain") + device_id;
-    temp = "";
-    if (use_calib_gains)
-    {
-        if (mqttClient.temporary_listen_for_last_value(temp, rx_gain_topic, 10, 30))
-        {
-            rx_gain_input = std::stof(temp);
-            LOG_DEBUG_FMT("Using Calibrated Rx Gain Value = %1% dB.", rx_gain_input);
-        }
-    }
-    else
-    {
-        if (parser.getValue_str("gain-mgmt") == "gain")
-        {
-            rx_gain_input = parser.getValue_float("rx-gain");
-            LOG_DEBUG_FMT("Using Fixed Rx Gain Value = %1% dB.", rx_gain_input);
-        }
-        else if (parser.getValue_str("gain-mgmt") == "power")
-        {
-            auto retval = query_calibration_data();
-
-            if (retval.first == -100.0)
-                rx_gain_input = parser.getValue_float("rx-gain");
-            else
-                rx_gain_input = retval.first;
-
-            LOG_DEBUG_FMT("Using Measurement-based Rx Gain Value = %1% dB.", rx_gain_input);
-        }
-    }
+    float rx_gain_input = get_gain("rx", use_calib_gains);
 
     LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", rx_gain_input);
     usrp->set_rx_gain(rx_gain_input, 0); // Assuming channel 0
     rx_gain = usrp->get_rx_gain(0);
     LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
 };
+
+float USRP_class::get_gain(const std::string &trans_type, const bool &get_calib_gains)
+{
+    if (trans_type == "tx")
+    {
+        std::string config_type = "tx-gain";
+    }
+    else if (trans_type == "rx")
+    {
+        std::string config_type = "rx-gain";
+    }
+    else
+        LOG_WARN_FMT("Incorrect `trans_type´ = %1%. Allowed values are \"tx\" or \"rx\".", trans_type);
+
+    float gain_val;
+    if (get_calib_gains)
+    {
+        // if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
+        if (readDeviceConfig(device_id, "calib-" + config_type, gain_val))
+        {
+            if (gain_val == 0.0)
+                return get_gain(trans_type, false);
+            else
+                return gain_val;
+        }
+        else
+            return get_gain(trans_type, false);
+    }
+    else
+    {
+        if (parser.getValue_str("gain-mgmt") == "gain")
+        {
+            gain_val = parser.getValue_float(config_type);
+        }
+        else if (parser.getValue_str("gain-mgmt") == "power")
+        {
+            auto retval = query_calibration_data();
+
+            if (retval.second == -100.0)
+                gain_val = parser.getValue_float(config_type);
+            else
+                gain_val = retval.second;
+        }
+        return gain_val
+    }
+}
 
 void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
 {
