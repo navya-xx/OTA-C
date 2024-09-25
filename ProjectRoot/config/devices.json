@@ -76,12 +76,7 @@
     "32B1708": {
         "IP": "192.168.5.241",
         "config": {
-<<<<<<< HEAD
-            "CFO": 0.0,
-            "fullscale": 1.0,
-=======
             "CFO": 0.002501297276467085,
->>>>>>> bbae053 (asdf!)
             "calib-tx-gain": 0.0,
             "calib-rx-gain": 0.0,
             "noise": {
