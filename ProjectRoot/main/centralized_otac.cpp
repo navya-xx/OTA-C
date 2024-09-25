@@ -14,7 +14,7 @@ void sig_int_handler(int)
     stop_signal_called = true;
 }
 
-void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::string &counterpard_id, const bool &is_cent = false)
+void gen_mqtt_control_msg(std::string &device_id, std::string &counterpard_id, const bool &is_cent = false)
 {
     int choice;
 
@@ -35,6 +35,7 @@ void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::s
     {
     case 1:
     {
+        MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
         std::string cent_id, leaf_id;
         if (is_cent)
         {
@@ -62,6 +63,7 @@ void gen_mqtt_control_msg(MQTTClient &mqttClient, std::string &device_id, std::s
     }
     case 2:
     {
+        MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
         std::string cent_id, leaf_id;
         if (is_cent)
         {
@@ -306,8 +308,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         if (device_type == "cent" && program_ends)
         {
             program_ends = false;
-            std::thread input_thread([&]()
-                                     { gen_mqtt_control_msg(mqttClient, device_id, counterpart_id, is_cent); });
+            std::thread input_thread([&device_id, &counterpart_id, &is_cent]()
+                                     { gen_mqtt_control_msg(device_id, counterpart_id, is_cent); });
             input_thread.join();
         }
         else if (device_type == "leaf" && program_ends)
