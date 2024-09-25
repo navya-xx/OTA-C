@@ -672,15 +672,16 @@ bool Calibration::transmission_ref(const float &scale, const uhd::time_spec_t &t
 
 bool Calibration::transmission_otac(const float &scale, const uhd::time_spec_t &tx_timer)
 {
-    std::vector<std::complex<float>> tx_waveform(otac_waveform.size());
+    std::vector<std::complex<float>> tx_waveform = otac_waveform;
     float my_scale;
     if (scale > 1.0) // if not full_scale = 1.0, implement scaling of signal
         my_scale = 1.0;
     else
         my_scale = scale;
 
-    for (int i = 0; i < tx_waveform.size(); ++i)
-        tx_waveform[i] = my_scale * otac_waveform[i];
+    size_t cfo_counter = 0;
+    float current_cfo = csd_obj->cfo;
+    correct_cfo_tx(tx_waveform, my_scale, current_cfo, cfo_counter);
 
     if (usrp_obj->transmission(tx_waveform, tx_timer, signal_stop_called, true))
         return true;

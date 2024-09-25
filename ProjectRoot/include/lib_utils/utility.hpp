@@ -36,6 +36,8 @@ bool saveDeviceConfig(const std::string &device_id, const std::string &config_ty
 bool readDeviceConfig(const std::string &device_id, const std::string &config_type, float &config_val);
 bool readDeviceConfig(const std::string &device_id, const std::string &config_type, json &config_val);
 
+void correct_cfo_tx(std::vector<std::complex<float>> &signal, float &scale, float &cfo, size_t &counter);
+
 struct GainPower
 {
     double gain;

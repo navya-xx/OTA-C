@@ -1,5 +1,7 @@
 #include "utility.hpp"
 
+std::mutex fileMutex;
+
 std::string currentDateTime()
 {
     auto now = std::chrono::system_clock::now();
@@ -446,6 +448,7 @@ float fromDecibel(float dB, bool isPower)
 // read/write devices.json file
 bool devices_json_read_write(json &config_data, const bool &is_read)
 {
+    std::lock_guard<std::mutex> lock(fileMutex);
     std::string homeDir = get_home_dir();
     std::string devices_json_file = homeDir + "/OTA-C/ProjectRoot/config/devices.json";
 
@@ -613,5 +616,17 @@ bool readDeviceConfig(const std::string &device_id, const std::string &config_ty
     {
         LOG_WARN_FMT("JSON error %1%", e.what());
         return false;
+    }
+}
+
+void correct_cfo_tx(std::vector<std::complex<float>> &signal, float &scale, float &cfo, size_t &counter)
+{
+    for (auto &samp : signal)
+    {
+        if (cfo != 0.0)
+            samp *= scale * std::complex<float>(std::cos(cfo * counter), std::sin(cfo * counter));
+        else
+            samp *= scale;
+        counter++;
     }
 }

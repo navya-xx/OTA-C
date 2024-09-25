@@ -221,6 +221,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         LOG_INFO("Calbration ended.");
 
         program_ends.store(true);
+
+        return;
     };
 
     auto control_calib_topic = mqttClient.topics->getValue_str("calibration") + device_id;
@@ -282,6 +284,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         LOG_INFO("Calbration ended.");
 
         program_ends.store(true);
+
+        return;
     };
 
     auto control_scale_topic = mqttClient.topics->getValue_str("scaling-tests") + device_id;
