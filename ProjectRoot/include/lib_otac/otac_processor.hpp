@@ -55,7 +55,7 @@ private:
     /** OTAC protocol.
      * 1. Cent transmits ref -- Leafs detects, estimates channel power, and adjusts CFO and RX-gain.
      * 2. Leaf transmits pre-processed (modulate amplitude with f_n(x_n)) OTAC waveform at specified time
-     * 3. Cent receives superimposed OTAC waveform and estimates sum (\sum_n f_n(x_n))
+     * 3. Cent receives superimposed OTAC waveform and estimates sum (\sum_n <f_n(x_n))
      * 4. Process is repeated multiple times to get a histogram of errors
      */
     void producer_leaf_proto();

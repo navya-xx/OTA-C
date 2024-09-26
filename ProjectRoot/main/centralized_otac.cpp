@@ -186,16 +186,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------- USRP setup --------------*/
     // USRP_class usrp_obj(parser);
     std::shared_ptr<USRP_class> usrp_obj = std::make_shared<USRP_class>(*parser);
-    if (device_type == "leaf")
-        usrp_obj->use_calib_gains = true;
 
     // external reference
     usrp_obj->external_ref = parser->getValue_str("external-clock-ref") == "true" ? true : false;
-    usrp_obj->initialize();
-
-    // run background noise estimator
-    // if (device_type == "leaf")
-    //     usrp_obj->collect_background_noise_powers();
 
     parser->set_value("max-rx-packet-size", std::to_string(usrp_obj->max_rx_packet_size), "int", "Max Rx packet size");
     parser->print_values();
@@ -231,6 +224,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             main_dev = jdata["leaf-id"];
             c_dev = jdata["cent-id"];
         }
+
+        if (device_type == "leaf")
+            usrp_obj->use_calib_gains = false;
+        usrp_obj->initialize();
+
+        // run background noise estimator
+        // if (device_type == "leaf")
+        //     usrp_obj->collect_background_noise_powers();
 
         Calibration calib_class_obj(*usrp_obj, *parser, main_dev, c_dev, device_type, stop_signal_called);
 
@@ -295,6 +296,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             c_dev = jdata["cent-id"];
         }
 
+        if (device_type == "leaf")
+            usrp_obj->use_calib_gains = true;
+        usrp_obj->initialize();
+
+        // run background noise estimator
+        // if (device_type == "leaf")
+        //     usrp_obj->collect_background_noise_powers();
+
         Calibration calib_class_obj(*usrp_obj, *parser, main_dev, c_dev, device_type, stop_signal_called);
 
         if (!calib_class_obj.initialize())
@@ -353,6 +362,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         float dmin = jdata["dmin"];
         float dmax = jdata["dmax"];
         size_t num_leafs = jdata["num_leafs"];
+
+        if (device_type == "leaf")
+            usrp_obj->use_calib_gains = true;
+        usrp_obj->initialize();
+
+        // run background noise estimator
+        // if (device_type == "leaf")
+        //     usrp_obj->collect_background_noise_powers();
 
         OTAC_class otac_obj(*usrp_obj, *parser, device_id, device_type, input_data, dmin, dmax, num_leafs, stop_signal_called);
 

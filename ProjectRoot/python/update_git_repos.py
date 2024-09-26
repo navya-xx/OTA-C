@@ -21,10 +21,24 @@ def read_devices_config():
 
 def run_parallel_scripts():
     # Start a new tmux session
-    subprocess.run(["tmux", "kill-session", "-t", session_name])
-    subprocess.run(["tmux", "new-session", "-d", "-s", session_name])
     devices_config = read_devices_config()
     i = 0
+    for key, val in devices_config.items():
+        if (not key.startswith("32")):
+            continue
+
+        # First kill the existing otac_cent programs that might be running
+        if (val["type"] == "leaf"):
+            pkill_command = pkill_template.format(node_username=val["hostname"], node_address=val["IP"])
+            subprocess.run(pkill_command, shell=True, check=False)
+        else:
+            subprocess.run("pkill -f otac_cent && sleep 1", shell=True, check=False)
+
+    time.sleep(2)
+
+    subprocess.run(["tmux", "kill-session", "-t", session_name])
+    subprocess.run(["tmux", "new-session", "-d", "-s", session_name])
+    
     for key, val in devices_config.items():
         if (not key.startswith("32")):
             continue
@@ -32,8 +46,6 @@ def run_parallel_scripts():
         # For the first script, we're already in the first pane of the session.
         if i == 0:
             if (val["type"] == "leaf"):
-                pkill_command = pkill_template.format(node_username=val["hostname"], node_address=val["IP"])
-                # subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0", pkill_command, "C-m"])
                 tmux_command = command_template.format(node_username=val["hostname"], node_address=val["IP"], node_serial=key)
                 subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0", tmux_command, "C-m"])
             elif (val["type"] == "cent"):
@@ -47,8 +59,6 @@ def run_parallel_scripts():
             subprocess.run(["tmux", "select-layout", "-t", f"{session_name}", "tiled"])
 
             if (val["type"] == "leaf"):
-                pkill_command = pkill_template.format(node_username=val["hostname"], node_address=val["IP"])
-                # subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0.{i}", pkill_command, "C-m"])
                 tmux_command = command_template.format(node_username=val["hostname"], node_address=val["IP"], node_serial=key)
                 subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0.{i}", tmux_command, "C-m"])
             elif (val["type"] == "cent"):
