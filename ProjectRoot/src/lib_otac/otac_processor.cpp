@@ -279,8 +279,8 @@ void OTAC_class::producer_cent_proto()
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     // size_t R_zfc = parser.getValue_int("Ref-R-zfc");
     size_t ref_pad_len = parser.getValue_int("Ref-padding-mul") * N_zfc;
-    double first_sample_gap = ref_pad_len / usrp_obj->rx_rate;
-    double wait_duration = first_sample_gap + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
+    // double first_sample_gap = ref_pad_len / usrp_obj->rx_rate;
+    double wait_duration = parser.getValue_float("start-tx-wait-microsec") / 1e6;
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
 
     while (not signal_stop_called && round++ < max_total_round)
