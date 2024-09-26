@@ -37,7 +37,7 @@ bool readDeviceConfig(const std::string &device_id, const std::string &config_ty
 bool readDeviceConfig(const std::string &device_id, const std::string &config_type, json &config_val);
 bool listActiveDevices(std::vector<std::string> &device_ids);
 
-void correct_cfo_tx(std::vector<std::complex<float>> &signal, float &scale, float &cfo, size_t &counter);
+void correct_cfo_tx(std::vector<std::complex<float>> &signal, const float &scale, const float &cfo, size_t &counter);
 
 struct GainPower
 {

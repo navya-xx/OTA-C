@@ -33,7 +33,7 @@ def run_parallel_scripts():
         if i == 0:
             if (val["type"] == "leaf"):
                 pkill_command = pkill_template.format(node_username=val["hostname"], node_address=val["IP"])
-                subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0", pkill_command, "C-m"])
+                # subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0", pkill_command, "C-m"])
                 tmux_command = command_template.format(node_username=val["hostname"], node_address=val["IP"], node_serial=key)
                 subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0", tmux_command, "C-m"])
             elif (val["type"] == "cent"):
@@ -48,7 +48,7 @@ def run_parallel_scripts():
 
             if (val["type"] == "leaf"):
                 pkill_command = pkill_template.format(node_username=val["hostname"], node_address=val["IP"])
-                subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0.{i}", pkill_command, "C-m"])
+                # subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0.{i}", pkill_command, "C-m"])
                 tmux_command = command_template.format(node_username=val["hostname"], node_address=val["IP"], node_serial=key)
                 subprocess.run(["tmux", "send-keys", "-t", f"{session_name}:0.{i}", tmux_command, "C-m"])
             elif (val["type"] == "cent"):

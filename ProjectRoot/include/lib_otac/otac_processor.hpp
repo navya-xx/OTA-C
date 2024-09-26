@@ -28,7 +28,7 @@ private:
     std::shared_ptr<USRP_class> usrp_obj;
     std::unique_ptr<CycleStartDetector> csd_obj;
     std::unique_ptr<PeakDetectionClass> peak_det_obj;
-    std::vector<std::complex<float>> ref_waveform, otac_waveform;
+    std::vector<std::complex<float>> ref_waveform, otac_waveform, fs_waveform;
 
     void initialize_peak_det_obj();
     void initialize_csd_obj();
@@ -42,6 +42,7 @@ private:
     bool transmission_otac(const float &scale = 1.0, const uhd::time_spec_t &tx_timer = uhd::time_spec_t(0.0));
     bool reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer);
     bool reception_otac(float &otac_sig_pow, uhd::time_spec_t &tx_timer);
+    bool otac_signal_detection(const std::vector<std::complex<float>> &signal, float &signal_power, uhd::time_spec_t &signal_start_timer, const size_t &detection_type_id = 0);
 
     float compute_nmse(const float &val1, const float &val2);
     void callback_detect_flags(const std::string &payload);

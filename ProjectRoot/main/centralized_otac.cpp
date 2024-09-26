@@ -121,7 +121,8 @@ void gen_mqtt_control_msg(std::string &device_id, std::string &counterpard_id, c
         float otac_input_sum = 0.0;
         for (const auto &dev_id : device_id_list)
         {
-            float otac_input_ = generateRandomFloat(dmin, dmax);
+            // float otac_input_ = generateRandomFloat(dmin, dmax);
+            float otac_input_ = dmax;
             otac_input_sum += otac_input_;
             jstring["otac_input"] = otac_input_;
             mqttClient.publish(topic_otac + dev_id, jstring.dump(4), false);

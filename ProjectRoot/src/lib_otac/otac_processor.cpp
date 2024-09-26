@@ -1,6 +1,7 @@
 #include "otac_processor.hpp"
 
 // TODO: consumer-producer routine for Cent reception (add ZFC seq to detect reception)
+// TODO: Validate OTAC performance for each pair of devices (calibrate)
 // TODO: Adpatable (dmin, dmax)
 // TODO: Non-linear power amplification control
 
@@ -78,8 +79,11 @@ void OTAC_class::generate_waveform()
     ref_waveform = wf_gen.generate_waveform();
 
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    wf_gen.initialize(wf_gen.UNIT_RAND, 1 * otac_wf_len, 1, 0, otac_wf_len, 1, 1.0, 1);
+    wf_gen.initialize(wf_gen.UNIT_RAND, 2 * otac_wf_len, 1, 0, 2 * otac_wf_len, 1, 1.0, 1);
     otac_waveform = wf_gen.generate_waveform();
+
+    wf_gen.initialize(wf_gen.UNIT_RAND, otac_wf_len, 1, 0, 0, 1, 1.0, 1);
+    fs_waveform = wf_gen.generate_waveform();
 }
 
 bool OTAC_class::initialize()
@@ -273,7 +277,7 @@ void OTAC_class::producer_cent_proto()
     size_t round = 0;
 
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
-    size_t R_zfc = parser.getValue_int("Ref-R-zfc");
+    // size_t R_zfc = parser.getValue_int("Ref-R-zfc");
     size_t ref_pad_len = parser.getValue_int("Ref-padding-mul") * N_zfc;
     double first_sample_gap = ref_pad_len / usrp_obj->rx_rate;
     double wait_duration = first_sample_gap + (parser.getValue_float("start-tx-wait-microsec") / 1e6);
@@ -290,19 +294,19 @@ void OTAC_class::producer_cent_proto()
         bool transmit_success = transmission_ref(1.0, tx_timer);
         if (transmit_success)
         {
-            uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t((ref_waveform.size()) / usrp_obj->rx_rate); // uhd::time_spec_t(wait_duration);
+            uhd::time_spec_t otac_timer = tx_timer + uhd::time_spec_t(wait_duration);
             bool rx_success = reception_otac(ltoc, otac_timer);
             if (rx_success)
             {
-                // float txrx_gap = (otac_timer - tx_timer - uhd::time_spec_t(wait_duration)).get_real_secs() * 1e6;
-                // txrx_gap -= ((otac_wf_len / usrp_obj->rx_rate) * 1e6);
-                // LOG_INFO_FMT("OTAC signal synchronization gap = %1% microsecs", txrx_gap);
-                // float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");
-                // if (txrx_gap > exp_wait_time + 200)
-                // {
-                //     LOG_WARN("OTAC signal reception delay is too big -> Reject this data.");
-                //     continue;
-                // }
+                float txrx_gap = (otac_timer - tx_timer - uhd::time_spec_t(wait_duration)).get_real_secs() * 1e6;
+                txrx_gap -= ((otac_wf_len / usrp_obj->rx_rate) * 1e6);
+                LOG_INFO_FMT("OTAC signal synchronization gap = %1% microsecs", txrx_gap);
+                float exp_wait_time = parser.getValue_float("start-tx-wait-microsec");
+                if (txrx_gap > exp_wait_time + 200)
+                {
+                    LOG_WARN("OTAC signal reception delay is too big -> Reject this data.");
+                    continue;
+                }
 
                 float otac_output;
                 if (not otac_post_processing(ltoc, otac_output))
@@ -377,6 +381,11 @@ bool OTAC_class::transmission_otac(const float &scale, const uhd::time_spec_t &t
     float current_cfo = csd_obj->cfo;
     correct_cfo_tx(tx_waveform, my_scale, current_cfo, cfo_counter);
 
+    std::vector<std::complex<float>> fs_tx_waveform = fs_waveform;
+    correct_cfo_tx(fs_tx_waveform, 1.0, current_cfo, cfo_counter);
+
+    tx_waveform.insert(tx_waveform.begin(), fs_tx_waveform.begin(), fs_tx_waveform.end());
+
     if (usrp_obj->transmission(tx_waveform, tx_timer, signal_stop_called, true))
         return true;
     else
@@ -414,13 +423,32 @@ bool OTAC_class::reception_ref(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 bool OTAC_class::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
 {
     size_t otac_wf_len = parser.getValue_int("test-signal-len");
-    size_t req_num_samps = (60 / 1e3 * usrp_obj->rx_rate);
+    size_t req_num_samps = 10 * otac_wf_len;
     auto otac_rx_samps = usrp_obj->reception(signal_stop_called, req_num_samps, 0.0, tx_timer, true);
-
     if (otac_rx_samps.size() == req_num_samps)
+        return otac_signal_detection(otac_rx_samps, rx_sig_pow, tx_timer);
+    else
+        return false;
+}
+
+bool OTAC_class::otac_signal_detection(const std::vector<std::complex<float>> &signal, float &signal_power, uhd::time_spec_t &signal_start_timer, const size_t &type_id)
+{
+    if (type_id == 0) // looks for a full-scale signal over a window followed by a gap, and then signal with highest mean-square-norm over window
     {
-        std::vector<float> norm_samples(otac_rx_samps.size());
-        std::transform(otac_rx_samps.begin(), otac_rx_samps.end(), norm_samples.begin(), [](const std::complex<float> &c)
+        // size_t otac_wf_len = parser.getValue_int("test-signal-len");
+        // size_t req_num_samps = signal.size();
+        // std::vector<float> norm_samples(req_num_samps);
+        // std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
+        //                { return std::norm(c); });
+        signal_power = 0.1;
+        return true;
+    }
+    else if (type_id == 1) // only looks for signal with highest mean-square-norm over a window
+    {
+        size_t otac_wf_len = parser.getValue_int("test-signal-len");
+        size_t req_num_samps = signal.size();
+        std::vector<float> norm_samples(req_num_samps);
+        std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
                        { return std::norm(c); });
         // compute signal power over window
         float max_val = 0.0, temp_val = 0.0, win_pow = 0.0;
@@ -454,10 +482,12 @@ bool OTAC_class::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
             return false;
         }
 
-        tx_timer += uhd::time_spec_t(max_index / usrp_obj->rx_rate);
-        rx_sig_pow = max_val;
+        signal_start_timer += uhd::time_spec_t(max_index / usrp_obj->rx_rate);
+        signal_power = max_val;
         return true;
     }
     else
+    {
         return false;
+    }
 }

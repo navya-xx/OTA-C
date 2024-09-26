@@ -659,7 +659,7 @@ bool listActiveDevices(std::vector<std::string> &device_ids)
     return true;
 }
 
-void correct_cfo_tx(std::vector<std::complex<float>> &signal, float &scale, float &cfo, size_t &counter)
+void correct_cfo_tx(std::vector<std::complex<float>> &signal, const float &scale, const float &cfo, size_t &counter)
 {
     for (auto &samp : signal)
     {
