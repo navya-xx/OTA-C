@@ -175,14 +175,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------- MQTT Client setup -------*/
     MQTTClient &mqttClient = MQTTClient::getInstance(device_id);
 
-    /*------- Obtain data ---------*/
-    // get last CFO
-    std::string val = "";
-    std::string topic_cfo = mqttClient.topics->getValue_str("CFO") + device_id;
-    mqttClient.temporary_listen_for_last_value(val, topic_cfo, 15, 20);
-    if (val != "")
-        parser->set_value("cfo", val, "float", "CFO-value from calibrated data");
-
     /*------- USRP setup --------------*/
     // USRP_class usrp_obj(parser);
     std::shared_ptr<USRP_class> usrp_obj = std::make_shared<USRP_class>(*parser);
