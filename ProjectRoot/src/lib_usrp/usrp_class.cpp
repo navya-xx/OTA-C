@@ -978,6 +978,8 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
 
     stream_cmd.num_samps = max_rx_packet_size;
 
+    size_t total_num_samps = duration * rx_rate;
+
     auto start_time = std::chrono::high_resolution_clock::now();
     stream_cmd.stream_now = true;
     rx_streamer->issue_stream_cmd(stream_cmd);
@@ -993,13 +995,14 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     size_t retry_rx = 0;
     size_t num_acc_samps = 0;
     bool callback_success = false;
-    std::vector<std::complex<float>> buff(max_rx_packet_size);
+    std::vector<std::complex<float>> buff(total_num_samps);
 
     while (not reception_complete and not stop_signal_called)
     {
 
         uhd::rx_metadata_t md;
-        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front(), max_rx_packet_size, md, timeout, false);
+        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front() + num_acc_samps, max_rx_packet_size, md, timeout, false);
+        num_acc_samps += num_curr_rx_samps;
 
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
         {
@@ -1019,9 +1022,6 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         if (not success)
             break;
 
-        std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
-        rx_samples.insert(rx_samples.end(), forward.begin(), forward.end());
-
         auto time_data = md.time_spec;
         timer_vec.emplace_back(time_data);
         datalen_vec.emplace_back(num_curr_rx_samps);
@@ -1037,7 +1037,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     }
 
     std::ofstream rx_save_datastream, rx_save_timer;
-    save_stream_to_file(data_filename, rx_save_datastream, rx_samples);
+    save_stream_to_file(data_filename, rx_save_datastream, buff);
 
     rx_save_timer.open(timer_filename, std::ios::out | std::ios::binary | std::ios::app);
     for (size_t i = 0; i < timer_vec.size(); ++i)
