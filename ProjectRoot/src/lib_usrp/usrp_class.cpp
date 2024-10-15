@@ -1159,7 +1159,7 @@ void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, co
         }
         else if (num_curr_rx_samps < max_rx_packet_size)
         {
-            LOG_WARN_FMT("Not all samples received in round %1%!", rx_counter);
+            LOG_WARN_FMT("Only %1% samples out of requested %2% samples received in round %3%!", num_curr_rx_samps, max_rx_packet_size, rx_counter);
         }
 
         if (not success)
