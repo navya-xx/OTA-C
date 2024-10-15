@@ -995,8 +995,6 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     bool callback_success = false;
     std::vector<std::complex<float>> buff(max_rx_packet_size);
 
-    std::vector<double> timer_seq;
-
     while (not reception_complete and not stop_signal_called)
     {
         size_t size_rx = max_rx_packet_size;
@@ -1019,12 +1017,11 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
             success = false;
         }
 
-        // TODO: catch reception error gracefully without breaking
         if (not success)
             break;
 
         std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
-        save_stream_to_file(data_filename, rx_save_datastream, forward);
+        rx_samples.insert(rx_samples.end(), forward.begin(), forward.end());
 
         double time_data = md.time_spec.get_real_secs();
         LOG_INFO_FMT("Rx data at time : %1%", time_data);
@@ -1042,6 +1039,8 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
         rx_streamer->issue_stream_cmd(stream_cmd);
     }
+
+    save_stream_to_file(data_filename, rx_save_datastream, rx_samples);
 };
 
 void USRP_class::adjust_for_freq_offset(const float &freq_offset)
