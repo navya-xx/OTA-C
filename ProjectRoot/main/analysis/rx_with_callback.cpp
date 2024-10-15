@@ -65,7 +65,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     };
     usrp_classobj.receive_continuously_with_callback(stop_signal_called, save_stream_callback);
 
-    LOG_INFO("Reception over!");
+    rx_save_stream.close();
+
+    LOG_INFO_FMT("Reception over! Total number of samples saved = %1%", num_samples_saved);
 
     return EXIT_SUCCESS;
 };

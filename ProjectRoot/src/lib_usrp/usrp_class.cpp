@@ -1157,9 +1157,9 @@ void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, co
             LOG_WARN_FMT("Receiver error: %1%", md.strerror());
             success = false;
         }
-        else if (num_curr_rx_samps != max_rx_packet_size)
+        else if (num_curr_rx_samps < max_rx_packet_size)
         {
-            LOG_WARN_FMT("Not all samples received in this round!");
+            LOG_WARN_FMT("Not all samples received in round %1%!", rx_counter);
         }
 
         if (not success)
