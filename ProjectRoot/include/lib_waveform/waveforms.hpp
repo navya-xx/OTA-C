@@ -26,6 +26,9 @@ public:
 
     std::vector<std::complex<float>> generate_waveform();
 
+    std::vector<int> feedbackPolynomial11_1 = {11, 8, 5, 2};
+    std::vector<int> feedbackPolynomial11_2 = {11, 6, 5, 1};
+
 private:
     WAVEFORM_TYPE wf_type;
 
@@ -34,6 +37,12 @@ private:
     std::vector<std::complex<float>> generateUnitCircleRandom();
 
     std::vector<std::complex<float>> generateImpulseSignal();
+
+    std::vector<std::complex<float>> generateQPSKSymbols(const std::vector<int> &binarySequence);
+
+    std::vector<int> generateMSequence(int n, const std::vector<int> &feedbackPolynomial);
+
+    std::vector<int> generateGoldSequence(int n, int shift, const std::vector<int> &feedbackPolynomial1 = {11, 8, 5, 2}, const std::vector<int> &feedbackPolynomial2 = {11, 6, 5, 1});
 
     std::vector<std::complex<float>> generateDFTseq();
 };

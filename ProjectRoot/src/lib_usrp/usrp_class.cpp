@@ -426,7 +426,7 @@ float USRP_class::get_device_temperature()
 void USRP_class::setup_streamers()
 {
     std::string cpu_format = parser.getValue_str("cpu-format");
-    std::string otw_format = "sc16";
+    std::string otw_format = parser.getValue_str("otw-format");
     uhd::stream_args_t stream_args(cpu_format, otw_format);
     std::vector<size_t> channel_nums = {0}; // Assuming channel 0
     stream_args.channels = channel_nums;
@@ -968,8 +968,8 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     std::string data_filename, timer_filename;
     std::string homeDirStr = get_home_dir();
     std::string curr_datetime = currentDateTimeFilename();
-    data_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_data_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
-    timer_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/rx_saved_file_timer_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
+    data_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/data_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
+    timer_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/timer_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
 
     std::ofstream rx_save_datastream, rx_save_timer;
     rx_save_timer.open(timer_filename, std::ios::out | std::ios::binary | std::ios::app);

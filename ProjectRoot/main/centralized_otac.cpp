@@ -216,8 +216,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             c_dev = jdata["cent-id"];
         }
 
-        if (device_type == "leaf")
-            usrp_obj->use_calib_gains = false;
         usrp_obj->initialize();
 
         parser->set_value("max-rx-packet-size", std::to_string(usrp_obj->max_rx_packet_size), "int", "Max Rx packet size");
@@ -246,7 +244,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             calib_class_obj.stop();
         }
 
-        while (!calib_class_obj.calibration_ends)
+        while (!calib_class_obj.calibration_ends and not stop_signal_called)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
@@ -317,7 +315,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             calib_class_obj.stop();
         }
 
-        while (!calib_class_obj.scaling_test_ends)
+        while (!calib_class_obj.scaling_test_ends and not stop_signal_called)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
@@ -384,7 +382,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             otac_obj.stop();
         }
 
-        while (!otac_obj.otac_routine_ends)
+        while (!otac_obj.otac_routine_ends and not stop_signal_called)
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
         program_ends.store(true);

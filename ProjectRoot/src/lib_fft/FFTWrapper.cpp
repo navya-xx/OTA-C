@@ -127,3 +127,34 @@ void FFTWrapper::zeroPad(const std::deque<std::complex<float>> &input,
         output[i] = std::complex<float>(0.0, 0.0);
     }
 }
+
+// Low-pass filter method
+void FFTWrapper::lowPassFilter(const std::vector<std::complex<float>> &inputSignal,
+                               std::vector<std::complex<float>> &outputSignal,
+                               float cutoffFrequency, float sampleRate)
+{
+    size_t N = inputSignal.size();
+
+    // Ensure FFTWrapper is initialized with the correct size
+    if (N != size_)
+    {
+        initialize(N);
+    }
+
+    // Perform FFT on the input signal
+    std::vector<std::complex<float>> frequencyDomain(N);
+    fft(inputSignal, frequencyDomain);
+
+    // Apply low-pass filter in the frequency domain
+    float nyquist = sampleRate / 2.0f;
+    size_t cutoffBin = static_cast<size_t>((cutoffFrequency / nyquist) * (N / 2));
+
+    // Zero out frequencies above the cutoff
+    for (size_t i = cutoffBin; i < N - cutoffBin; ++i)
+    {
+        frequencyDomain[i] = std::complex<float>(0, 0);
+    }
+
+    // Perform inverse FFT to get back the filtered signal in the time domain
+    ifft(frequencyDomain, outputSignal);
+}

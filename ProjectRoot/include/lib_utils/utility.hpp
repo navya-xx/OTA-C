@@ -45,4 +45,15 @@ struct GainPower
     double power_dbm;
 };
 
+// Processing OTAC signal appended with Full-scale signal to obtain signal power and number of samples in the signal before otac
+void windowing_func(const std::vector<float> &signal, const size_t &otac_len, const float &threshold, std::vector<float> out_signal, float &max_signal_power, size_t &max_index);
+bool otac_wfs_proc(const std::vector<std::complex<float>> &signal, const size_t &otac_len, const float &threshold, float &fs_signal_power, float &otac_signal_power, size_t &num_samples_till_fs);
+
+// Processing OTAC signal without Full-scale signal to obtain signal power and number of samples in the signal before otac
+bool otac_wofs_proc(const std::vector<std::complex<float>> &signal, const size_t &otac_len, const float &threshold, float &signal_power, size_t &num_samples_till_otac);
+
+// signal processing
+std::vector<std::complex<float>> upsample(const std::vector<std::complex<float>> &input_signal, const size_t &upscale_factor);
+std::vector<std::complex<float>> downsample(const std::vector<std::complex<float>> &input_signal, const size_t &downscale_factor);
+
 #endif // UTILITY_FUNCS

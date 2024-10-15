@@ -431,63 +431,7 @@ bool OTAC_class::reception_otac(float &rx_sig_pow, uhd::time_spec_t &tx_timer)
         return false;
 }
 
-bool OTAC_class::otac_signal_detection(const std::vector<std::complex<float>> &signal, float &signal_power, uhd::time_spec_t &signal_start_timer, const size_t &type_id)
+bool OTAC_class::otac_signal_detection(const std::vector<std::complex<float>> &signal, float &signal_power, uhd::time_spec_t &signal_start_timer, const size_t &detection_type_id)
 {
-    if (type_id == 0) // looks for a full-scale signal over a window followed by a gap, and then signal with highest mean-square-norm over window
-    {
-        // size_t otac_wf_len = parser.getValue_int("test-signal-len");
-        // size_t req_num_samps = signal.size();
-        // std::vector<float> norm_samples(req_num_samps);
-        // std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
-        //                { return std::norm(c); });
-        signal_power = 0.1;
-        return true;
-    }
-    else if (type_id == 1) // only looks for signal with highest mean-square-norm over a window
-    {
-        size_t otac_wf_len = parser.getValue_int("test-signal-len");
-        size_t req_num_samps = signal.size();
-        std::vector<float> norm_samples(req_num_samps);
-        std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
-                       { return std::norm(c); });
-        // compute signal power over window
-        float max_val = 0.0, temp_val = 0.0, win_pow = 0.0;
-        size_t max_index = 0;
-        for (size_t i = 0; i < req_num_samps - otac_wf_len; ++i)
-        {
-            if (i == 0)
-            {
-                for (size_t j = 0; j < otac_wf_len; ++j)
-                {
-                    temp_val += norm_samples[j];
-                }
-            }
-            else
-            {
-                temp_val -= norm_samples[i - 1];
-                temp_val += norm_samples[i + otac_wf_len - 1];
-            }
-
-            win_pow = temp_val / otac_wf_len;
-            if (win_pow > max_val)
-            {
-                max_val = win_pow;
-                max_index = i;
-            }
-        }
-
-        if (max_val < 10 * noise_power)
-        {
-            LOG_WARN_FMT("Estimated OTAC signal power = %1% .. is too low!", max_val);
-            return false;
-        }
-
-        signal_start_timer += uhd::time_spec_t(max_index / usrp_obj->rx_rate);
-        signal_power = max_val;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return false;
 }

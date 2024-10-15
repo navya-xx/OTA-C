@@ -27,6 +27,11 @@ public:
     void zeroPad(const std::deque<std::complex<float>> &input,
                  std::vector<std::complex<float>> &output, int paddedSize);
 
+    // Filtering
+    void lowPassFilter(const std::vector<std::complex<float>> &inputSignal,
+                       std::vector<std::complex<float>> &outputSignal,
+                       float cutoffFrequency, float sampleRate);
+
 private:
     size_t size_;
     fftw_complex *fft_input_;

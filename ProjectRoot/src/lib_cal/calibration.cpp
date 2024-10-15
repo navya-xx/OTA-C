@@ -529,20 +529,28 @@ void Calibration::producer_leaf_proto2()
             else
                 continue;
 
-            // check if ctol is too large or too small
-            if (not check_ctol())
-            {
-                LOG_WARN("Repeat ref reception with new Rx gain!");
-                continue;
-            }
+            // // check if ctol is too large or too small
+            // if (not check_ctol())
+            // {
+            //     LOG_WARN("Repeat ref reception with new Rx gain!");
+            //     continue;
+            // }
 
             // transmit otac signal
             recv_success = false;
             if (tx_timer <= uhd::time_spec_t(0.0))
-                tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(200e-6);
-            float sig_scale = std::min<float>(full_scale / std::sqrt(ctol / min_e2e_pow), 1.0);
-            LOG_DEBUG_FMT("Transmitting OTAC signal with scale %1%", sig_scale);
+            {
+                LOG_WARN("Estimate REF timer incorrect. Transmitting OTAC signal without proper reference.");
+                tx_timer = usrp_obj->usrp->get_time_now() + uhd::time_spec_t(parser.getValue_float("start-tx-wait-microsec") / 1e6);
+            }
+
+            float sig_scale = std::min<float>(full_scale / std::sqrt(ctol / min_e2e_pow), 10.0);
+            LOG_DEBUG_FMT("Transmitting OTAC signal with scale %1% = (%2% * %3% / %4%)", full_scale / std::sqrt(ctol / min_e2e_pow), full_scale, std::sqrt(min_e2e_pow), std::sqrt(ctol));
+            if (full_scale / std::sqrt(ctol / min_e2e_pow) > 10.0)
+                LOG_DEBUG("Tx signal scale is clipped at 10.0");
+
             bool tx_success = transmission_otac(sig_scale, tx_timer);
+
             if (not tx_success)
             {
                 LOG_WARN("OTAC tranmission failed!");
@@ -777,13 +785,13 @@ bool Calibration::calibrate_gains(MQTTClient &mqttClient)
 {
     // float new_tx_gain = toDecibel(ctol / (calib_sig_scale * calib_sig_scale), true) - toDecibel(ltoc / (calib_sig_scale * calib_sig_scale), true) + usrp_obj->tx_gain;
     float ltoc_sig_scale = ltoc / std::norm(calib_sig_scale * full_scale);
-    bool prox_check = proximity_check(1.0, ltoc_sig_scale);
-    if (prox_check)
-    {
-        on_calib_success(mqttClient);
-        calibration_ends = true;
-        return true;
-    }
+    // bool prox_check = proximity_check(1.0, ltoc_sig_scale);
+    // if (prox_check)
+    // {
+    //     on_calib_success(mqttClient);
+    //     calibration_ends = true;
+    //     return true;
+    // }
     float new_tx_gain = usrp_obj->tx_gain - toDecibel(ltoc_sig_scale, true);
     float impl_tx_gain = std::ceil(new_tx_gain * 2) / 2; // tx gains are implemented in 0.5dB steps
     LOG_DEBUG_FMT("Requested TX gain = %1% dB", impl_tx_gain);

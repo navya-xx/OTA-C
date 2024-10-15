@@ -28,8 +28,7 @@ int random_delay(const int &min, const int &max)
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     /*------ Initialize ---------------*/
-    const char *homeDir = std::getenv("HOME");
-    std::string homeDirStr(homeDir);
+    std::string homeDirStr = get_home_dir();
     std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
     std::string curr_time_str = currentDateTimeFilename();
 
@@ -44,7 +43,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     Logger::getInstance().setLogLevel(LOG_LEVEL);
 
     /*------ Parse Config -------------*/
-    ConfigParser parser(projectDir + "/main/centralized_arch/config.conf");
+    ConfigParser parser(projectDir + "/config/config.conf");
     parser.set_value("device-id", device_id, "str", "USRP device number");
     if (argc > 2)
     {
@@ -64,8 +63,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
+    size_t sampling_factor = parser.getValue_int("sampling-factor");
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, q_zfc, 1.0, 0, false);
-    auto tx_waveform = wf_gen.generate_waveform();
+    auto ref_waveform = wf_gen.generate_waveform();
+    auto tx_waveform = upsample(ref_waveform, sampling_factor);
 
     /*-------- Transmit Waveform --------*/
     // transmit multiple copies of the waveform with random delays

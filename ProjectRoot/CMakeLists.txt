@@ -96,8 +96,8 @@ endfunction()
 # add_library(lib_usrp STATIC src/lib_usrp/USRPclass.cpp)
 # enable_precompiled_headers(lib_usrp)
 
-SET(executables_list otac_cent)
-SET(files_list main/centralized_otac.cpp)
+SET(executables_list otac_cent rx_to_file tx_zfc)
+SET(files_list main/centralized_otac.cpp main/analysis/rx_to_file.cpp main/analysis/tx_zfc.cpp)
 SET(counter 0)
 
 ### Make the executable #######################################################

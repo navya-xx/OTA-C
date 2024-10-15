@@ -15,8 +15,7 @@ void sig_int_handler(int)
 int UHD_SAFE_MAIN(int argc, char *argv[])
 {
     /*------ Initialize ---------------*/
-    const char *homeDir = std::getenv("HOME");
-    std::string homeDirStr(homeDir);
+    std::string homeDirStr = get_home_dir();
     std::string projectDir = homeDirStr + "/OTA-C/ProjectRoot";
     std::string curr_time_str = currentDateTimeFilename();
 
@@ -31,7 +30,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     Logger::getInstance().setLogLevel(LOG_LEVEL);
 
     /*------ Parse Config -------------*/
-    ConfigParser parser(projectDir + "/main/centralized_arch/config.conf");
+    ConfigParser parser(projectDir + "/config/config.conf");
     parser.set_value("device-id", device_id, "str", "USRP device number");
     if (argc > 2)
     {

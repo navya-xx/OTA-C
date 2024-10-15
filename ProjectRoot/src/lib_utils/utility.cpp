@@ -670,3 +670,143 @@ void correct_cfo_tx(std::vector<std::complex<float>> &signal, const float &scale
         counter++;
     }
 }
+
+void windowing_func(const std::vector<float> &signal, const size_t &otac_len, const float &threshold, std::vector<float> out_signal, float &max_signal_power, size_t &max_index)
+{
+    size_t signal_len = signal.size();
+    out_signal.resize(signal_len - otac_len);
+    float temp_val = 0.0, win_pow = 0.0;
+    bool threshold_crossed = false;
+    for (size_t i = 0; i < signal_len - otac_len; ++i)
+    {
+        if (i == 0)
+        {
+            for (size_t j = 0; j < otac_len; ++j)
+            {
+                temp_val += signal[j];
+            }
+        }
+        else
+        {
+            temp_val -= signal[i - 1];
+            temp_val += signal[i + otac_len - 1];
+        }
+
+        win_pow = temp_val / otac_len;
+        out_signal[i] = win_pow;
+
+        if (win_pow > max_signal_power)
+        {
+            max_signal_power = win_pow;
+            max_index = i;
+        }
+    }
+}
+
+bool otac_wfs_proc(const std::vector<std::complex<float>> &signal, const size_t &otac_len, const float &threshold, float &fs_signal_power, float &otac_signal_power, size_t &num_samples_till_fs)
+{
+    size_t signal_len = signal.size();
+    std::vector<float> norm_samples(signal_len);
+    std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
+                   { return std::norm(c); });
+
+    // Find Full-scale signal - first occurance of signal with mean-norm above threshold
+    float max_fs = 0.0;
+    size_t max_index = 0;
+    std::vector<float> window_avg_sig;
+    windowing_func(norm_samples, otac_len, threshold, window_avg_sig, max_fs, max_index);
+
+    if (max_fs > threshold)
+    {
+        // calculate the power of follow-up otac signal
+        if (max_index > signal_len - 5 * otac_len)
+        {
+            LOG_WARN("OTAC signal is not captured correctly.");
+        }
+        else
+        {
+            auto max_it = std::max_element(window_avg_sig.begin() + max_index + otac_len, window_avg_sig.end());
+            float max_otac = *max_it;
+            LOG_DEBUG_FMT("Distance of maximum OTAC signal (%1%) from end of FullScale signal (%2%) = %3%", max_fs, max_otac, std::distance(window_avg_sig.begin() + max_index + otac_len, max_it));
+            otac_signal_power = max_otac;
+        }
+
+        fs_signal_power = max_fs;
+        num_samples_till_fs = max_index;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool otac_wofs_proc(const std::vector<std::complex<float>> &signal, const size_t &otac_len, const float &threshold, float &signal_power, size_t &num_samples_till_otac)
+{
+    size_t signal_len = signal.size();
+    std::vector<float> norm_samples(signal_len);
+    std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
+                   { return std::norm(c); });
+    // compute signal power over window
+    float max_val = 0.0, temp_val = 0.0, win_pow = 0.0;
+    size_t max_index = 0;
+    for (size_t i = 0; i < signal_len - otac_len; ++i)
+    {
+        if (i == 0)
+        {
+            for (size_t j = 0; j < otac_len; ++j)
+            {
+                temp_val += norm_samples[j];
+            }
+        }
+        else
+        {
+            temp_val -= norm_samples[i - 1];
+            temp_val += norm_samples[i + otac_len - 1];
+        }
+
+        win_pow = temp_val / otac_len;
+        if (win_pow > max_val)
+        {
+            max_val = win_pow;
+            max_index = i;
+        }
+    }
+
+    num_samples_till_otac = max_index;
+    signal_power = max_val;
+    return true;
+}
+
+std::vector<std::complex<float>> upsample(const std::vector<std::complex<float>> &input_signal, const size_t &upscale_factor)
+{
+    size_t inputSize = input_signal.size();
+    size_t outputSize = inputSize * upscale_factor;
+
+    std::vector<std::complex<float>> outputSignal(outputSize);
+
+    // Insert zeros between samples
+    for (size_t i = 0; i < inputSize; ++i)
+    {
+        outputSignal[i * upscale_factor] = input_signal[i]; // Keep the original sample
+        for (size_t j = 1; j < upscale_factor; ++j)
+        {
+            outputSignal[i * upscale_factor + j] = std::complex<float>(0, 0); // Insert zeros
+        }
+    }
+
+    return outputSignal;
+}
+
+std::vector<std::complex<float>> downsample(const std::vector<std::complex<float>> &inputSignal, const size_t &factor)
+{
+    size_t inputSize = inputSignal.size();
+    size_t outputSize = inputSize / factor;
+    std::vector<std::complex<float>> outputSignal(outputSize);
+
+    // Take every nth sample and discard the others
+    for (size_t i = 0; i < outputSize; ++i)
+    {
+        outputSignal[i] = inputSignal[i * factor];
+    }
+
+    return outputSignal;
+}
