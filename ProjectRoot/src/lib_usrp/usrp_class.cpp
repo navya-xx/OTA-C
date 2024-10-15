@@ -992,7 +992,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     std::vector<size_t> datalen_vec;
 
     bool reception_complete = false;
-    size_t retry_rx = 0;
+    size_t rx_counter = 0;
     size_t num_acc_samps = 0;
     bool callback_success = false;
     std::vector<std::complex<float>> buff(total_num_samps);
@@ -1022,6 +1022,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         if (not success)
             break;
 
+        std::cout << "Rx_counter " << rx_counter << std::flush;
         auto time_data = md.time_spec;
         timer_vec.emplace_back(time_data);
         datalen_vec.emplace_back(num_curr_rx_samps);
@@ -1032,6 +1033,9 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
         rx_streamer->issue_stream_cmd(stream_cmd);
     }
+
+    std::cout << std::endl;
+    std::cout << "Saving file..." << std::endl;
 
     std::ofstream rx_save_datastream, rx_save_timer;
     save_stream_to_file(data_filename, rx_save_datastream, buff);
