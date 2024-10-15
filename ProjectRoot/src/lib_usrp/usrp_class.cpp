@@ -521,8 +521,10 @@ float USRP_class::set_background_noise_power()
 float USRP_class::estimate_background_noise_power(const size_t &num_pkts)
 {
     bool dont_stop = false;
+    std::vector<std::complex<float>> rx_samples;
+    uhd::time_spec_t rx_timer;
+    receive_fixed_num_samps(dont_stop, max_rx_packet_size * num_pkts, rx_samples, rx_timer);
 
-    auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
     if (rx_samples.size() == max_rx_packet_size * num_pkts)
     {
         LOG_DEBUG_FMT("Reception successful! Total %1% samples received.", rx_samples.size());
@@ -1022,7 +1024,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         if (not success)
             break;
 
-        std::cout << "\rRx_counter " << rx_counter;
+        std::cout << "\rNum of packets received so far = " << rx_counter;
         std::cout.flush();
         ++rx_counter;
         auto time_data = md.time_spec;
@@ -1052,6 +1054,70 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         rx_save_timer.write(reinterpret_cast<char *>(&datalen), sizeof(size_t));
     }
     rx_save_timer.close();
+};
+
+void USRP_class::receive_fixed_num_samps(bool &stop_signal_called, const size_t &num_rx_samples, std::vector<std::complex<float>> &out_samples, uhd::time_spec_t &out_timer)
+{
+    bool success = true;
+
+    // setup streaming
+    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+
+    stream_cmd.num_samps = max_rx_packet_size;
+    out_samples.resize(num_rx_samples);
+
+    // auto start_time = std::chrono::high_resolution_clock::now();
+    stream_cmd.stream_now = true;
+    rx_streamer->issue_stream_cmd(stream_cmd);
+
+    const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_rx_packet_size / rx_rate));
+    double timeout = burst_pkt_time;
+
+    size_t rx_counter = 0;
+    size_t num_acc_samps = 0;
+    bool callback_success = false;
+
+    while (num_acc_samps < num_rx_samples and not stop_signal_called)
+    {
+
+        uhd::rx_metadata_t md;
+        size_t packet_size = std::min(num_rx_samples - num_acc_samps, max_rx_packet_size);
+        size_t num_curr_rx_samps = rx_streamer->recv(&out_samples.front() + num_acc_samps, packet_size, md, timeout, false);
+        num_acc_samps += num_curr_rx_samps;
+
+        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        {
+            LOG_WARN_FMT("Timeout while streaming");
+            success = false;
+        }
+        else if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        {
+            LOG_WARN("*** Got an overflow indication.");
+        }
+        else if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        {
+            LOG_WARN_FMT("Receiver error: %1%", md.strerror());
+            success = false;
+        }
+
+        if (not success)
+            break;
+
+        if (rx_counter == 0)
+            out_timer = md.time_spec;
+
+        std::cout << "\rNum of packets received so far = " << rx_counter;
+        std::cout.flush();
+        ++rx_counter;
+    }
+
+    if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
+    {
+        stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+        rx_streamer->issue_stream_cmd(stream_cmd);
+    }
+
+    std::cout << std::endl;
 };
 
 void USRP_class::adjust_for_freq_offset(const float &freq_offset)

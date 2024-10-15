@@ -32,11 +32,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     /*------ Parse Config -------------*/
     ConfigParser parser(projectDir + "/config/config.conf");
     parser.set_value("device-id", device_id, "str", "USRP device number");
-    if (argc > 2)
-    {
-        size_t rand_seed = std::stoi(argv[2]);
-        parser.set_value("rand-seed", std::to_string(rand_seed), "int", "Random seed selected by the leaf node");
-    }
     parser.print_values();
 
     /*------- USRP setup --------------*/
@@ -45,9 +40,29 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     usrp_classobj.initialize();
 
     /*-------- Receive data stream --------*/
+    size_t num_samples = 0;
+    if (argc > 2)
+    {
+        num_samples = std::stoi(argv[2]);
+    }
+    else
+    {
+        float duration = 10.0;
+        num_samples = size_t(duration * usrp_classobj.rx_rate);
+    }
 
-    float duration = 10.0;
-    usrp_classobj.receive_save_with_timer(stop_signal_called, duration);
+    LOG_INFO_FMT("Receiving %1% samples...", num_samples);
+
+    std::vector<std::complex<float>> rx_samples;
+    uhd::time_spec_t rx_start_timer;
+    usrp_classobj.receive_fixed_num_samps(stop_signal_called, num_samples, rx_samples, rx_start_timer);
+    std::vector<double> rx_start_timer_vec;
+    rx_start_timer_vec.emplace_back(rx_start_timer.get_real_secs());
+
+    LOG_INFO("Saving received samples and start timer.");
+    std::ofstream rx_save_stream, rx_save_timer;
+    save_stream_to_file(projectDir + "/storage/rxdata_" + device_id + "_" + curr_time_str + ".dat", rx_save_stream, rx_samples);
+    save_timer_to_file(projectDir + "/storage/rxtimer_" + device_id + "_" + curr_time_str + ".dat", rx_save_timer, rx_start_timer_vec);
 
     return EXIT_SUCCESS;
 };

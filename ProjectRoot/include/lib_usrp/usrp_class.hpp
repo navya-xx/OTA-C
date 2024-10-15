@@ -62,6 +62,7 @@ public:
         { return false; });
 
     void receive_save_with_timer(bool &stop_signal_called, const float &duration);
+    void receive_fixed_num_samps(bool &stop_signal_called, const size_t &num_rx_samples, std::vector<std::complex<float>> &out_samples, uhd::time_spec_t &out_timer);
 
     void adjust_for_freq_offset(const float &freq_offset);
 
