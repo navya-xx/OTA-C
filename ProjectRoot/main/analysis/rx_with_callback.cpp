@@ -52,17 +52,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     }
 
     LOG_INFO("Implementing simple callback to save data to a deque vector.");
-    std::deque<std::complex<float>> saved_data(usrp_classobj.max_rx_packet_size * 20);
+    std::deque<std::vector<std::complex<float>>> stream_deq(20);
+    std::deque<uhd::time_spec_t> timer_deq(20);
     std::string filename = projectDir + "/storage/rxdata_" + device_id + "_" + curr_time_str + ".dat";
     std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
-    std::function save_stream_callback = [&saved_data, &rx_save_stream, &num_samples, &num_samples_saved, &filename](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
+    std::function save_stream_callback = [&stream_deq, &timer_deq, &rx_save_stream, &num_samples, &num_samples_saved, &filename](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
     {
         // save_stream_to_file(filename, rx_save_stream, rx_stream);
-        for (const auto &data : rx_stream)
-        {
-            saved_data.pop_front();
-            saved_data.push_back(std::move(data));
-        }
+        stream_deq.pop_front();
+        stream_deq.push_back(std::move(rx_stream));
+        timer_deq.pop_front();
+        timer_deq.push_back(rx_timer);
         num_samples_saved += rx_stream_size;
         if (num_samples_saved < num_samples)
             return false;
