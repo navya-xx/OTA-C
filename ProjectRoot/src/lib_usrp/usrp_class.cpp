@@ -1127,21 +1127,23 @@ void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, co
     // setup streaming
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 
-    stream_cmd.num_samps = max_rx_packet_size;
+    size_t packet_size = max_rx_packet_size / 2;
+
+    stream_cmd.num_samps = packet_size;
     stream_cmd.stream_now = true;
     rx_streamer->issue_stream_cmd(stream_cmd);
 
-    const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_rx_packet_size / rx_rate));
+    const double burst_pkt_time = std::max<double>(0.1, (2.0 * packet_size / rx_rate));
     double timeout = burst_pkt_time;
 
     size_t rx_counter = 0;
     bool callback_success = false;
-    std::vector<std::complex<float>> buff(max_rx_packet_size);
+    std::vector<std::complex<float>> buff(packet_size);
 
     while (not stop_signal_called and not callback_success)
     {
         uhd::rx_metadata_t md;
-        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front(), max_rx_packet_size, md, timeout, false);
+        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front(), packet_size, md, timeout, false);
 
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
         {
@@ -1157,9 +1159,9 @@ void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, co
             LOG_WARN_FMT("Receiver error: %1%", md.strerror());
             success = false;
         }
-        else if (num_curr_rx_samps < max_rx_packet_size)
+        else if (num_curr_rx_samps < packet_size)
         {
-            LOG_WARN_FMT("Only %1% samples out of requested %2% samples received in round %3%!", num_curr_rx_samps, max_rx_packet_size, rx_counter);
+            LOG_WARN_FMT("Only %1% samples out of requested %2% samples received in round %3%!", num_curr_rx_samps, packet_size, rx_counter);
         }
 
         if (not success)
