@@ -80,8 +80,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     for (int i = 0; i < 100; i++)
     {
         // int delay = random_delay(random_min, random_max);
-        uhd::time_spec_t wait_duration = uhd::time_spec_t(double(1e4 / tx_samp_rate));
+        uhd::time_spec_t wait_duration = uhd::time_spec_t(double(1e5 / tx_samp_rate));
         usrp_classobj.transmission(tx_waveform, usrp_classobj.usrp->get_time_now() + wait_duration, stop_signal_called, true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     return EXIT_SUCCESS;
