@@ -1024,6 +1024,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
 
         std::cout << "\rRx_counter " << rx_counter;
         std::cout.flush();
+        ++rx_counter;
         auto time_data = md.time_spec;
         timer_vec.emplace_back(time_data);
         datalen_vec.emplace_back(num_curr_rx_samps);
