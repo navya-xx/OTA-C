@@ -56,7 +56,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     USRP_class usrp_classobj(parser);
 
     usrp_classobj.initialize();
-    // float tx_samp_rate = usrp_classobj.tx_rate;
+    float tx_samp_rate = usrp_classobj.tx_rate;
 
     /*------- Generate Waveform -------*/
     WaveformGenerator wf_gen = WaveformGenerator();
@@ -70,24 +70,19 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     /*-------- Transmit Waveform --------*/
     // transmit multiple copies of the waveform with random delays
-    std::vector<std::complex<float>> complete_tx_seq;
+    // std::vector<std::complex<float>> complete_tx_seq;
 
     // size_t random_min = int(1e4), random_max = int(1e5);
-
-    for (int i = 0; i < 20; i++)
-    {
-        // int delay = random_delay(random_min, random_max);
-        size_t num_samps = int(1e4); // * tx_samp_rate / 1e6);
-        // LOG_INFO_FMT("Num samps added in the gap = %1%.", num_samps);
-        complete_tx_seq.insert(complete_tx_seq.end(), tx_waveform.begin(), tx_waveform.end());
-        complete_tx_seq.insert(complete_tx_seq.end(), num_samps, std::complex<float>(0.0, 0.0));
-    }
-
     int wait_duration = 2;
     LOG_INFO_FMT("Starting transmission in %1% secs.", wait_duration);
     std::this_thread::sleep_for(std::chrono::milliseconds(wait_duration * 1000));
 
-    usrp_classobj.transmission(complete_tx_seq, uhd::time_spec_t(0.0), stop_signal_called, true);
+    for (int i = 0; i < 100; i++)
+    {
+        // int delay = random_delay(random_min, random_max);
+        uhd::time_spec_t wait_duration = uhd::time_spec_t(double(1e4 / tx_samp_rate));
+        usrp_classobj.transmission(tx_waveform, usrp_classobj.usrp->get_time_now() + wait_duration, stop_signal_called, true);
+    }
 
     return EXIT_SUCCESS;
 };
