@@ -971,9 +971,6 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     data_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/data_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
     timer_filename = homeDirStr + "/OTA-C/ProjectRoot/storage/timer_" + parser.getValue_str("device-id") + "_" + curr_datetime + ".dat";
 
-    std::ofstream rx_save_datastream, rx_save_timer;
-    rx_save_timer.open(timer_filename, std::ios::out | std::ios::binary | std::ios::app);
-
     bool success = true;
 
     // setup streaming
@@ -989,6 +986,9 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     double timeout = burst_pkt_time;
 
     std::vector<std::complex<float>> rx_samples;
+    std::vector<uhd::time_spec_t> timer_vec;
+    std::vector<size_t> datalen_vec;
+
     bool reception_complete = false;
     size_t retry_rx = 0;
     size_t num_acc_samps = 0;
@@ -1024,15 +1024,12 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         rx_samples.insert(rx_samples.end(), forward.begin(), forward.end());
 
         double time_data = md.time_spec.get_real_secs();
-        LOG_INFO_FMT("Rx data at time : %1%", time_data);
-        rx_save_timer.write(reinterpret_cast<char *>(&time_data), sizeof(time_data));
-        rx_save_timer.write(reinterpret_cast<char *>(&num_curr_rx_samps), sizeof(num_curr_rx_samps));
+        timer_vec.emplace_back(time_data);
+        datalen_vec.emplace_back(num_curr_rx_samps);
 
         if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
             reception_complete = true;
     }
-
-    rx_save_timer.close();
 
     if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
     {
@@ -1040,7 +1037,19 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         rx_streamer->issue_stream_cmd(stream_cmd);
     }
 
+    std::ofstream rx_save_datastream, rx_save_timer;
     save_stream_to_file(data_filename, rx_save_datastream, rx_samples);
+
+    rx_save_timer.open(timer_filename, std::ios::out | std::ios::binary | std::ios::app);
+    for (size_t i = 0; i < timer_vec.size(); ++i)
+    {
+        // LOG_INFO_FMT("Rx data at time : %1%", time_data);
+        auto time_data = timer_vec[i];
+        auto datalen = datalen_vec[i];
+        rx_save_timer.write(reinterpret_cast<char *>(&time_data), sizeof(time_data));
+        rx_save_timer.write(reinterpret_cast<char *>(&datalen), sizeof(size_t));
+    }
+    rx_save_timer.close();
 };
 
 void USRP_class::adjust_for_freq_offset(const float &freq_offset)
