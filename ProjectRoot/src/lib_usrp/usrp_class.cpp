@@ -1127,7 +1127,7 @@ void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, co
     // setup streaming
     uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 
-    size_t packet_size = max_rx_packet_size / 2;
+    size_t packet_size = max_rx_packet_size;
 
     stream_cmd.num_samps = packet_size;
     stream_cmd.stream_now = true;
