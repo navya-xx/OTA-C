@@ -978,7 +978,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
 
     stream_cmd.num_samps = max_rx_packet_size;
 
-    auto usrp_now = usrp->get_time_now();
+    auto start_time = std::chrono::high_resolution_clock::now();
     stream_cmd.stream_now = true;
     rx_streamer->issue_stream_cmd(stream_cmd);
 
@@ -997,10 +997,9 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
 
     while (not reception_complete and not stop_signal_called)
     {
-        size_t size_rx = max_rx_packet_size;
 
         uhd::rx_metadata_t md;
-        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front(), size_rx, md, timeout, false);
+        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front(), max_rx_packet_size, md, timeout, false);
 
         if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
         {
@@ -1023,11 +1022,11 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
         rx_samples.insert(rx_samples.end(), forward.begin(), forward.end());
 
-        double time_data = md.time_spec.get_real_secs();
+        auto time_data = md.time_spec;
         timer_vec.emplace_back(time_data);
         datalen_vec.emplace_back(num_curr_rx_samps);
 
-        if ((usrp->get_time_now() - usrp_now).get_real_secs() > duration)
+        if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start_time).count() / 1e6 > duration)
             reception_complete = true;
     }
 
@@ -1044,9 +1043,9 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     for (size_t i = 0; i < timer_vec.size(); ++i)
     {
         // LOG_INFO_FMT("Rx data at time : %1%", time_data);
-        auto time_data = timer_vec[i];
+        double time_data = timer_vec[i].get_real_secs();
         auto datalen = datalen_vec[i];
-        rx_save_timer.write(reinterpret_cast<char *>(&time_data), sizeof(time_data));
+        rx_save_timer.write(reinterpret_cast<char *>(&time_data), sizeof(double));
         rx_save_timer.write(reinterpret_cast<char *>(&datalen), sizeof(size_t));
     }
     rx_save_timer.close();

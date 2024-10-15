@@ -176,22 +176,6 @@ std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector
     return phase;
 }
 
-/**
- * @brief Approximates a rational number for a given floating-point number.
- *
- * This function tries to approximate a floating-point number `a` as a rational
- * number m/N, where `m` and `N` are integers. The approximation ensures that
- * the absolute difference between `a` and m/N is less than the error tolerance `e`.
- * The approximation process stops if the difference is within the error tolerance
- * or if the maximum number of iterations `max_iter` is reached.
- *
- * @param a The floating-point number to approximate as a rational number.
- * @param e The acceptable error tolerance for the approximation.
- * @param max_iter The maximum number of iterations allowed to improve the approximation.
- *
- * @return The denominator `N` of the rational approximation m/N, where `m` is
- *         the integer that best approximates `a * N`.
- */
 size_t rational_number_approximation(double a, double e, size_t max_iter)
 {
     size_t N = static_cast<size_t>(std::ceil(1.0 / (2 * e)));
