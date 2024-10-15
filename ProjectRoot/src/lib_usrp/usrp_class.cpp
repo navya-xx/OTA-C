@@ -1120,6 +1120,69 @@ void USRP_class::receive_fixed_num_samps(bool &stop_signal_called, const size_t 
     std::cout << std::endl;
 };
 
+void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
+{
+    bool success = true;
+
+    // setup streaming
+    uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
+
+    stream_cmd.num_samps = max_rx_packet_size;
+    stream_cmd.stream_now = true;
+    rx_streamer->issue_stream_cmd(stream_cmd);
+
+    const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_rx_packet_size / rx_rate));
+    double timeout = burst_pkt_time;
+
+    size_t rx_counter = 0;
+    bool callback_success = false;
+    std::vector<std::complex<float>> buff(max_rx_packet_size);
+
+    while (not stop_signal_called and not callback_success)
+    {
+        uhd::rx_metadata_t md;
+        size_t num_curr_rx_samps = rx_streamer->recv(&buff.front(), max_rx_packet_size, md, timeout, false);
+
+        if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT)
+        {
+            LOG_WARN_FMT("Timeout while streaming");
+            success = false;
+        }
+        else if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)
+        {
+            LOG_WARN("*** Got an overflow indication.");
+        }
+        else if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE)
+        {
+            LOG_WARN_FMT("Receiver error: %1%", md.strerror());
+            success = false;
+        }
+        else if (num_curr_rx_samps != max_rx_packet_size)
+        {
+            LOG_WARN_FMT("Not all samples received in this round!");
+        }
+
+        if (not success)
+            break;
+
+        auto packet_timer = md.time_spec;
+
+        callback_success = callback(buff, num_curr_rx_samps, md.time_spec);
+
+        std::cout << "\rNum of packets received so far = " << rx_counter;
+        std::cout.flush();
+        ++rx_counter;
+    }
+
+    if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
+    {
+        stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+        rx_streamer->issue_stream_cmd(stream_cmd);
+    }
+
+    std::cout << std::endl;
+}
+
 void USRP_class::adjust_for_freq_offset(const float &freq_offset)
 {
     // set the sample rate
