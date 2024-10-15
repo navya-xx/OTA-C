@@ -978,9 +978,9 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
 
     stream_cmd.num_samps = max_rx_packet_size;
 
-    size_t total_num_samps = duration * rx_rate;
+    size_t total_num_samps = std::ceil(duration * rx_rate / max_rx_packet_size) * max_rx_packet_size;
 
-    auto start_time = std::chrono::high_resolution_clock::now();
+    // auto start_time = std::chrono::high_resolution_clock::now();
     stream_cmd.stream_now = true;
     rx_streamer->issue_stream_cmd(stream_cmd);
 
@@ -997,7 +997,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     bool callback_success = false;
     std::vector<std::complex<float>> buff(total_num_samps);
 
-    while (not reception_complete and not stop_signal_called)
+    while (num_acc_samps < total_num_samps and not stop_signal_called)
     {
 
         uhd::rx_metadata_t md;
@@ -1025,9 +1025,6 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
         auto time_data = md.time_spec;
         timer_vec.emplace_back(time_data);
         datalen_vec.emplace_back(num_curr_rx_samps);
-
-        if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start_time).count() / 1e6 > duration)
-            reception_complete = true;
     }
 
     if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
