@@ -64,7 +64,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t q_zfc = parser.getValue_int("Ref-m-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t sampling_factor = parser.getValue_int("sampling-factor");
-    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, 10000, q_zfc, 1.0, 0, 0);
+    wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, 10000, q_zfc, 1.0, 123);
     std::vector<std::complex<float>> ref_waveform = wf_gen.generate_waveform();
 
     // for (int i = 0; i < 3; i++)
