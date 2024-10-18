@@ -83,15 +83,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     LOG_INFO_FMT("Starting transmission in %1% secs.", wait_duration);
     std::this_thread::sleep_for(std::chrono::milliseconds(wait_duration * 1000));
 
-    usrp_classobj.transmission(ref_waveform, usrp_classobj.usrp->get_time_now() + double(0.01), stop_signal_called, true);
+    // usrp_classobj.transmission(ref_waveform, usrp_classobj.usrp->get_time_now() + double(0.01), stop_signal_called, true);
 
-    // for (int i = 0; i < 100; i++)
-    // {
-    //     // int delay = random_delay(random_min, random_max);
-    //     uhd::time_spec_t wait_duration = uhd::time_spec_t(double(1e5 / tx_samp_rate));
-    //     usrp_classobj.transmission(tx_waveform, usrp_classobj.usrp->get_time_now() + wait_duration, stop_signal_called, true);
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    // }
+    for (int i = 0; i < 100; i++)
+    {
+        // int delay = random_delay(random_min, random_max);
+        usrp_classobj.transmission(tx_waveform, usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(double(1e5 / tx_samp_rate)), stop_signal_called, true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 
     return EXIT_SUCCESS;
 };
