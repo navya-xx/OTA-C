@@ -65,7 +65,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
     size_t sampling_factor = parser.getValue_int("sampling-factor");
     wf_gen.initialize(wf_gen.ZFC, N_zfc, reps_zfc, 0, q_zfc, 1.0, 0, false);
-    auto ref_waveform = wf_gen.generate_waveform();
+    std::vector<std::complex<float>> ref_waveform = wf_gen.generate_waveform();
+
+    for (int i = 0; i < 4; i++)
+    {
+        ref_waveform.insert(ref_waveform.end(), ref_waveform.begin(), ref_waveform.end());
+    }
+
     auto tx_waveform = upsample(ref_waveform, sampling_factor);
 
     /*-------- Transmit Waveform --------*/
@@ -77,13 +83,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     LOG_INFO_FMT("Starting transmission in %1% secs.", wait_duration);
     std::this_thread::sleep_for(std::chrono::milliseconds(wait_duration * 1000));
 
-    for (int i = 0; i < 100; i++)
-    {
-        // int delay = random_delay(random_min, random_max);
-        uhd::time_spec_t wait_duration = uhd::time_spec_t(double(1e5 / tx_samp_rate));
-        usrp_classobj.transmission(tx_waveform, usrp_classobj.usrp->get_time_now() + wait_duration, stop_signal_called, true);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
+    usrp_classobj.transmission(ref_waveform, usrp_classobj.usrp->get_time_now() + double(0.01), stop_signal_called, true);
+
+    // for (int i = 0; i < 100; i++)
+    // {
+    //     // int delay = random_delay(random_min, random_max);
+    //     uhd::time_spec_t wait_duration = uhd::time_spec_t(double(1e5 / tx_samp_rate));
+    //     usrp_classobj.transmission(tx_waveform, usrp_classobj.usrp->get_time_now() + wait_duration, stop_signal_called, true);
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    // }
 
     return EXIT_SUCCESS;
 };
