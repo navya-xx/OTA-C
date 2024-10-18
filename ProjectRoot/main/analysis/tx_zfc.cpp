@@ -83,7 +83,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     LOG_INFO_FMT("Starting transmission in %1% secs.", wait_duration);
     std::this_thread::sleep_for(std::chrono::milliseconds(wait_duration * 1000));
 
-    usrp_classobj.transmission(ref_waveform, usrp_classobj.usrp->get_time_now() + uhd::time_spec_t(double(1e5 / tx_samp_rate)), stop_signal_called, true);
+    usrp_classobj.transmission(ref_waveform, usrp_classobj.usrp->get_time_now(), stop_signal_called, true);
 
     // for (int i = 0; i < 100; i++)
     // {
