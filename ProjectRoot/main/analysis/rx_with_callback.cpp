@@ -136,12 +136,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             if (M_max < M)
                 M_max = M;
 
-            saved_P.pop_front();
-            saved_P.push_back(P);
-
             if (M > M_threshold)
             {
                 // LOG_INFO_FMT("UP -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
+                saved_P.pop_front();
+                saved_P.push_back(P);
+
                 if (not detection_flag)
                     detection_flag = true;
             }
@@ -150,6 +150,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                 if (detection_flag)
                 {
                     // LOG_INFO_FMT("DOWN -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
+                    saved_P.pop_front();
+                    saved_P.push_back(P);
                     if (extra > save_extra)
                         return true;
                     else
