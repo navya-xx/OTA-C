@@ -53,18 +53,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
-    size_t ex_save_mul = 5;
+    size_t ex_save_mul = 2;
 
     size_t capacity = N_zfc * (reps_zfc + ex_save_mul);
 
     std::deque<std::complex<float>> saved_P(capacity);
-    std::deque<std::complex<float>> saved_R(capacity);
-    std::deque<std::complex<float>> saved_buffer(2 * N_zfc);
+    std::vector<std::complex<float>> saved_buffer(2 * N_zfc, std::complex<float>(0.0));
     bool buffer_init = false, detection_flag = false;
     size_t save_extra = ex_save_mul * N_zfc, extra = 0;
     std::complex<float> P(0.0);
-    float R = 1e-6;
-    float M = 0;
+    float R = 0.0;
+    float M = 0, M_max = 0;
     float M_threshold = 0.01;
 
     // std::string filename = projectDir + "/storage/rxdata_data_" + device_id + "_" + curr_time_str + ".dat";
@@ -73,12 +72,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     // {
     //     save_stream_to_file(filename, rx_save_stream, rx_stream);
     //     // Low-pass filter (FFTW3) and Downsample
-
     //     // stream_deq.pop_front();
     //     // stream_deq.push_back(std::move(rx_stream));
     //     // timer_deq.pop_front();
     //     // timer_deq.push_back(rx_timer);
-
     //     // check power of samples over a window
     //     // size_t samples_processed = 0;
     //     // while (samples_processed < rx_stream_size)
@@ -92,7 +89,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     //     //     sum /= window_len;
     //     //     LOG_INFO_FMT("Average signal strength over window = %1%", sum);
     //     // }
-
     //     num_samples_saved += rx_stream_size;
     //     if (num_samples_saved < num_samples)
     //         return false;
@@ -102,46 +98,50 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     std::function schmidt_cox = [&](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
     {
-        size_t i = 0;
         std::complex<float> samp_1(0.0), samp_2(0.0), samp_3(0.0);
+        // std::vector<std::complex<float>> P_samps;
 
-        while (i < rx_stream_size)
+        for (size_t i = 0; i < rx_stream.size(); ++i)
         {
-            // Initialize buffer in the beginning
-            if (not buffer_init)
+            if (i < 2 * N_zfc)
+                samp_1 = saved_buffer[i];
+            else
+                samp_1 = rx_stream[i - 2 * N_zfc];
+
+            if (i < N_zfc)
+                samp_2 = saved_buffer[i + N_zfc];
+            else
+                samp_2 = rx_stream[i - N_zfc];
+
+            samp_3 = rx_stream[i];
+
+            P = P + (std::conj(samp_2) * samp_3) - (std::conj(samp_1) * samp_2);
+
+            // R = R + std::norm(samp_3) - std::norm(samp_2);
+            if (buffer_init)
+            {
+                // if (std::norm(samp_2) == 0.0)
+                //     LOG_WARN("samp_2 is zero!");
+                R = R + std::norm(samp_3) - std::norm(samp_2);
+            }
+            else
             {
                 if (i < 2 * N_zfc)
-                {
-                    saved_buffer.pop_front();
-                    saved_buffer.push_back(rx_stream[i]);
-                    ++i;
-                    continue;
-                }
+                    R = R + std::norm(samp_3);
                 else
                     buffer_init = true;
             }
-            // update buffer with last 2L samples from the packet
-            else if (i > rx_stream_size - 2 * N_zfc)
-            {
-                saved_buffer.pop_front();
-                saved_buffer.push_back(rx_stream[i]);
-            }
 
-            samp_1 = (i - 2 * N_zfc < 0) ? saved_buffer[i] : rx_stream[i - 2 * N_zfc];
-            samp_2 = (i - N_zfc < 0) ? saved_buffer[i + N_zfc] : rx_stream[i - N_zfc];
-            samp_3 = rx_stream[i];
-            P = P + (std::conj(samp_2) * samp_3) - (std::conj(samp_1) * samp_2);
-            R = R + std::norm(samp_3) - std::norm(samp_2);
             M = std::norm(P) / std::max(R, float(1e-6));
+            if (M_max < M)
+                M_max = M;
+
             saved_P.pop_front();
             saved_P.push_back(P);
-            saved_R.pop_front();
-            saved_R.push_back(R);
 
             if (M > M_threshold)
             {
-                // LOG_DEBUG("Detection threshold crossed up!");
-                std::cout << "M (up) = " << M << std::endl;
+                // LOG_INFO_FMT("UP -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
                 if (not detection_flag)
                     detection_flag = true;
             }
@@ -149,21 +149,20 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             {
                 if (detection_flag)
                 {
-                    // LOG_DEBUG("Detection threshold crossed down!");
+                    // LOG_INFO_FMT("DOWN -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
                     if (extra > save_extra)
                         return true;
                     else
-                    {
-                        std::cout << "M (down) = " << M << std::endl;
                         ++extra;
-                    }
                 }
             }
 
-            ++i;
+            if (i >= rx_stream.size() - 2 * N_zfc)
+                saved_buffer[i - (rx_stream.size() - 2 * N_zfc)] = samp_3;
         }
 
-        num_samples_saved += rx_stream_size;
+        num_samples_saved += rx_stream.size();
+        // LOG_INFO_FMT("(%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, num_samples_saved);
         if (num_samples_saved < num_samples)
             return false;
         else
@@ -172,6 +171,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
 
+    LOG_INFO_FMT("M_max = %1%", M_max);
+
     std::string P_filename = projectDir + "/storage/P_data_" + device_id + "_" + curr_time_str + ".dat";
     std::ofstream P_save_stream;
     std::vector<std::complex<float>> save_data;
@@ -179,11 +180,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     save_stream_to_file(P_filename, P_save_stream, save_data);
     P_save_stream.close();
 
-    std::string R_filename = projectDir + "/storage/R_data_" + device_id + "_" + curr_time_str + ".dat";
-    std::ofstream R_save_stream;
-    save_data.insert(save_data.begin(), saved_R.begin(), saved_R.end());
-    save_stream_to_file(R_filename, R_save_stream, save_data);
-    R_save_stream.close();
+    // std::string R_filename = projectDir + "/storage/R_data_" + device_id + "_" + curr_time_str + ".dat";
+    // std::ofstream R_save_stream;
+    // save_data.insert(save_data.begin(), saved_R.begin(), saved_R.end());
+    // save_stream_to_file(R_filename, R_save_stream, save_data);
+    // R_save_stream.close();
 
     LOG_INFO_FMT("Reception over! Total number of samples saved = %1%", num_samples_saved);
 
