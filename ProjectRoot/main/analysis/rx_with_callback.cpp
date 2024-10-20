@@ -60,7 +60,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::deque<std::complex<float>> saved_P(capacity);
     std::vector<std::complex<float>> saved_buffer(2 * N_zfc, std::complex<float>(0.0));
     bool buffer_init = false, detection_flag = false;
-    size_t save_extra = ex_save_mul * N_zfc, extra = 0;
+    size_t save_extra = ex_save_mul * N_zfc, extra = 0, counter = 0;
     std::complex<float> P(0.0);
     float R = 0.0;
     float M = 0, M_max = 0;
@@ -144,11 +144,21 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
                 if (not detection_flag)
                     detection_flag = true;
+
+                if (detection_flag)
+                    ++counter;
             }
             else
             {
                 if (detection_flag)
                 {
+                    if (not((counter > N_zfc * reps_zfc) and (counter < N_zfc * (reps_zfc + ex_save_mul))))
+                    {
+                        detection_flag = false;
+                        counter = 0;
+                        saved_P.clear();
+                        saved_P.resize(capacity);
+                    }
                     // LOG_INFO_FMT("DOWN -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
                     saved_P.pop_front();
                     saved_P.push_back(P);
