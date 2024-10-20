@@ -152,12 +152,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             {
                 if (detection_flag)
                 {
-                    if (not((counter > N_zfc * reps_zfc) and (counter < N_zfc * (reps_zfc + ex_save_mul))))
+                    if ((counter < N_zfc * reps_zfc) or (counter > N_zfc * (reps_zfc + ex_save_mul)))
                     {
                         detection_flag = false;
                         counter = 0;
                         saved_P.clear();
                         saved_P.resize(capacity);
+                        LOG_DEBUG("Resetting counter for detection!");
                     }
                     // LOG_INFO_FMT("DOWN -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
                     saved_P.pop_front();
