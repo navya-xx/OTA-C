@@ -152,7 +152,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             {
                 if (detection_flag)
                 {
-                    if ((counter < N_zfc * reps_zfc) or (counter > N_zfc * (reps_zfc + ex_save_mul)))
+                    if ((counter < N_zfc * (reps_zfc - 1)) or (counter > N_zfc * (reps_zfc + ex_save_mul)))
                     {
                         detection_flag = false;
                         counter = 0;
