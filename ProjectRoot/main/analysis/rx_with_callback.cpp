@@ -164,7 +164,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                     if (extra > save_extra)
                     {
                         int ref_end = (i - counter - save_extra) + std::floor(counter / 2) + int(std::floor(N_zfc * reps_zfc / 2) + N_zfc);
-                        LOG_DEBUG_FMT("Ref end index count = %1%", ref_end);
+                        LOG_DEBUG_FMT("Ref end index = %1%, conuter = %2%", ref_end, counter);
                         ref_start_timer = rx_timer + uhd::time_spec_t(double(ref_end / rx_rate));
                         return true;
                     }
@@ -191,7 +191,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
 
     // CFO estimation
-    int ref_start_index = saved_P.size() - (save_extra + std::floor(counter / 2) + int(std::floor(N_zfc * reps_zfc / 2) + N_zfc));
+    int ref_start_index = saved_P.size() - (save_extra + std::floor(counter / 2) + int(std::floor(N_zfc * (reps_zfc - 1) / 2)));
     LOG_DEBUG_FMT("Start index of ref = %1%", ref_start_index);
     std::vector<std::complex<float>> ex_vec;
     ex_vec.insert(ex_vec.begin(), saved_P.begin() + ref_start_index, saved_P.begin() + ref_start_index + N_zfc * (reps_zfc - 1));
