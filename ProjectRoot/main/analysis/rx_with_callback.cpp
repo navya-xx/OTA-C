@@ -68,35 +68,35 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     float M_threshold = 0.01;
     uhd::time_spec_t ref_start_timer(0.0);
 
-    std::string filename = projectDir + "/storage/rxdata_data_" + device_id + "_" + curr_time_str + ".dat";
-    std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
-    std::function save_stream_callback = [&](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
-    {
-        save_stream_to_file(filename, rx_save_stream, rx_stream);
-        // Low-pass filter (FFTW3) and Downsample
-        // stream_deq.pop_front();
-        // stream_deq.push_back(std::move(rx_stream));
-        // timer_deq.pop_front();
-        // timer_deq.push_back(rx_timer);
-        // check power of samples over a window
-        // size_t samples_processed = 0;
-        // while (samples_processed < rx_stream_size)
-        // {
-        //     float sum = 0.0;
-        //     for (size_t i = 0; i < window_len; ++i)
-        //     {
-        //         sum += std::norm(rx_stream[samples_processed]);
-        //         ++samples_processed;
-        //     }
-        //     sum /= window_len;
-        //     LOG_INFO_FMT("Average signal strength over window = %1%", sum);
-        // }
-        num_samples_saved += rx_stream_size;
-        if (num_samples_saved < num_samples)
-            return false;
-        else
-            return true;
-    };
+    // std::string filename = projectDir + "/storage/rxdata_data_" + device_id + "_" + curr_time_str + ".dat";
+    // std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
+    // std::function save_stream_callback = [&](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
+    // {
+    //     save_stream_to_file(filename, rx_save_stream, rx_stream);
+    //     // Low-pass filter (FFTW3) and Downsample
+    //     // stream_deq.pop_front();
+    //     // stream_deq.push_back(std::move(rx_stream));
+    //     // timer_deq.pop_front();
+    //     // timer_deq.push_back(rx_timer);
+    //     // check power of samples over a window
+    //     // size_t samples_processed = 0;
+    //     // while (samples_processed < rx_stream_size)
+    //     // {
+    //     //     float sum = 0.0;
+    //     //     for (size_t i = 0; i < window_len; ++i)
+    //     //     {
+    //     //         sum += std::norm(rx_stream[samples_processed]);
+    //     //         ++samples_processed;
+    //     //     }
+    //     //     sum /= window_len;
+    //     //     LOG_INFO_FMT("Average signal strength over window = %1%", sum);
+    //     // }
+    //     num_samples_saved += rx_stream_size;
+    //     if (num_samples_saved < num_samples)
+    //         return false;
+    //     else
+    //         return true;
+    // };
 
     std::function schmidt_cox = [&](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
     {
@@ -185,12 +185,19 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return true;
     };
 
-    // usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
-    usrp_classobj.receive_continuously_with_callback(stop_signal_called, save_stream_callback);
+    usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
+    // usrp_classobj.receive_continuously_with_callback(stop_signal_called, save_stream_callback);
 
-    // LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
+    LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
 
     // CFO estimation
+    int ref_start_index = saved_P.size() - (save_extra + std::floor(counter / 2) + int(std::floor(N_zfc * reps_zfc / 2) + N_zfc));
+    LOG_DEBUG_FMT("Start index of ref = %1%", ref_start_index);
+    std::vector<std::complex<float>> ex_vec;
+    ex_vec.insert(ex_vec.begin(), saved_P.begin() + ref_start_index, saved_P.begin() + ref_start_index + N_zfc * (reps_zfc - 1));
+    std::vector<double> phases = unwrap(ex_vec);
+    double cfo_mean = std::accumulate(phases.begin(), phases.end(), 0.0) / phases.size() / N_zfc;
+    LOG_INFO_FMT("Mean CFO = %1%", cfo_mean);
 
     // LOG_INFO_FMT("M_max = %1%", M_max);
 
