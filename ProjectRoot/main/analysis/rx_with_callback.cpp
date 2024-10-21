@@ -162,7 +162,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                     saved_P.push_back(P);
                     if (extra > save_extra)
                     {
-                        size_t ref_start = (i - counter) + std::floor(counter / 2) - std::floor(N_zfc * reps_zfc / 2) - N_zfc;
+                        int ref_start = (i - counter - save_extra) + std::floor(counter / 2) - std::floor(N_zfc * reps_zfc / 2) - N_zfc;
+                        LOG_DEBUG_FMT("Ref start timer = %1%", ref_start);
                         ref_start_timer = rx_timer + uhd::time_spec_t(double(ref_start / rx_rate));
                         return true;
                     }
