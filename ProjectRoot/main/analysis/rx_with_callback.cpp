@@ -54,10 +54,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
+    size_t decimation_factor = parser.getValue_int("sampling-factor");
     size_t ex_save_mul = 1;
 
     size_t capacity = N_zfc * (reps_zfc + ex_save_mul);
-
     std::deque<std::complex<float>> saved_P(capacity);
     std::vector<std::complex<float>> saved_buffer(2 * N_zfc, std::complex<float>(0.0));
     bool buffer_init = false, detection_flag = false;
@@ -68,43 +68,99 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     float M_threshold = 0.01;
     uhd::time_spec_t ref_start_timer(0.0);
 
-    // std::string filename = projectDir + "/storage/rxdata_data_" + device_id + "_" + curr_time_str + ".dat";
-    // std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
-    // std::function save_stream_callback = [&](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
-    // {
-    //     save_stream_to_file(filename, rx_save_stream, rx_stream);
-    //     // Low-pass filter (FFTW3) and Downsample
-    //     // stream_deq.pop_front();
-    //     // stream_deq.push_back(std::move(rx_stream));
-    //     // timer_deq.pop_front();
-    //     // timer_deq.push_back(rx_timer);
-    //     // check power of samples over a window
-    //     // size_t samples_processed = 0;
-    //     // while (samples_processed < rx_stream_size)
-    //     // {
-    //     //     float sum = 0.0;
-    //     //     for (size_t i = 0; i < window_len; ++i)
-    //     //     {
-    //     //         sum += std::norm(rx_stream[samples_processed]);
-    //     //         ++samples_processed;
-    //     //     }
-    //     //     sum /= window_len;
-    //     //     LOG_INFO_FMT("Average signal strength over window = %1%", sum);
-    //     // }
-    //     num_samples_saved += rx_stream_size;
-    //     if (num_samples_saved < num_samples)
-    //         return false;
-    //     else
-    //         return true;
-    // };
+    // Downsampling filter
+    std::vector<float> fir_filter;
+    std::ifstream filter_file("../config/filters/fir_order_51_downscale_10.csv");
+    float value;
+    // Check if the file was opened successfully
+    if (!filter_file)
+    {
+        LOG_ERROR("Error: Could not open the file.");
+        return 1;
+    }
+    // Read the file line by line
+    while (filter_file >> value)
+    {
+        fir_filter.push_back(value); // Store each float in the vector
+    }
+    filter_file.close(); // Close the file
+
+    size_t filter_len = fir_filter.size();
+    std::vector<std::complex<float>> tail_samples(filter_len * decimation_factor, std::complex<float>(0.0));
+
+    std::string filename = projectDir + "/storage/rx_data_" + device_id + "_" + curr_time_str + ".dat";
+    std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
+    std::string filename_dw = projectDir + "/storage/dw_data_" + device_id + "_" + curr_time_str + ".dat";
+    std::ofstream dw_save_stream(filename_dw, std::ios::out | std::ios::binary | std::ios::app);
+
+    std::function save_stream_callback = [&](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
+    {
+        std::vector<std::complex<float>> dec_vector;
+
+        for (int i = 0; i < rx_stream_size; i += decimation_factor)
+        {
+            // downsample via polyphase filter
+            float realpart = 0.0, imagpart = 0.0;
+            for (int j = 0; j < filter_len; ++j)
+            {
+                int signal_index = i - j * decimation_factor;
+                if (signal_index < 0 && signal_index + tail_samples.size() > 0)
+                {
+                    realpart += tail_samples[signal_index + tail_samples.size()].real() * fir_filter[j];
+                    imagpart += tail_samples[signal_index + tail_samples.size()].imag() * fir_filter[j];
+                }
+                else if (signal_index >= 0 && signal_index <= rx_stream_size)
+                {
+                    realpart += rx_stream[signal_index].real() * fir_filter[j];
+                    imagpart += rx_stream[signal_index].imag() * fir_filter[j];
+                }
+                else
+                    LOG_WARN_FMT("signal_index %1% is invalid!!", signal_index);
+            }
+
+            std::complex<float> sample_dw(realpart, imagpart);
+            dec_vector.emplace_back(sample_dw);
+        }
+
+        save_stream_to_file(filename, rx_save_stream, rx_stream);
+        save_stream_to_file(filename_dw, dw_save_stream, dec_vector);
+
+        num_samples_saved += dec_vector.size();
+        if (num_samples_saved < num_samples)
+            return false;
+        else
+            return true;
+    };
 
     std::function schmidt_cox = [&](const std::vector<std::complex<float>> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
     {
         std::complex<float> samp_1(0.0), samp_2(0.0), samp_3(0.0);
-        // std::vector<std::complex<float>> P_samps;
 
-        for (int i = 0; i < rx_stream.size(); ++i)
+        for (int i = 0; i < rx_stream_size; i += decimation_factor)
         {
+            // // downsample via polyphase filter
+            // float realpart = 0.0, imagpart = 0.0;
+            // for (int j = 0; j < filter_len; ++j)
+            // {
+            //     int signal_index = i - j * decimation_factor;
+            //     if (signal_index < 0 && signal_index + tail_samples.size() > 0)
+            //     {
+            //         realpart += tail_samples[signal_index + tail_samples.size()].real() * fir_filter[j];
+            //         imagpart += tail_samples[signal_index + tail_samples.size()].imag() * fir_filter[j];
+            //     }
+            //     else if (signal_index >= 0 && signal_index <= rx_stream_size)
+            //     {
+            //         realpart += rx_stream[signal_index].real() * fir_filter[j];
+            //         imagpart += rx_stream[signal_index].imag() * fir_filter[j];
+            //     }
+            //     else
+            //         LOG_WARN_FMT("signal_index %1% is invalid!!", signal_index);
+            // }
+
+            // std::complex<float> sample_dw(realpart, imagpart);
+
+            // int k = i / decimation_factor;
+
             if (i < 2 * N_zfc)
                 samp_1 = saved_buffer[i];
             else
@@ -130,8 +186,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             }
 
             M = std::norm(P) / std::max(R, float(1e-6));
-            // if (M_max < M)
-            //     M_max = M;
 
             if (M > M_threshold)
             {
@@ -185,8 +239,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             return true;
     };
 
-    usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
-    // usrp_classobj.receive_continuously_with_callback(stop_signal_called, save_stream_callback);
+    // usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
+    usrp_classobj.receive_continuously_with_callback(stop_signal_called, save_stream_callback);
 
     LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
 
