@@ -61,7 +61,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::deque<std::complex<float>> saved_P(capacity);
     std::vector<std::complex<float>> saved_buffer(2 * N_zfc, std::complex<float>(0.0));
     bool buffer_init = false, detection_flag = false;
-    size_t save_extra = ex_save_mul * N_zfc, extra = 0, counter = 0;
+    int save_extra = ex_save_mul * N_zfc, extra = 0, counter = 0;
     std::complex<float> P(0.0);
     float R = 0.0;
     float M = 0;
@@ -103,7 +103,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         std::complex<float> samp_1(0.0), samp_2(0.0), samp_3(0.0);
         // std::vector<std::complex<float>> P_samps;
 
-        for (size_t i = 0; i < rx_stream.size(); ++i)
+        for (int i = 0; i < rx_stream.size(); ++i)
         {
             if (i < 2 * N_zfc)
                 samp_1 = saved_buffer[i];
@@ -155,6 +155,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                         saved_P.clear();
                         saved_P.resize(capacity);
                         counter = 0;
+                        continue;
                     }
 
                     // LOG_INFO_FMT("DOWN -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
@@ -162,8 +163,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                     saved_P.push_back(P);
                     if (extra > save_extra)
                     {
-                        int ref_start = (i - counter - save_extra) + std::floor(counter / 2) - std::floor(N_zfc * reps_zfc / 2) - N_zfc;
-                        LOG_DEBUG_FMT("Ref start timer = %1%", ref_start);
+                        int ref_start = (i - counter - save_extra) + std::floor(counter / 2) - int(std::floor(N_zfc * reps_zfc / 2) + N_zfc);
+                        LOG_DEBUG_FMT("Ref start index count = %1%", ref_start);
                         ref_start_timer = rx_timer + uhd::time_spec_t(double(ref_start / rx_rate));
                         return true;
                     }
