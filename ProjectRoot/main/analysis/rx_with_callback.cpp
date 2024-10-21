@@ -38,6 +38,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     USRP_class usrp_classobj(parser);
     usrp_classobj.external_ref = parser.getValue_str("external-clock-ref") == "true" ? true : false;
     usrp_classobj.initialize();
+    double rx_rate = usrp_classobj.rx_rate;
 
     /*-------- Receive data stream --------*/
     size_t num_samples = 0, num_samples_saved = 0;
@@ -63,8 +64,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t save_extra = ex_save_mul * N_zfc, extra = 0, counter = 0;
     std::complex<float> P(0.0);
     float R = 0.0;
-    float M = 0, M_max = 0;
+    float M = 0;
     float M_threshold = 0.01;
+    uhd::time_spec_t ref_start_timer(0.0);
 
     // std::string filename = projectDir + "/storage/rxdata_data_" + device_id + "_" + curr_time_str + ".dat";
     // std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
@@ -117,13 +119,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
             P = P + (std::conj(samp_2) * samp_3) - (std::conj(samp_1) * samp_2);
 
-            // R = R + std::norm(samp_3) - std::norm(samp_2);
             if (buffer_init)
-            {
-                // if (std::norm(samp_2) == 0.0)
-                //     LOG_WARN("samp_2 is zero!");
                 R = R + std::norm(samp_3) - std::norm(samp_2);
-            }
             else
             {
                 if (i < 2 * N_zfc)
@@ -133,8 +130,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             }
 
             M = std::norm(P) / std::max(R, float(1e-6));
-            if (M_max < M)
-                M_max = M;
+            // if (M_max < M)
+            //     M_max = M;
 
             if (M > M_threshold)
             {
@@ -145,8 +142,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                 if (not detection_flag)
                     detection_flag = true;
 
-                if (detection_flag)
-                    ++counter;
+                ++counter;
             }
             else
             {
@@ -160,11 +156,16 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                         saved_P.resize(capacity);
                         counter = 0;
                     }
+
                     // LOG_INFO_FMT("DOWN -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
                     saved_P.pop_front();
                     saved_P.push_back(P);
                     if (extra > save_extra)
+                    {
+                        size_t ref_start = (i - counter) + std::floor(counter / 2) - std::floor(N_zfc * reps_zfc / 2) - N_zfc;
+                        ref_start_timer = rx_timer + uhd::time_spec_t(double(ref_start / rx_rate));
                         return true;
+                    }
                     else
                         ++extra;
                 }
@@ -184,7 +185,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
 
-    LOG_INFO_FMT("M_max = %1%", M_max);
+    LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
+
+    // LOG_INFO_FMT("M_max = %1%", M_max);
 
     std::string P_filename = projectDir + "/storage/P_data_" + device_id + "_" + curr_time_str + ".dat";
     std::ofstream P_save_stream;
