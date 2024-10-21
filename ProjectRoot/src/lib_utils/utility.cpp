@@ -66,7 +66,7 @@ void append_value_with_timestamp(const std::string &filename, std::ofstream &out
     outfile.close();
 }
 
-void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<std::complex<float>> stream)
+void save_stream_to_file(const std::string &filename, std::ofstream &outfile, std::vector<sample_type> stream)
 {
     // Open the file in append mode (if not already open)
     if (!outfile.is_open())
@@ -107,9 +107,9 @@ void save_timer_to_file(const std::string &filename, std::ofstream &outfile, std
     }
 }
 
-std::vector<std::complex<float>> read_from_file(const std::string &filename)
+std::vector<sample_type> read_from_file(const std::string &filename)
 {
-    std::vector<std::complex<float>> data;
+    std::vector<sample_type> data;
 
     // Open the file in binary mode
     std::ifstream inputFile(filename, std::ios::binary);
@@ -124,15 +124,15 @@ std::vector<std::complex<float>> read_from_file(const std::string &filename)
     std::streamsize fileSize = inputFile.tellg();
     inputFile.seekg(0, std::ios::beg);
 
-    // Ensure the file size is a multiple of the size of std::complex<float>
-    if (fileSize % sizeof(std::complex<float>) != 0)
+    // Ensure the file size is a multiple of the size of sample_type
+    if (fileSize % sizeof(sample_type) != 0)
     {
-        LOG_ERROR("File size is not a multiple of std::complex<float>");
+        LOG_ERROR("File size is not a multiple of sample_type");
         return data;
     }
 
     // Calculate the number of complex numbers in the file
-    size_t numElements = fileSize / sizeof(std::complex<float>);
+    size_t numElements = fileSize / sizeof(sample_type);
 
     // Resize the vector to hold all complex numbers
     data.resize(numElements);
@@ -143,20 +143,20 @@ std::vector<std::complex<float>> read_from_file(const std::string &filename)
     if (!inputFile)
     {
         LOG_ERROR_FMT("Error reading file: ", filename);
-        return std::vector<std::complex<float>>(); // Return an empty vector on read error
+        return std::vector<sample_type>(); // Return an empty vector on read error
     }
 
     return data;
 }
 
-std::vector<double> unwrap(const std::vector<std::complex<float>> &complexVector)
+std::vector<double> unwrap(const std::vector<sample_type> &complexVector)
 {
     const double pi = M_PI;
     const double two_pi = 2 * M_PI;
 
     // Calculate the initial phase (angles) of the complex numbers
     std::vector<double> phase(complexVector.size());
-    std::transform(complexVector.begin(), complexVector.end(), phase.begin(), [](const std::complex<float> &c)
+    std::transform(complexVector.begin(), complexVector.end(), phase.begin(), [](const sample_type &c)
                    { return std::arg(c); });
 
     // Unwrap the phase
@@ -211,7 +211,7 @@ std::string floatToStringWithPrecision(float value, int precision)
     return out.str();
 }
 
-float findMaxAbsValue(const std::vector<std::complex<float>> &vec)
+float findMaxAbsValue(const std::vector<sample_type> &vec)
 {
     float max_abs_value = 0.0f;
 
@@ -227,7 +227,7 @@ float findMaxAbsValue(const std::vector<std::complex<float>> &vec)
     return max_abs_value;
 }
 
-float calc_signal_power(const std::vector<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_power)
+float calc_signal_power(const std::vector<sample_type> &signal, const size_t &start_index, const size_t &length, const float &min_power)
 {
     size_t L;
     if (length == 0)
@@ -240,13 +240,13 @@ float calc_signal_power(const std::vector<std::complex<float>> &signal, const si
     return sig_pow;
 }
 
-float calc_signal_power(const std::deque<std::complex<float>> &signal, const size_t &start_index, const size_t &length, const float &min_power)
+float calc_signal_power(const std::deque<sample_type> &signal, const size_t &start_index, const size_t &length, const float &min_power)
 {
-    std::vector<std::complex<float>> vector(signal.begin(), signal.end());
+    std::vector<sample_type> vector(signal.begin(), signal.end());
     return calc_signal_power(vector, start_index, length, min_power);
 }
 
-float meanSquareValue(const std::vector<std::complex<float>> &vec, const size_t &start_index, const size_t &end_index, const float lower_bound)
+float meanSquareValue(const std::vector<sample_type> &vec, const size_t &start_index, const size_t &end_index, const float lower_bound)
 {
     float sum = 0.0;
     for (size_t i = start_index; i < end_index; ++i)
@@ -260,7 +260,7 @@ float meanSquareValue(const std::vector<std::complex<float>> &vec, const size_t 
     return sum / (end_index - start_index);
 }
 
-float meanAbsoluteValue(const std::vector<std::complex<float>> &vec, const float lower_bound)
+float meanAbsoluteValue(const std::vector<sample_type> &vec, const float lower_bound)
 {
     float sum = 0.0;
     float abs_val = 0.0;
@@ -643,12 +643,12 @@ bool listActiveDevices(std::vector<std::string> &device_ids)
     return true;
 }
 
-void correct_cfo_tx(std::vector<std::complex<float>> &signal, const float &scale, const float &cfo, size_t &counter)
+void correct_cfo_tx(std::vector<sample_type> &signal, const float &scale, const float &cfo, size_t &counter)
 {
     for (auto &samp : signal)
     {
         if (cfo != 0.0)
-            samp *= scale * std::complex<float>(std::cos(cfo * counter), std::sin(cfo * counter));
+            samp *= scale * sample_type(std::cos(cfo * counter), std::sin(cfo * counter));
         else
             samp *= scale;
         counter++;
@@ -687,11 +687,11 @@ void windowing_func(const std::vector<float> &signal, const size_t &otac_len, co
     }
 }
 
-bool otac_wfs_proc(const std::vector<std::complex<float>> &signal, const size_t &otac_len, const float &threshold, float &fs_signal_power, float &otac_signal_power, size_t &num_samples_till_fs)
+bool otac_wfs_proc(const std::vector<sample_type> &signal, const size_t &otac_len, const float &threshold, float &fs_signal_power, float &otac_signal_power, size_t &num_samples_till_fs)
 {
     size_t signal_len = signal.size();
     std::vector<float> norm_samples(signal_len);
-    std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
+    std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const sample_type &c)
                    { return std::norm(c); });
 
     // Find Full-scale signal - first occurance of signal with mean-norm above threshold
@@ -723,11 +723,11 @@ bool otac_wfs_proc(const std::vector<std::complex<float>> &signal, const size_t 
         return false;
 }
 
-bool otac_wofs_proc(const std::vector<std::complex<float>> &signal, const size_t &otac_len, const float &threshold, float &signal_power, size_t &num_samples_till_otac)
+bool otac_wofs_proc(const std::vector<sample_type> &signal, const size_t &otac_len, const float &threshold, float &signal_power, size_t &num_samples_till_otac)
 {
     size_t signal_len = signal.size();
     std::vector<float> norm_samples(signal_len);
-    std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const std::complex<float> &c)
+    std::transform(signal.begin(), signal.end(), norm_samples.begin(), [](const sample_type &c)
                    { return std::norm(c); });
     // compute signal power over window
     float max_val = 0.0, temp_val = 0.0, win_pow = 0.0;
@@ -760,12 +760,12 @@ bool otac_wofs_proc(const std::vector<std::complex<float>> &signal, const size_t
     return true;
 }
 
-std::vector<std::complex<float>> upsample(const std::vector<std::complex<float>> &input_signal, const size_t &upscale_factor)
+std::vector<sample_type> upsample(const std::vector<sample_type> &input_signal, const size_t &upscale_factor)
 {
     size_t inputSize = input_signal.size();
     size_t outputSize = inputSize * upscale_factor;
 
-    std::vector<std::complex<float>> outputSignal(outputSize);
+    std::vector<sample_type> outputSignal(outputSize);
 
     // Insert zeros between samples
     for (size_t i = 0; i < inputSize; ++i)
@@ -773,18 +773,18 @@ std::vector<std::complex<float>> upsample(const std::vector<std::complex<float>>
         outputSignal[i * upscale_factor] = input_signal[i]; // Keep the original sample
         for (size_t j = 1; j < upscale_factor; ++j)
         {
-            outputSignal[i * upscale_factor + j] = std::complex<float>(0, 0); // Insert zeros
+            outputSignal[i * upscale_factor + j] = sample_type(0, 0); // Insert zeros
         }
     }
 
     return outputSignal;
 }
 
-std::vector<std::complex<float>> downsample(const std::vector<std::complex<float>> &inputSignal, const size_t &factor)
+std::vector<sample_type> downsample(const std::vector<sample_type> &inputSignal, const size_t &factor)
 {
     size_t inputSize = inputSignal.size();
     size_t outputSize = inputSize / factor;
-    std::vector<std::complex<float>> outputSignal(outputSize);
+    std::vector<sample_type> outputSignal(outputSize);
 
     // Take every nth sample and discard the others
     for (size_t i = 0; i < outputSize; ++i)

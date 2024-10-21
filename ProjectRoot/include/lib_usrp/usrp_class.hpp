@@ -46,24 +46,24 @@ public:
     void publish_usrp_data();
     void log_device_parameters();
 
-    bool transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
+    bool transmission(const std::vector<sample_type> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
 
-    bool single_burst_transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
+    bool single_burst_transmission(const std::vector<sample_type> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack = false);
 
-    void continuous_transmission(const std::vector<std::complex<float>> &buff, std::atomic_bool &stop_signal_called);
+    void continuous_transmission(const std::vector<sample_type> &buff, std::atomic_bool &stop_signal_called);
 
-    std::vector<std::complex<float>> reception(
+    std::vector<sample_type> reception(
         bool &stop_signal_called,
         const size_t &num_rx_samps = 0,
         const float &duration = 0.0,
         const uhd::time_spec_t &rx_time = uhd::time_spec_t(0.0),
         bool is_save_to_file = false,
-        const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)
+        const std::function<bool(const std::vector<sample_type> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<sample_type> &, const size_t &, const uhd::time_spec_t &)
         { return false; });
 
     void receive_save_with_timer(bool &stop_signal_called, const float &duration);
-    void receive_fixed_num_samps(bool &stop_signal_called, const size_t &num_rx_samples, std::vector<std::complex<float>> &out_samples, uhd::time_spec_t &out_timer);
-    void receive_continuously_with_callback(bool &stop_signal_called, const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)
+    void receive_fixed_num_samps(bool &stop_signal_called, const size_t &num_rx_samples, std::vector<sample_type> &out_samples, uhd::time_spec_t &out_timer);
+    void receive_continuously_with_callback(bool &stop_signal_called, const std::function<bool(const std::vector<sample_type> &, const size_t &, const uhd::time_spec_t &)> &callback = [](const std::vector<sample_type> &, const size_t &, const uhd::time_spec_t &)
                                                                       { return false; });
 
     void adjust_for_freq_offset(const float &freq_offset);

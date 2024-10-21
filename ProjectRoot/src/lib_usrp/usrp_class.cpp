@@ -442,7 +442,7 @@ void USRP_class::setup_streamers()
 
 void USRP_class::perform_tx_test()
 {
-    std::vector<std::complex<float>> tx_buff(100 * max_tx_packet_size, std::complex<float>(1.0, 1.0));
+    std::vector<sample_type> tx_buff(100 * max_tx_packet_size, sample_type(1.0, 1.0));
     bool dont_stop = false;
     if (transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop, true))
     {
@@ -521,7 +521,7 @@ float USRP_class::set_background_noise_power()
 float USRP_class::estimate_background_noise_power(const size_t &num_pkts)
 {
     bool dont_stop = false;
-    std::vector<std::complex<float>> rx_samples;
+    std::vector<sample_type> rx_samples;
     uhd::time_spec_t rx_timer;
     receive_fixed_num_samps(dont_stop, max_rx_packet_size * num_pkts, rx_samples, rx_timer);
 
@@ -555,7 +555,7 @@ void USRP_class::publish_usrp_data()
     mqttClient.publish(topic_init, json_data.dump(4), true);
 }
 
-bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
+bool USRP_class::transmission(const std::vector<sample_type> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
 {
     bool success = false;
     size_t total_num_samps = buff.size();
@@ -696,7 +696,7 @@ bool USRP_class::transmission(const std::vector<std::complex<float>> &buff, cons
     return success;
 };
 
-bool USRP_class::single_burst_transmission(const std::vector<std::complex<float>> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
+bool USRP_class::single_burst_transmission(const std::vector<sample_type> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
 {
     bool success = false;
     size_t total_num_samps = buff.size();
@@ -772,7 +772,7 @@ bool USRP_class::single_burst_transmission(const std::vector<std::complex<float>
     return success;
 };
 
-void USRP_class::continuous_transmission(const std::vector<std::complex<float>> &buff, std::atomic_bool &stop_transmission)
+void USRP_class::continuous_transmission(const std::vector<sample_type> &buff, std::atomic_bool &stop_transmission)
 {
 
     // setup metadata for the first packet
@@ -811,7 +811,7 @@ void USRP_class::continuous_transmission(const std::vector<std::complex<float>> 
     tx_streamer->send("", 0, md);
 };
 
-std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
+std::vector<sample_type> USRP_class::reception(bool &stop_signal_called, const size_t &req_num_rx_samps, const float &duration, const uhd::time_spec_t &rx_time, bool is_save_to_file, const std::function<bool(const std::vector<sample_type> &, const size_t &, const uhd::time_spec_t &)> &callback)
 {
     std::string filename;
 
@@ -861,13 +861,13 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     double rx_delay = stream_cmd.stream_now ? 0.0 : (rx_time - usrp->get_time_now()).get_real_secs();
     double timeout = burst_pkt_time + rx_delay;
 
-    std::vector<std::complex<float>> rx_samples;
+    std::vector<sample_type> rx_samples;
     bool reception_complete = false;
     size_t retry_rx = 0;
     size_t num_acc_samps = 0;
     bool callback_success = false;
     size_t num_curr_rx_samps;
-    std::vector<std::complex<float>> buff(max_rx_packet_size);
+    std::vector<sample_type> buff(max_rx_packet_size);
     int retry_count = 0;
 
     while (not reception_complete and not stop_signal_called)
@@ -922,7 +922,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
         // process (save, update counters, etc...) received samples and continue
         if (is_save_to_file and (not fixed_reception_condition)) // continuous saving
         {
-            std::vector<std::complex<float>> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
+            std::vector<sample_type> forward(buff.begin(), buff.begin() + num_curr_rx_samps);
             save_stream_to_file(filename, rx_save_stream, forward);
         }
 
@@ -962,7 +962,7 @@ std::vector<std::complex<float>> USRP_class::reception(bool &stop_signal_called,
     if (success and fixed_reception_condition)
         return rx_samples;
     else // do not return anything if total num rx samps not given
-        return std::vector<std::complex<float>>{};
+        return std::vector<sample_type>{};
 };
 
 void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &duration)
@@ -989,7 +989,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     const double burst_pkt_time = std::max<double>(0.1, (2.0 * max_rx_packet_size / rx_rate));
     double timeout = burst_pkt_time;
 
-    std::vector<std::complex<float>> rx_samples;
+    std::vector<sample_type> rx_samples;
     std::vector<uhd::time_spec_t> timer_vec;
     std::vector<size_t> datalen_vec;
 
@@ -997,7 +997,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     size_t rx_counter = 0;
     size_t num_acc_samps = 0;
     bool callback_success = false;
-    std::vector<std::complex<float>> buff(total_num_samps);
+    std::vector<sample_type> buff(total_num_samps);
 
     while (num_acc_samps < total_num_samps and not stop_signal_called)
     {
@@ -1056,7 +1056,7 @@ void USRP_class::receive_save_with_timer(bool &stop_signal_called, const float &
     rx_save_timer.close();
 };
 
-void USRP_class::receive_fixed_num_samps(bool &stop_signal_called, const size_t &num_rx_samples, std::vector<std::complex<float>> &out_samples, uhd::time_spec_t &out_timer)
+void USRP_class::receive_fixed_num_samps(bool &stop_signal_called, const size_t &num_rx_samples, std::vector<sample_type> &out_samples, uhd::time_spec_t &out_timer)
 {
     bool success = true;
 
@@ -1120,7 +1120,7 @@ void USRP_class::receive_fixed_num_samps(bool &stop_signal_called, const size_t 
     std::cout << std::endl;
 };
 
-void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, const std::function<bool(const std::vector<std::complex<float>> &, const size_t &, const uhd::time_spec_t &)> &callback)
+void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, const std::function<bool(const std::vector<sample_type> &, const size_t &, const uhd::time_spec_t &)> &callback)
 {
     bool success = true;
 
@@ -1138,7 +1138,7 @@ void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, co
 
     size_t rx_counter = 0;
     bool callback_success = false;
-    std::vector<std::complex<float>> buff(packet_size);
+    std::vector<sample_type> buff(packet_size);
 
     while (not stop_signal_called and not callback_success)
     {
