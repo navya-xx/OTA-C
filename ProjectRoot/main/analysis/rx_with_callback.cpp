@@ -54,7 +54,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
-    size_t ex_save_mul = 2;
+    size_t ex_save_mul = 1;
 
     size_t capacity = N_zfc * (reps_zfc + ex_save_mul);
 
@@ -163,9 +163,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
                     saved_P.push_back(P);
                     if (extra > save_extra)
                     {
-                        int ref_start = (i - counter - save_extra) + std::floor(counter / 2) - int(std::floor(N_zfc * reps_zfc / 2) + N_zfc);
-                        LOG_DEBUG_FMT("Ref start index count = %1%", ref_start);
-                        ref_start_timer = rx_timer + uhd::time_spec_t(double(ref_start / rx_rate));
+                        int ref_end = (i - counter - save_extra) + std::floor(counter / 2) + int(std::floor(N_zfc * reps_zfc / 2) + N_zfc);
+                        LOG_DEBUG_FMT("Ref end index count = %1%", ref_end);
+                        ref_start_timer = rx_timer + uhd::time_spec_t(double(ref_end / rx_rate));
                         return true;
                     }
                     else
