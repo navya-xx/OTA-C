@@ -54,7 +54,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     size_t N_zfc = parser.getValue_int("Ref-N-zfc");
     size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
-    size_t decimation_factor = parser.getValue_int("sampling-factor");
     size_t ex_save_mul = 1;
 
     size_t capacity = N_zfc * (reps_zfc + ex_save_mul);
@@ -69,6 +68,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     uhd::time_spec_t ref_start_timer(0.0);
 
     // Downsampling filter
+    size_t decimation_factor = parser.getValue_int("sampling-factor");
     std::vector<float> fir_filter;
     std::ifstream filter_file("../config/filters/fir_order_51_downscale_10.csv");
     float value;
@@ -88,8 +88,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     size_t filter_len = fir_filter.size();
     std::vector<sample_type> tail_samples(filter_len * decimation_factor, sample_type(0.0));
 
-    std::string filename = projectDir + "/storage/rx_data_" + device_id + "_" + curr_time_str + ".dat";
-    std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
+    // std::string filename = projectDir + "/storage/rx_data_" + device_id + "_" + curr_time_str + ".dat";
+    // std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
     std::string filename_dw = projectDir + "/storage/dw_data_" + device_id + "_" + curr_time_str + ".dat";
     std::ofstream dw_save_stream(filename_dw, std::ios::out | std::ios::binary | std::ios::app);
 
@@ -122,7 +122,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             dec_vector.emplace_back(sample_dw);
         }
 
-        save_stream_to_file(filename, rx_save_stream, rx_stream);
+        // save_stream_to_file(filename, rx_save_stream, rx_stream);
         save_stream_to_file(filename_dw, dw_save_stream, dec_vector);
 
         num_samples_saved += dec_vector.size();
@@ -136,31 +136,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     {
         sample_type samp_1(0.0), samp_2(0.0), samp_3(0.0);
 
-        for (int i = 0; i < rx_stream_size; i += decimation_factor)
+        for (int i = 0; i < rx_stream_size; ++i)
         {
-            // // downsample via polyphase filter
-            // float realpart = 0.0, imagpart = 0.0;
-            // for (int j = 0; j < filter_len; ++j)
-            // {
-            //     int signal_index = i - j * decimation_factor;
-            //     if (signal_index < 0 && signal_index + tail_samples.size() > 0)
-            //     {
-            //         realpart += tail_samples[signal_index + tail_samples.size()].real() * fir_filter[j];
-            //         imagpart += tail_samples[signal_index + tail_samples.size()].imag() * fir_filter[j];
-            //     }
-            //     else if (signal_index >= 0 && signal_index <= rx_stream_size)
-            //     {
-            //         realpart += rx_stream[signal_index].real() * fir_filter[j];
-            //         imagpart += rx_stream[signal_index].imag() * fir_filter[j];
-            //     }
-            //     else
-            //         LOG_WARN_FMT("signal_index %1% is invalid!!", signal_index);
-            // }
-
-            // sample_type sample_dw(realpart, imagpart);
-
-            // int k = i / decimation_factor;
-
             if (i < 2 * N_zfc)
                 samp_1 = saved_buffer[i];
             else
@@ -241,26 +218,27 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
     usrp_classobj.receive_continuously_with_callback(stop_signal_called, save_stream_callback);
+    dw_save_stream.close();
 
-    LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
+    // LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
 
     // CFO estimation
-    int ref_start_index = saved_P.size() - (save_extra + std::floor(counter / 2) + int(std::floor(N_zfc * (reps_zfc - 1) / 2)));
-    LOG_DEBUG_FMT("Start index of ref = %1%", ref_start_index);
-    std::vector<sample_type> ex_vec;
-    ex_vec.insert(ex_vec.begin(), saved_P.begin() + ref_start_index, saved_P.begin() + ref_start_index + N_zfc * (reps_zfc - 1));
-    std::vector<double> phases = unwrap(ex_vec);
-    double cfo_mean = std::accumulate(phases.begin(), phases.end(), 0.0) / phases.size() / N_zfc;
-    LOG_INFO_FMT("Mean CFO = %1%", cfo_mean);
+    // int ref_start_index = saved_P.size() - (save_extra + std::floor(counter / 2) + int(std::floor(N_zfc * (reps_zfc - 1) / 2)));
+    // LOG_DEBUG_FMT("Start index of ref = %1%", ref_start_index);
+    // std::vector<sample_type> ex_vec;
+    // ex_vec.insert(ex_vec.begin(), saved_P.begin() + ref_start_index, saved_P.begin() + ref_start_index + N_zfc * (reps_zfc - 1));
+    // std::vector<double> phases = unwrap(ex_vec);
+    // double cfo_mean = std::accumulate(phases.begin(), phases.end(), 0.0) / phases.size() / N_zfc;
+    // LOG_INFO_FMT("Mean CFO = %1%", cfo_mean);
 
     // LOG_INFO_FMT("M_max = %1%", M_max);
 
-    std::string P_filename = projectDir + "/storage/P_data_" + device_id + "_" + curr_time_str + ".dat";
-    std::ofstream P_save_stream;
-    std::vector<sample_type> save_data;
-    save_data.insert(save_data.begin(), saved_P.begin(), saved_P.end());
-    save_stream_to_file(P_filename, P_save_stream, save_data);
-    P_save_stream.close();
+    // std::string P_filename = projectDir + "/storage/P_data_" + device_id + "_" + curr_time_str + ".dat";
+    // std::ofstream P_save_stream;
+    // std::vector<sample_type> save_data;
+    // save_data.insert(save_data.begin(), saved_P.begin(), saved_P.end());
+    // save_stream_to_file(P_filename, P_save_stream, save_data);
+    // P_save_stream.close();
 
     // std::string R_filename = projectDir + "/storage/R_data_" + device_id + "_" + curr_time_str + ".dat";
     // std::ofstream R_save_stream;
