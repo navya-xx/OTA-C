@@ -90,13 +90,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // std::string filename = projectDir + "/storage/rx_data_" + device_id + "_" + curr_time_str + ".dat";
     // std::ofstream rx_save_stream(filename, std::ios::out | std::ios::binary | std::ios::app);
-    std::string filename_dw = projectDir + "/storage/dw_data_" + device_id + "_" + curr_time_str + ".dat";
-    std::ofstream dw_save_stream(filename_dw, std::ios::out | std::ios::binary | std::ios::app);
+
+    std::vector<sample_type> dec_vector;
 
     std::function save_stream_callback = [&](const std::vector<sample_type> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
     {
-        std::vector<sample_type> dec_vector;
-
         for (int i = 0; i < rx_stream_size; i += decimation_factor)
         {
             // downsample via polyphase filter
@@ -123,7 +121,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
         }
 
         // save_stream_to_file(filename, rx_save_stream, rx_stream);
-        save_stream_to_file(filename_dw, dw_save_stream, dec_vector);
+
+        tail_samples.insert(tail_samples.begin(), rx_stream.end() - filter_len * decimation_factor, rx_stream.end());
 
         num_samples_saved += dec_vector.size();
         if (num_samples_saved < num_samples)
@@ -218,6 +217,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
 
     // usrp_classobj.receive_continuously_with_callback(stop_signal_called, schmidt_cox);
     usrp_classobj.receive_continuously_with_callback(stop_signal_called, save_stream_callback);
+
+    std::string filename_dw = projectDir + "/storage/dw_data_" + device_id + "_" + curr_time_str + ".dat";
+    std::ofstream dw_save_stream(filename_dw, std::ios::out | std::ios::binary | std::ios::app);
+    save_stream_to_file(filename_dw, dw_save_stream, dec_vector);
     dw_save_stream.close();
 
     // LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_start_timer.get_tick_count(rx_rate), usrp_classobj.usrp->get_time_now().get_tick_count(rx_rate));
