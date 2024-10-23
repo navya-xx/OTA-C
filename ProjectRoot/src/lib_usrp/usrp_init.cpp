@@ -375,8 +375,6 @@ void USRP_init::log_device_parameters()
     LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
     LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
     LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
-    LOG_DEBUG_FMT("Tx Ref gain levels: %1%...", usrp->get_tx_power_reference(0)); // Assuming channel 0
-    LOG_DEBUG_FMT("Rx Ref gain levels: %1%...", usrp->get_rx_power_reference(0)); // Assuming channel 0
     LOG_DEBUG_FMT("Actual Rx Bandwidth: %1% MHz...", (rx_bw / 1e6));
     LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
 }
