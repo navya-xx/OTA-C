@@ -1,522 +1,7 @@
 #include "usrp_class.hpp"
 #include <uhd/cal/database.hpp>
 
-USRP_class::USRP_class(const ConfigParser &parser) : parser(parser) {};
-
-uhd::sensor_value_t USRP_class::get_sensor_fn_rx(const std::string &sensor_name, const size_t &channel)
-{
-    return usrp->get_rx_sensor(sensor_name, channel);
-}
-
-uhd::sensor_value_t USRP_class::get_sensor_fn_tx(const std::string &sensor_name, const size_t &channel)
-{
-    return usrp->get_tx_sensor(sensor_name, channel);
-}
-
-bool USRP_class::check_locked_sensor_rx(float setup_time)
-{
-    auto sensor_names = usrp->get_rx_sensor_names(0);
-    std::string sensor_name = "lo_locked";
-    if (std::find(sensor_names.begin(), sensor_names.end(), sensor_name) == sensor_names.end())
-        return false;
-
-    auto setup_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(int64_t(setup_time * 1000));
-    bool lock_detected = false;
-
-    LOG_INTO_BUFFER_FMT("Waiting for \"%1%\":", sensor_name);
-
-    while (true)
-    {
-        if (lock_detected and (std::chrono::steady_clock::now() > setup_timeout))
-        {
-            LOG_INTO_BUFFER(" locked.");
-            LOG_FLUSH_INFO();
-            break;
-        }
-        if (get_sensor_fn_rx(sensor_name, 0).to_bool())
-        {
-            LOG_INTO_BUFFER("+");
-            lock_detected = true;
-        }
-        else
-        {
-            if (std::chrono::steady_clock::now() > setup_timeout)
-            {
-                LOG_INFO_FMT("timed out waiting for consecutive locks on sensor \"%1%\"", sensor_name);
-            }
-            LOG_INTO_BUFFER("_");
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    return true;
-}
-
-bool USRP_class::check_locked_sensor_tx(float setup_time)
-{
-    auto sensor_names = usrp->get_tx_sensor_names(0);
-    std::string sensor_name = "lo_locked";
-    if (std::find(sensor_names.begin(), sensor_names.end(), sensor_name) == sensor_names.end())
-        return false;
-
-    auto setup_timeout = std::chrono::steady_clock::now() + std::chrono::milliseconds(int64_t(setup_time * 1000));
-    bool lock_detected = false;
-
-    LOG_INTO_BUFFER_FMT("Waiting for \"%1%\":", sensor_name);
-
-    while (true)
-    {
-        if (lock_detected and (std::chrono::steady_clock::now() > setup_timeout))
-        {
-            LOG_INTO_BUFFER(" locked.");
-            LOG_FLUSH_INFO();
-            break;
-        }
-        if (get_sensor_fn_tx(sensor_name, 0).to_bool())
-        {
-            LOG_INTO_BUFFER("+");
-            lock_detected = true;
-        }
-        else
-        {
-            if (std::chrono::steady_clock::now() > setup_timeout)
-            {
-                LOG_INFO_FMT("timed out waiting for consecutive locks on sensor \"%1%\"", sensor_name);
-            }
-            LOG_INTO_BUFFER("_");
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    return true;
-}
-
-void USRP_class::initialize(bool perform_rxtx_tests)
-{
-    device_id = parser.getValue_str("device-id");
-    external_ref = parser.getValue_str("external-clock-ref") == "true";
-
-    if (!check_and_create_usrp_device())
-    {
-        LOG_ERROR("Failed to create USRP device. Exiting!");
-        return;
-    }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    configure_clock_source();
-    set_device_parameters();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    check_locked_sensor_rx();
-    check_locked_sensor_tx();
-
-    setup_streamers();
-
-    float noise_power = estimate_background_noise_power();
-    init_noise_ampl = std::sqrt(noise_power);
-    LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
-
-    // if (perform_rxtx_tests)
-    // {
-    //     perform_rx_test(); // for estimating background noise
-    // }
-
-    usrp->set_time_now(uhd::time_spec_t(0.0));
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    current_temperature = get_device_temperature();
-    LOG_INFO_FMT("Current temperature of device = %1% C.", current_temperature);
-
-    publish_usrp_data();
-
-    LOG_INFO("--------- USRP initialization finished -----------------");
-}
-
-bool USRP_class::check_and_create_usrp_device()
-{
-    bool usrp_make_success = false;
-    std::string args = "serial=" + device_id;
-
-    try
-    {
-        usrp = uhd::usrp::multi_usrp::make(args);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        usrp_make_success = true;
-    }
-    catch (const std::exception &e)
-    {
-        LOG_ERROR_FMT("%1%", e.what());
-    }
-
-    return usrp_make_success;
-}
-
-void USRP_class::print_usrp_device_info()
-{
-    LOG_INFO_FMT("Initializing Device: %1%", usrp->get_pp_string());
-}
-
-std::pair<float, float> USRP_class::query_calibration_data()
-{
-    float rx_pow_ref_input = parser.getValue_float("rx-pow-ref");
-    float tx_pow_ref_input = parser.getValue_float("tx-pow-ref");
-
-    // Query RX calibration data
-    auto rx_info = usrp->get_usrp_rx_info();
-    std::string cal_dir = get_home_dir() + "/uhd/caldata/";
-    std::string rx_ref_power_file = cal_dir + rx_info["rx_ref_power_key"] + "_" + rx_info["rx_ref_power_serial"] + ".json";
-
-    auto retval = find_closest_gain(rx_ref_power_file, rx_pow_ref_input, carrier_freq);
-    float rx_pow_ref_gain = retval.first;
-    float rx_pow_ref_pow = retval.second;
-    LOG_INFO_FMT("Rx Power ref | requested %1% dBm | implemented %2% dBm | at gain %3% dB", rx_pow_ref_input, rx_pow_ref_pow, rx_pow_ref_gain);
-
-    // Query TX calibration data
-    auto tx_info = usrp->get_usrp_tx_info();
-    std::string tx_ref_power_file = cal_dir + tx_info["tx_ref_power_key"] + "_" + tx_info["tx_ref_power_serial"] + ".json";
-
-    auto reretval = find_closest_gain(tx_ref_power_file, tx_pow_ref_input, carrier_freq);
-    float tx_pow_ref_gain = reretval.first;
-    float tx_pow_ref_pow = reretval.second;
-    LOG_INFO_FMT("Tx Power ref | requested %1% dBm | implemented %2% dBm | at gain %3% dB", tx_pow_ref_input, tx_pow_ref_pow, tx_pow_ref_gain);
-
-    return {rx_pow_ref_gain, tx_pow_ref_gain};
-}
-
-void USRP_class::configure_clock_source()
-{
-    if (external_ref)
-    {
-        usrp->set_clock_source("external");
-
-        LOG_INFO("Now confirming lock on clock signals...");
-        bool is_locked = false;
-        auto end_time = std::chrono::steady_clock::now() + std::chrono::duration(std::chrono::milliseconds(1000));
-
-        while ((is_locked = usrp->get_mboard_sensor("ref_locked", 0).to_bool()) == false and std::chrono::steady_clock::now() < end_time)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-        if (is_locked == false)
-        {
-            LOG_WARN("ERROR: Unable to confirm clock signal locked on board");
-        }
-    }
-
-    LOG_INFO_FMT("Clock and time sources set to : %1% and %2%.", usrp->get_clock_source(0), usrp->get_time_source(0));
-}
-
-void USRP_class::set_device_parameters()
-{
-    set_antenna();
-    set_master_clock_rate();
-    set_sample_rate();
-    set_center_frequency();
-    set_initial_gains();
-    set_bandwidth();
-    apply_additional_settings();
-}
-
-void USRP_class::set_antenna()
-{
-    LOG_DEBUG("Setting Tx/Rx antenna.");
-    usrp->set_tx_antenna("TX/RX");
-    usrp->set_rx_antenna("TX/RX");
-    LOG_DEBUG_FMT("Actual Tx/Rx antenna: %1%, %2%.", usrp->get_tx_antenna(), usrp->get_rx_antenna());
-}
-
-void USRP_class::set_master_clock_rate()
-{
-    float master_clock_rate_input = parser.getValue_float("master-clock-rate");
-    LOG_DEBUG_FMT("Setting master clock rate at : %1% ...", master_clock_rate_input);
-    usrp->set_master_clock_rate(master_clock_rate_input);
-    float master_clock_rate_out = usrp->get_master_clock_rate();
-    LOG_DEBUG_FMT("Actual master clock rate set = %1%", master_clock_rate_out);
-}
-
-void USRP_class::set_sample_rate()
-{
-    float rate = parser.getValue_float("rate");
-    if (rate <= 0.0)
-    {
-        throw std::invalid_argument("Specify a valid sampling rate!");
-    }
-
-    LOG_DEBUG_FMT("Setting Tx/Rx Rate: %1% Msps.", (rate / 1e6));
-    usrp->set_tx_rate(rate);
-    usrp->set_rx_rate(rate, 0); // Assuming channel 0
-    tx_rate = usrp->get_tx_rate(0);
-    rx_rate = usrp->get_rx_rate(0);
-    LOG_DEBUG_FMT("Actual Tx Sampling Rate :  %1%", (tx_rate / 1e6));
-    LOG_DEBUG_FMT("Actual Rx Sampling Rate : %1%", (rx_rate / 1e6));
-}
-
-void USRP_class::set_center_frequency()
-{
-    float freq = parser.getValue_float("freq");
-    float lo_offset = parser.getValue_float("lo-offset");
-
-    LOG_DEBUG_FMT("Setting TX/RX Freq: %1% MHz...", (freq / 1e6));
-    LOG_DEBUG_FMT("Setting TX/RX LO Offset: %1% MHz...", (lo_offset / 1e6));
-
-    uhd::tune_request_t tune_request(freq, lo_offset);
-    usrp->set_rx_freq(tune_request, 0); // Assuming channel 0
-    usrp->set_tx_freq(tune_request, 0);
-    carrier_freq = usrp->get_rx_freq(0);
-    LOG_DEBUG_FMT("Actual Rx Freq: %1% MHz...", (usrp->get_rx_freq(0) / 1e6));
-    LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
-}
-
-void USRP_class::set_initial_gains()
-{
-    float tx_gain_input = get_gain("tx", use_calib_gains);
-
-    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", tx_gain_input);
-    usrp->set_tx_gain(tx_gain_input, 0); // Assuming channel 0
-    tx_gain = usrp->get_tx_gain(0);
-    LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
-
-    // Rx-gain
-    float rx_gain_input = get_gain("rx", use_calib_gains);
-
-    LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", rx_gain_input);
-    usrp->set_rx_gain(rx_gain_input, 0); // Assuming channel 0
-    rx_gain = usrp->get_rx_gain(0);
-    LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
-};
-
-float USRP_class::get_gain(const std::string &trans_type, const bool &get_calib_gains)
-{
-    std::string config_type;
-    if (trans_type == "tx")
-    {
-        config_type = "tx-gain";
-    }
-    else if (trans_type == "rx")
-    {
-        config_type = "rx-gain";
-    }
-    else
-        LOG_WARN_FMT("Incorrect `trans_type´ = %1%. Allowed values are \"tx\" or \"rx\".", trans_type);
-
-    float gain_val;
-    if (get_calib_gains)
-    {
-        // if (mqttClient.temporary_listen_for_last_value(temp, tx_gain_topic, 10, 30))
-        if (readDeviceConfig(device_id, "calib-" + config_type, gain_val))
-        {
-            if (gain_val == 0.0)
-                return get_gain(trans_type, false);
-            else
-                return gain_val;
-        }
-        else
-            return get_gain(trans_type, false);
-    }
-    else
-    {
-        if (parser.getValue_str("gain-mgmt") == "gain")
-        {
-            gain_val = parser.getValue_float(config_type);
-        }
-        else if (parser.getValue_str("gain-mgmt") == "power")
-        {
-            auto retval = query_calibration_data();
-
-            if (retval.second == -100.0)
-                gain_val = parser.getValue_float(config_type);
-            else
-                gain_val = retval.second;
-        }
-        return gain_val;
-    }
-}
-
-void USRP_class::set_tx_gain(const float &_tx_gain, const int &channel)
-{
-    LOG_DEBUG_FMT("Setting TX Gain: %1% dB...", _tx_gain);
-    usrp->set_tx_gain(_tx_gain, channel);
-    tx_gain = usrp->get_tx_gain(channel);
-    LOG_DEBUG_FMT("Actual TX Gain: %1% dB...", tx_gain);
-};
-
-void USRP_class::set_rx_gain(const float &_rx_gain, const int &channel)
-{
-    LOG_DEBUG_FMT("Setting RX Gain: %1% dB...", _rx_gain);
-    usrp->set_rx_gain(_rx_gain, channel);
-    rx_gain = usrp->get_rx_gain(channel);
-    LOG_DEBUG_FMT("Actual RX Gain: %1% dB...", rx_gain);
-};
-
-void USRP_class::set_bandwidth()
-{
-    float rx_bw_input = parser.getValue_float("rx-bw");
-    if (rx_bw_input >= 0.0)
-    {
-        LOG_DEBUG_FMT("Setting RX Bandwidth: %1% MHz...", (rx_bw_input / 1e6));
-        usrp->set_rx_bandwidth(rx_bw_input, 0); // Assuming channel 0
-        rx_bw = usrp->get_rx_bandwidth(0);
-        LOG_DEBUG_FMT("Actual Rx Bandwidth: %1% MHz...", (rx_bw / 1e6));
-    }
-
-    float tx_bw_input = parser.getValue_float("tx-bw");
-    if (tx_bw_input >= 0.0)
-    {
-        LOG_DEBUG_FMT("Setting TX Bandwidth: %1% MHz...", (tx_bw_input / 1e6));
-        usrp->set_tx_bandwidth(tx_bw_input, 0); // Assuming channel 0
-        tx_bw = usrp->get_tx_bandwidth(0);
-        LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
-    }
-
-    std::this_thread::sleep_for(std::chrono::microseconds(500)); // Allow setup to settle
-}
-
-void USRP_class::apply_additional_settings()
-{
-    // This function could handle any additional settings, such as specific filters,
-    // advanced tuning settings, or any hardware-specific features.
-}
-
-void USRP_class::log_device_parameters()
-{
-    LOG_DEBUG_FMT("Master Clock Rate: %1% Msps...", (usrp->get_master_clock_rate() / 1e6));
-    LOG_DEBUG_FMT("Actual Tx Sampling Rate :  %1%", (tx_rate / 1e6));
-    LOG_DEBUG_FMT("Actual Rx Sampling Rate : %1%", (rx_rate / 1e6));
-    LOG_DEBUG_FMT("Actual Rx Freq: %1% MHz...", (usrp->get_rx_freq(0) / 1e6));
-    LOG_DEBUG_FMT("Actual Tx Freq: %1% MHz...", (usrp->get_tx_freq(0) / 1e6));
-    LOG_DEBUG_FMT("Actual Rx Gain: %1% dB...", rx_gain);
-    LOG_DEBUG_FMT("Actual Tx Gain: %1% dB...", tx_gain);
-    LOG_DEBUG_FMT("Tx Ref gain levels: %1%...", usrp->get_tx_power_reference(0)); // Assuming channel 0
-    LOG_DEBUG_FMT("Rx Ref gain levels: %1%...", usrp->get_rx_power_reference(0)); // Assuming channel 0
-    LOG_DEBUG_FMT("Actual Rx Bandwidth: %1% MHz...", (rx_bw / 1e6));
-    LOG_DEBUG_FMT("Actual Tx Bandwidth: %1% MHz...", (tx_bw / 1e6));
-}
-
-void USRP_class::print_available_sensors()
-{
-    for (auto sensor : usrp->get_mboard_sensor_names(0))
-    {
-        LOG_INFO_FMT("MBoard Sensor %1% -- avaiable", sensor);
-    }
-
-    for (auto sensor : usrp->get_tx_sensor_names(0))
-    {
-        LOG_INFO_FMT("Tx Sensor %1% -- avaiable", sensor);
-    }
-
-    for (auto sensor : usrp->get_rx_sensor_names(0))
-    {
-        LOG_INFO_FMT("Rx Sensor %1% -- avaiable", sensor);
-    }
-}
-
-float USRP_class::get_device_temperature()
-{
-    try
-    {
-        uhd::sensor_value_t temp = usrp->get_tx_sensor("temp", 0);
-        // std::cout << "USRP Device Temperature: " << temp.to_pp_string() << std::endl;
-        return float(temp.to_real());
-    }
-    catch (const uhd::lookup_error &e)
-    {
-        LOG_WARN_FMT("Temperature sensor not found. Error : %1%...", e.what());
-        return 0.0;
-    }
-}
-
-void USRP_class::setup_streamers()
-{
-    std::string cpu_format = parser.getValue_str("cpu-format");
-    std::string otw_format = parser.getValue_str("otw-format");
-    uhd::stream_args_t stream_args(cpu_format, otw_format);
-    std::vector<size_t> channel_nums = {0}; // Assuming channel 0
-    stream_args.channels = channel_nums;
-    rx_streamer = usrp->get_rx_stream(stream_args);
-    tx_streamer = usrp->get_tx_stream(stream_args);
-
-    max_rx_packet_size = rx_streamer->get_max_num_samps();
-    max_tx_packet_size = tx_streamer->get_max_num_samps();
-
-    rx_sample_duration = 1 / rx_rate;
-    tx_sample_duration = 1 / tx_rate;
-}
-
-void USRP_class::perform_tx_test()
-{
-    std::vector<sample_type> tx_buff(100 * max_tx_packet_size, sample_type(1.0, 1.0));
-    bool dont_stop = false;
-    if (transmission(tx_buff, uhd::time_spec_t(0.0), dont_stop, true))
-    {
-        LOG_DEBUG("Test Tx -- success");
-    }
-    else
-    {
-        LOG_DEBUG("Test Tx -- failed");
-    }
-}
-
-void USRP_class::perform_rx_test()
-{
-    bool dont_stop = false;
-
-    size_t num_pkts = 100;
-    auto rx_samples = reception(dont_stop, max_rx_packet_size * num_pkts);
-    if (rx_samples.size() == max_rx_packet_size * num_pkts)
-    {
-        LOG_DEBUG_FMT("Reception test successful! Total %1% samples received.", rx_samples.size());
-    }
-    else
-    {
-        LOG_WARN("Reception test Failed!");
-    }
-
-    // float noise_power = calc_signal_power(rx_samples);
-    // init_noise_ampl = std::sqrt(noise_power);
-    // LOG_DEBUG_FMT("Average background noise for packets = %1%.", init_noise_ampl);
-}
-
-void USRP_class::collect_background_noise_powers()
-{
-    LOG_DEBUG("----- Running routine to estimate background noise power for different rx-gains -------------");
-    json noise_powers;
-    for (size_t i = 0; i < 60; ++i)
-    {
-        // set RX gain
-        set_rx_gain(float(i));
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        float noise_power = estimate_background_noise_power(200);
-        std::string rx_gain_str = floatToStringWithPrecision(float(i), 1);
-        noise_powers[rx_gain_str] = noise_power;
-        LOG_DEBUG_FMT("Rx-gain: %1% --- Noise power: %2%", rx_gain_str, noise_power);
-    }
-
-    // return USRP to original gains
-    set_initial_gains();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    bool save_success = saveDeviceConfig(device_id, "noise", noise_powers);
-    if (not save_success)
-        LOG_WARN("Failed to save noise powers to the config file.");
-}
-
-float USRP_class::set_background_noise_power()
-{
-    json noise_power_vals;
-    if (not readDeviceConfig(device_id, "noise", noise_power_vals))
-        LOG_WARN("Unable to get noise values from the config file!");
-
-    std::string rx_gain_str = floatToStringWithPrecision(rx_gain, 1);
-    if (not noise_power_vals.contains(rx_gain_str))
-    {
-        LOG_WARN_FMT("Noise power corresponding to Rx gain %1% dB not found in the config file!", rx_gain_str);
-        return 0.0;
-    }
-    else
-    {
-        float noise_pow = noise_power_vals[rx_gain_str];
-        init_noise_ampl = sqrt(noise_pow);
-        return noise_pow;
-    }
-}
+USRP_class::USRP_class(const ConfigParser &parser) : USRP_init(parser), parser(parser) {};
 
 float USRP_class::estimate_background_noise_power(const size_t &num_pkts)
 {
@@ -524,15 +9,6 @@ float USRP_class::estimate_background_noise_power(const size_t &num_pkts)
     std::vector<sample_type> rx_samples;
     uhd::time_spec_t rx_timer;
     receive_fixed_num_samps(dont_stop, max_rx_packet_size * num_pkts, rx_samples, rx_timer);
-
-    if (rx_samples.size() == max_rx_packet_size * num_pkts)
-    {
-        LOG_DEBUG_FMT("Reception successful! Total %1% samples received.", rx_samples.size());
-    }
-    else
-    {
-        LOG_WARN("Reception test Failed!");
-    }
 
     float noise_power = calc_signal_power(rx_samples);
 
@@ -555,19 +31,36 @@ void USRP_class::publish_usrp_data()
     mqttClient.publish(topic_init, json_data.dump(4), true);
 }
 
+void USRP_class::pre_process_tx_symbols(std::vector<sample_type> &tx_samples, const float &scale)
+{
+    if (flag_correct_cfo)
+    {
+        size_t cfo_counter = 0;
+        correct_cfo(tx_samples, cfo_counter, scale, cfo);
+    }
+}
+
+void USRP_class::post_process_rx_symbols(std::vector<sample_type> &rx_samples)
+{
+    if (flag_correct_cfo)
+    {
+        size_t cfo_counter = 0;
+        correct_cfo(rx_samples, cfo_counter, 1.0, -cfo);
+    }
+}
+
 bool USRP_class::transmission(const std::vector<sample_type> &buff, const uhd::time_spec_t &tx_time, bool &stop_signal_called, bool ask_ack)
 {
     bool success = false;
     size_t total_num_samps = buff.size();
-
     // setup metadata for the first packet
     uhd::tx_metadata_t md;
     md.start_of_burst = true;
     md.end_of_burst = false;
 
-    auto usrp_now = usrp->get_time_now();
+    auto usrp_now = get_time_now();
     double time_diff = (tx_time - usrp_now).get_real_secs();
-    LOG_DEBUG_FMT("TX with delay = %.4f microsecs.", (time_diff * 1e6));
+
     if (time_diff <= 0.0)
     {
         LOG_DEBUG_FMT("Transmitting %d samples WITHOUT delay.", total_num_samps);
@@ -575,7 +68,7 @@ bool USRP_class::transmission(const std::vector<sample_type> &buff, const uhd::t
     }
     else
     {
-        LOG_DEBUG_FMT("Transmitting %d samples WITH delay.", total_num_samps);
+        LOG_DEBUG_FMT("Transmitting %d samples WITH delay %2% microsecs.", total_num_samps, (time_diff * 1e6));
         md.has_time_spec = true;
         md.time_spec = tx_time;
     }
@@ -604,10 +97,8 @@ bool USRP_class::transmission(const std::vector<sample_type> &buff, const uhd::t
                 {
                     LOG_WARN_FMT("TX-TIMEOUT! Actual num samples sent = %d, asked for = %d.", num_tx_samps_sent_now, samps_to_send);
 
-                    // tx_streamer.reset();
-
                     ++retry_tx_counter;
-                    if (retry_tx_counter > 5)
+                    if (retry_tx_counter >= 5)
                     {
                         LOG_WARN_FMT("All %1% retries failed!", retry_tx_counter);
                         transmit_failure = true;
@@ -615,8 +106,8 @@ bool USRP_class::transmission(const std::vector<sample_type> &buff, const uhd::t
                     }
                     else
                     {
-                        LOG_WARN_FMT("Retry %1% to transmit signal again!", retry_tx_counter);
-                        time_diff = (tx_time - usrp->get_time_now()).get_real_secs();
+                        LOG_WARN_FMT("Retry %1% to transmit signal again ...", retry_tx_counter);
+                        time_diff = (tx_time - get_time_now()).get_real_secs();
                         if (time_diff <= 0.0)
                             md.has_time_spec = false;
                         else
@@ -635,12 +126,24 @@ bool USRP_class::transmission(const std::vector<sample_type> &buff, const uhd::t
             catch (const std::exception &e)
             {
                 ++retry_tx_counter;
-                LOG_WARN_FMT("Error in transmission in usrp_class.cpp::tx_streamer->send(...) : %1%", e.what());
-                if (retry_tx_counter > 5)
+                LOG_WARN_FMT("Error in transmission : %1%", e.what());
+                if (retry_tx_counter >= 5)
                 {
                     LOG_WARN_FMT("All %1% retries failed!", retry_tx_counter);
                     transmit_failure = true;
                     break;
+                }
+                else
+                {
+                    LOG_WARN_FMT("Retry %1% to transmit signal again ...", retry_tx_counter);
+                    time_diff = (tx_time - get_time_now()).get_real_secs();
+                    if (time_diff <= 0.0)
+                        md.has_time_spec = false;
+                    else
+                    {
+                        md.has_time_spec = true;
+                        md.time_spec = tx_time;
+                    }
                 }
                 continue;
             }
@@ -774,7 +277,6 @@ bool USRP_class::single_burst_transmission(const std::vector<sample_type> &buff,
 
 void USRP_class::continuous_transmission(const std::vector<sample_type> &buff, std::atomic_bool &stop_transmission)
 {
-
     // setup metadata for the first packet
     uhd::tx_metadata_t md;
     md.start_of_burst = true;
@@ -1075,11 +577,9 @@ void USRP_class::receive_fixed_num_samps(bool &stop_signal_called, const size_t 
 
     size_t rx_counter = 0;
     size_t num_acc_samps = 0;
-    bool callback_success = false;
 
     while (num_acc_samps < num_rx_samples and not stop_signal_called)
     {
-
         uhd::rx_metadata_t md;
         size_t packet_size = std::min(num_rx_samples - num_acc_samps, max_rx_packet_size);
         size_t num_curr_rx_samps = rx_streamer->recv(&out_samples.front() + num_acc_samps, packet_size, md, timeout, false);
@@ -1106,18 +606,11 @@ void USRP_class::receive_fixed_num_samps(bool &stop_signal_called, const size_t 
         if (rx_counter == 0)
             out_timer = md.time_spec;
 
-        std::cout << "\rNum of packets received so far = " << rx_counter;
-        std::cout.flush();
         ++rx_counter;
     }
 
-    if (stream_cmd.stream_mode == uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS)
-    {
-        stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
-        rx_streamer->issue_stream_cmd(stream_cmd);
-    }
-
-    std::cout << std::endl;
+    stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+    rx_streamer->issue_stream_cmd(stream_cmd);
 };
 
 void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, const std::function<bool(const std::vector<sample_type> &, const size_t &, const uhd::time_spec_t &)> &callback)
@@ -1185,20 +678,185 @@ void USRP_class::receive_continuously_with_callback(bool &stop_signal_called, co
     std::cout << std::endl;
 }
 
-void USRP_class::adjust_for_freq_offset(const float &freq_offset)
+bool USRP_class::cycleStartDetector(bool &stop_signal_called, uhd::time_spec_t &ref_timer, float &ref_sig_power, const float &max_duration)
 {
-    // set the sample rate
-    int channel = 0; // we only use one channel on each device
-    float new_rx_rate = rx_rate - freq_offset;
-    float new_tx_rate = tx_rate - freq_offset;
-    LOG_DEBUG_FMT("Re-Setting Tx/Rx Rate: %1% Msps.", (new_rx_rate / 1e6));
-    int closest_pow_2 = std::floor(std::log2(56e6 / new_rx_rate));
-    int master_clock_mul = std::pow(2, closest_pow_2);
-    usrp->set_master_clock_rate(new_rx_rate * master_clock_mul);
-    usrp->get_tree()->access<double>("/mboards/0/tick_rate").set(new_rx_rate * master_clock_mul);
-    usrp->set_rx_rate(new_rx_rate, channel);
-    usrp->set_tx_rate(new_tx_rate);
-    LOG_DEBUG_FMT("New Rx rate after changing Master Clock Rate is %1%", usrp->get_rx_rate());
-    tx_rate = usrp->get_tx_rate(channel);
-    rx_rate = usrp->get_rx_rate(channel);
-};
+    size_t max_num_samples = size_t(max_duration * rx_rate);
+    size_t num_samples_processed = 0;
+    size_t N_zfc = parser.getValue_int("Ref-N-zfc");
+    size_t reps_zfc = parser.getValue_int("Ref-R-zfc");
+    size_t ex_save_mul = 1; // additional set of samples captured after successful detection
+
+    size_t capacity = N_zfc * (reps_zfc + ex_save_mul);
+    std::deque<sample_type> saved_P(capacity);
+    std::vector<sample_type> saved_buffer(2 * N_zfc, sample_type(0.0)); // samples from previous packet
+
+    bool buffer_init = false, detection_flag = false;
+    int save_extra = ex_save_mul * N_zfc, extra = 0, counter = 0;
+    sample_type P(0.0);
+    float R = 0.0;
+    float M = 0;
+    float M_threshold = 0.01;
+    uhd::time_spec_t ref_end_timer(0.0);
+
+    bool successful_csd = false;
+
+    std::function schmidt_cox = [&](const std::vector<sample_type> &rx_stream, const size_t &rx_stream_size, const uhd::time_spec_t &rx_timer)
+    {
+        sample_type samp_1(0.0), samp_2(0.0), samp_3(0.0);
+
+        for (int i = 0; i < rx_stream_size; ++i)
+        {
+            if (i < 2 * N_zfc)
+                samp_1 = saved_buffer[i];
+            else
+                samp_1 = rx_stream[i - 2 * N_zfc];
+
+            if (i < N_zfc)
+                samp_2 = saved_buffer[i + N_zfc];
+            else
+                samp_2 = rx_stream[i - N_zfc];
+
+            samp_3 = rx_stream[i];
+
+            P = P + (std::conj(samp_2) * samp_3) - (std::conj(samp_1) * samp_2);
+
+            if (buffer_init)
+                R = R + std::norm(samp_3) - std::norm(samp_2);
+            else
+            {
+                if (i < 2 * N_zfc)
+                    R = R + std::norm(samp_3);
+                else
+                    buffer_init = true;
+            }
+
+            M = std::norm(P) / std::max(R, float(1e-6));
+
+            if (M > M_threshold)
+            {
+                // LOG_INFO_FMT("UP -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
+                saved_P.pop_front();
+                saved_P.push_back(P);
+
+                if (not detection_flag)
+                    detection_flag = true;
+
+                ++counter;
+            }
+            else
+            {
+                if (detection_flag)
+                {
+                    if ((counter < N_zfc * (reps_zfc - 1)) or (counter > N_zfc * (reps_zfc + ex_save_mul)))
+                    {
+                        LOG_DEBUG_FMT("Resetting counter for detection! Counter = %1%", counter);
+                        detection_flag = false;
+                        saved_P.clear();
+                        saved_P.resize(capacity);
+                        counter = 0;
+                        continue;
+                    }
+
+                    // LOG_INFO_FMT("DOWN -- (%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, i);
+                    saved_P.pop_front();
+                    saved_P.push_back(P);
+                    if (extra > save_extra)
+                    {
+                        int ref_end = (i - counter - save_extra) + std::floor(counter / 2) + int(std::floor(N_zfc * reps_zfc / 2) + N_zfc);
+                        LOG_DEBUG_FMT("Ref end index = %1%, conuter = %2%", ref_end, counter);
+                        ref_end_timer = rx_timer + uhd::time_spec_t(double(ref_end / rx_rate));
+                        successful_csd = true;
+                        return true;
+                    }
+                    else
+                        ++extra;
+                }
+            }
+
+            if (i >= rx_stream.size() - 2 * N_zfc)
+                saved_buffer[i - (rx_stream.size() - 2 * N_zfc)] = samp_3;
+        }
+
+        num_samples_processed += rx_stream.size();
+        // LOG_INFO_FMT("(%4%) |P|^2 = %1%, R = %2%, M = %3%", std::norm(P), R, M, num_samples_saved);
+        if (num_samples_processed < max_num_samples)
+            return false;
+        else
+            return true;
+    };
+
+    receive_continuously_with_callback(stop_signal_called, schmidt_cox);
+
+    if (successful_csd)
+    {
+        LOG_INFO_FMT("REF timer = %1%, Current timer = %2%", ref_end_timer.get_tick_count(rx_rate), get_time_now().get_tick_count(rx_rate));
+        // CFO estimation
+        int ref_start_index = saved_P.size() - (save_extra + std::floor(counter / 2) + int(std::floor(N_zfc * (reps_zfc - 1) / 2)));
+        LOG_DEBUG_FMT("Start index of ref = %1%", ref_start_index);
+        std::vector<sample_type> ex_vec;
+        ex_vec.insert(ex_vec.begin(), saved_P.begin() + ref_start_index, saved_P.begin() + ref_start_index + N_zfc * (reps_zfc - 1));
+        std::vector<double> phases = unwrap(ex_vec);
+        double cfo_mean = std::accumulate(phases.begin(), phases.end(), 0.0) / phases.size() / N_zfc;
+        LOG_INFO_FMT("Mean CFO = %1%", cfo_mean);
+
+        ref_timer = ref_end_timer;
+        update_cfo(cfo_mean);
+        return true;
+    }
+    else
+        return false;
+}
+
+void USRP_class::lowpassFiltering(const std::vector<sample_type> &rx_samples, std::vector<sample_type> &decimated_samples)
+{
+    size_t rx_stream_size = rx_samples.size();
+    // Downsampling filter
+    size_t decimation_factor = parser.getValue_int("sampling-factor");
+    if (decimation_factor != 10)
+    {
+        LOG_ERROR("ERROR: Only support low-pass filtering with decimation factor = 10.");
+        return;
+    }
+    std::vector<float> fir_filter;
+    std::ifstream filter_file("../config/filters/fir_order_51_downscale_10.csv");
+    float value;
+    // Check if the file was opened successfully
+    if (!filter_file)
+    {
+        LOG_WARN("Error: Could not open the file.");
+        return;
+    }
+    // Read the file line by line
+    while (filter_file >> value)
+        fir_filter.push_back(value); // Store each float in the vector
+
+    filter_file.close(); // Close the file
+
+    size_t filter_len = fir_filter.size();
+    std::vector<sample_type> tail_samples(filter_len * decimation_factor, sample_type(0.0));
+
+    for (int i = 0; i < rx_stream_size; i += decimation_factor)
+    {
+        // downsample via polyphase filter
+        float realpart = 0.0, imagpart = 0.0;
+        for (int j = 0; j < filter_len; ++j)
+        {
+            int signal_index = i - j * decimation_factor;
+            if (signal_index < 0 && signal_index + tail_samples.size() > 0)
+            {
+                realpart += tail_samples[signal_index + tail_samples.size()].real() * fir_filter[j];
+                imagpart += tail_samples[signal_index + tail_samples.size()].imag() * fir_filter[j];
+            }
+            else if (signal_index >= 0 && signal_index <= rx_stream_size)
+            {
+                realpart += rx_samples[signal_index].real() * fir_filter[j];
+                imagpart += rx_samples[signal_index].imag() * fir_filter[j];
+            }
+            else
+                LOG_WARN_FMT("signal_index %1% is invalid!!", signal_index);
+        }
+
+        sample_type sample_dw(realpart, imagpart);
+        decimated_samples.emplace_back(sample_dw);
+    }
+}

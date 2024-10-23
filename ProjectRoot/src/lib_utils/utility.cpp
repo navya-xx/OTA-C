@@ -643,15 +643,30 @@ bool listActiveDevices(std::vector<std::string> &device_ids)
     return true;
 }
 
-void correct_cfo_tx(std::vector<sample_type> &signal, const float &scale, const float &cfo, size_t &counter)
+void correct_cfo(std::vector<sample_type> &signal, size_t &counter, const float &scale, const float &cfo)
 {
-    for (auto &samp : signal)
+    if (scale != 1.0)
     {
-        if (cfo != 0.0)
-            samp *= scale * sample_type(std::cos(cfo * counter), std::sin(cfo * counter));
-        else
-            samp *= scale;
-        counter++;
+        for (auto &samp : signal)
+        {
+            if (cfo != 0.0)
+                samp *= scale * sample_type(std::cos(cfo * counter), std::sin(cfo * counter));
+            else
+                samp *= scale;
+            counter++;
+        }
+    }
+    else if (cfo != 0.0)
+    {
+        for (auto &samp : signal)
+        {
+            samp *= sample_type(std::cos(cfo * counter), std::sin(cfo * counter));
+            counter++;
+        }
+    }
+    else
+    {
+        counter += signal.size();
     }
 }
 

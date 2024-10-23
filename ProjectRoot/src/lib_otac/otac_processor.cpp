@@ -379,10 +379,10 @@ bool OTAC_class::transmission_otac(const float &scale, const uhd::time_spec_t &t
 
     size_t cfo_counter = 0;
     float current_cfo = csd_obj->cfo;
-    correct_cfo_tx(tx_waveform, my_scale, current_cfo, cfo_counter);
+    correct_cfo(tx_waveform, my_scale, current_cfo, cfo_counter);
 
     std::vector<std::complex<float>> fs_tx_waveform = fs_waveform;
-    correct_cfo_tx(fs_tx_waveform, 1.0, current_cfo, cfo_counter);
+    correct_cfo(fs_tx_waveform, 1.0, current_cfo, cfo_counter);
 
     tx_waveform.insert(tx_waveform.begin(), fs_tx_waveform.begin(), fs_tx_waveform.end());
 
