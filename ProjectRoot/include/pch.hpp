@@ -1,6 +1,10 @@
 #ifndef PCH_HPP
 #define PCH_HPP
 
+#ifdef mode
+#undef mode
+#endif
+
 #pragma once
 #include <uhd/exception.hpp>
 #include <uhd/types/tune_request.hpp>

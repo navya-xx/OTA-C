@@ -1,0 +1,64 @@
+# Use Debian Bookworm Slim as base image (lightweight version of Debian)
+FROM debianbase
+
+# Set non-interactive mode for apt
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set UHD version
+ENV UHD_VERSION="v4.2.0.0"
+ENV UHD_DIR="/usr/local/src/uhd"
+
+# Clone UHD repository and build it using Python 3.10
+RUN git clone --branch $UHD_VERSION --depth 1 https://github.com/EttusResearch/uhd.git $UHD_DIR && \
+    cd $UHD_DIR && \
+    mkdir host/build && cd host/build && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
+          -DENABLE_PYTHON_API=ON \
+          -DPYTHON_EXECUTABLE=/usr/local/bin/python3.10 \
+          -DENABLE_TESTS=ON \
+          -DENABLE_EXAMPLES=ON \
+          -DENABLE_MANUAL=OFF \
+          -DENABLE_DOXYGEN=OFF \
+          -DENABLE_BENCHMARKS=OFF \
+          -DENABLE_C_API=ON \
+          -DCMAKE_BUILD_TYPE=Release .. && \
+          #   -DNEON_SIMD_ENABLE=OFF \
+    # For ARM build (comment out the above and uncomment below):
+    # cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_PYTHON_API=ON -DENABLE_TESTS=OFF -DENABLE_EXAMPLES=ON -DENABLE_MANUAL=OFF -DENABLE_DOXYGEN=OFF -DENABLE_BENCHMARKS=OFF -DENABLE_C_API=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../host/cmake/Toolchains/arm-linux-gnueabihf.toolchain.cmake .. && \
+    make -j$(nproc) && \
+    make install && \
+    ldconfig
+
+
+# Clone Paho MQTT C++ with submodules (Paho C)
+RUN git clone https://github.com/eclipse/paho.mqtt.cpp /usr/local/src/paho-mqtt-cpp && \
+    cd /usr/local/src/paho-mqtt-cpp && \
+    git checkout v1.5.1 && \
+    git submodule init && \
+    git submodule update
+
+# Build Paho MQTT C and C++ together
+RUN cd /usr/local/src/paho-mqtt-cpp && \
+    cmake -Bbuild -H. -DPAHO_WITH_MQTT_C=ON -DPAHO_BUILD_EXAMPLES=ON && \
+    cmake --build build/ --parallel $(nproc) && \
+    cmake --install build && \
+    ldconfig  # Refresh shared libraries
+
+# Install FFTW 3.3.10 from source with threading support
+RUN wget http://www.fftw.org/fftw-3.3.10.tar.gz -O /tmp/fftw-3.3.10.tar.gz && \
+    tar -xzf /tmp/fftw-3.3.10.tar.gz -C /tmp && \
+    cd /tmp/fftw-3.3.10 && \
+    ./configure --enable-threads --enable-shared --prefix=/usr/local && \
+    make -j$(nproc) && \
+    make install && \
+    ldconfig && \
+    rm -rf /tmp/fftw-3.3.10 /tmp/fftw-3.3.10.tar.gz
+
+
+RUN git clone https://github.com/navya-xx/OTA-C.git /usr/local/src/OTA-C
+
+# Set up a working directory
+WORKDIR /usr/local/src/OTA-C
+
+# Default command
+CMD ["/bin/bash"]
