@@ -4,8 +4,8 @@
 #pragma once
 
 // // Push the current definition of 'mode' (if any) and then undefine it
-// #pragma push_macro("mode")
-// #undef mode
+#pragma push_macro("mode")
+#undef mode
 
 #include <uhd/exception.hpp>
 #include <uhd/types/tune_request.hpp>
@@ -47,5 +47,7 @@ using json = nlohmann::json;
 // typedef std::complex<std::int16_t> sample_type;
 typedef float iq_type;
 typedef std::complex<iq_type> sample_type;
+
+#pragma pop_macro("mode")
 
 #endif // PCH_HPP
