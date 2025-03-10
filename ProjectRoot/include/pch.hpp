@@ -3,9 +3,9 @@
 
 #pragma once
 
-// Push the current definition of 'mode' (if any) and then undefine it
-#pragma push_macro("mode")
-#undef mode
+// // Push the current definition of 'mode' (if any) and then undefine it
+// #pragma push_macro("mode")
+// #undef mode
 
 #include <uhd/exception.hpp>
 #include <uhd/types/tune_request.hpp>

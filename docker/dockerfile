@@ -16,6 +16,7 @@ RUN git clone --branch $UHD_VERSION --depth 1 https://github.com/EttusResearch/u
           -DENABLE_PYTHON_API=ON \
           -DPYTHON_EXECUTABLE=/usr/local/bin/python3.10 \
           -DENABLE_TESTS=ON \
+          -DENABLE_NULL_DEVICE=ON \
           -DENABLE_EXAMPLES=ON \
           -DENABLE_MANUAL=OFF \
           -DENABLE_DOXYGEN=OFF \
