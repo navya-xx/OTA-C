@@ -75,16 +75,17 @@ include_directories(
     ${Boost_INCLUDE_DIRS}
     ${UHD_INCLUDE_DIRS}
     ${INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/include
     # ${FFTW3_INCLUDE_DIR}
 )
 link_directories(${Boost_LIBRARY_DIRS})
 
-set(PCH_HEADER "${CMAKE_SOURCE_DIR}/include/pch.hpp")
+# set(PCH_HEADER "${CMAKE_SOURCE_DIR}/include/pch.hpp")
 
-# Function to enable precompiled headers
-function(enable_precompiled_headers target)
-    target_precompile_headers(${target} PRIVATE "${PCH_HEADER}")
-endfunction()
+# # Function to enable precompiled headers
+# function(enable_precompiled_headers target)
+#     target_precompile_headers(${target} PRIVATE "${PCH_HEADER}")
+# endfunction()
 
 # Add libraries
 # add_library(lib_config STATIC src/lib_config/ConfigParser.cpp)
@@ -105,11 +106,12 @@ SET(counter 0)
 foreach(executable ${executables_list})
     list(GET files_list ${counter} file_loc)
     # add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_csd/cyclestartdetector.cpp src/lib_csd/peakdetector.cpp src/lib_fft/FFTWrapper.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp src/lib_mqtt/MQTTClient.cpp src/lib_cal/calibration.cpp src/lib_otac/otac_processor.cpp)
-    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp src/lib_usrp/usrp_init.cpp src/lib_mqtt/MQTTClient.cpp)
+    # add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp src/lib_usrp/usrp_init.cpp src/lib_mqtt/MQTTClient.cpp)
+    add_executable(${executable} ${file_loc} src/lib_log/logger.cpp src/lib_config/config_parser.cpp src/lib_waveform/waveforms.cpp src/lib_utils/utility.cpp src/lib_usrp/usrp_class.cpp src/lib_usrp/usrp_init.cpp src/lib_mqtt/MQTTClient.cpp include/pch.hpp)
     target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} PahoMqttCpp::paho-mqttpp3)
     # target_link_libraries(${executable} ${UHD_LIBRARIES} ${Boost_LIBRARIES} PahoMqttCpp::paho-mqttpp3 PkgConfig::FFTW ${FFTW_DOUBLE_THREADS_LIB})
     math(EXPR counter "${counter} + 1")
-    enable_precompiled_headers(${executable})
+    # enable_precompiled_headers(${executable})
 endforeach()
 
 set(CMAKE_BUILD_TYPE "Debug")
