@@ -3,12 +3,6 @@
 
 #pragma once
 
-#include <uhd/exception.hpp>
-#include <uhd/types/tune_request.hpp>
-#include <uhd/utils/safe_main.hpp>
-#include <uhd/utils/thread.hpp>
-#include <uhd/convert.hpp>
-#include <uhd/usrp/multi_usrp.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
@@ -43,5 +37,12 @@ using json = nlohmann::json;
 // typedef std::complex<std::int16_t> sample_type;
 typedef float iq_type;
 typedef std::complex<iq_type> sample_type;
+
+#include <uhd/exception.hpp>
+#include <uhd/types/tune_request.hpp>
+#include <uhd/utils/safe_main.hpp>
+#include <uhd/utils/thread.hpp>
+#include <uhd/convert.hpp>
+#include <uhd/usrp/multi_usrp.hpp>
 
 #endif // PCH_HPP
