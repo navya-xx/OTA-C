@@ -97,9 +97,9 @@ link_directories(${Boost_LIBRARY_DIRS})
 # add_library(lib_usrp STATIC src/lib_usrp/USRPclass.cpp)
 # enable_precompiled_headers(lib_usrp)
 
-SET(executables_list tx_zfc)
+SET(executables_list rx_to_file tx_zfc)
 # SET(files_list main/centralized_otac.cpp main/analysis/rx_to_file.cpp main/analysis/tx_zfc.cpp)
-SET(files_list main/analysis/tx_zfc.cpp)
+SET(files_list main/analysis/rx_to_file.cpp main/analysis/tx_zfc.cpp)
 SET(counter 0)
 
 ### Make the executable #######################################################
