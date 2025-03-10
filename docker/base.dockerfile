@@ -1,14 +1,13 @@
 # Dockerfile.base
-FROM python:3.10-slim
+FROM ubuntu:22.04
 
 # Set non-interactive mode for apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update & Upgrade System
-RUN apt-get update && apt-get upgrade -y
-
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update
+
+RUN apt-get install -y --no-install-recommends \
     autoconf \
     automake \
     build-essential \
@@ -25,7 +24,10 @@ RUN apt-get update && apt-get install -y \
     libusb-1.0-0 \
     libusb-1.0-0-dev \
     libusb-dev \
-    python3-dev \
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    python3-setuptools \
     wget \
     curl \
     swig \
@@ -39,4 +41,4 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip && pip install --no-cache-dir mako requests numpy scipy ruamel.yaml
 
 # Tag a label for clarity (optional)
-LABEL maintainer="navneet.gr8@gmail.com"
+LABEL maintainer="Navneet Agrawal"

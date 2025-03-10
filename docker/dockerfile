@@ -1,5 +1,5 @@
-# Use Debian Bookworm Slim as base image (lightweight version of Debian)
-FROM debianbase
+# Use Ubuntu Base as base image
+FROM ubuntubase
 
 # Set non-interactive mode for apt
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,7 +14,7 @@ RUN git clone --branch $UHD_VERSION --depth 1 https://github.com/EttusResearch/u
     mkdir host/build && cd host/build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
           -DENABLE_PYTHON_API=ON \
-          -DPYTHON_EXECUTABLE=/usr/local/bin/python3.10 \
+          -DPYTHON_EXECUTABLE=/usr/bin/python3 \
           -DENABLE_TESTS=ON \
           -DENABLE_NULL_DEVICE=ON \
           -DENABLE_EXAMPLES=ON \
